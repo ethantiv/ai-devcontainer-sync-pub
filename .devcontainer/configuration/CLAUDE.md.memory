@@ -1,0 +1,12 @@
+## Language Configuration
+- **User Communication:** Polish
+- **Code Elements:** English ONLY (includes code, variables, functions, classes, docstrings, and git commits)
+- **Documentation:**: English ONLY (includes README.md, documentation files, API docs, and technical writing)
+
+## Common Pitfalls to Avoid
+- **Security**: Always validate security, never skip for convenience
+- **Complexity**: Keep solutions simple, never overengineer
+- **Configuration**: Always use environment variables or config files, never hardcode values
+- **Documentation**: Always update documentation when making changes
+- **CRITICAL - Git/GitHub Operations**: NEVER execute ANY Git or GitHub commands autonomously (git add, commit, push, pull, merge, rebase, gh pr create/merge, etc.). Execute ONLY when the user explicitly requests it or through Claude Code slash commands
+- **CRITICAL - Auto-commit Prevention**: NEVER automatically commit or push changes after completing tasks - always wait for explicit user permission

@@ -1,0 +1,77 @@
+{
+  "name": "AI Agents Sandbox",
+  "image": "mcr.microsoft.com/devcontainers/base:noble",
+  "features": {
+    "ghcr.io/devcontainers/features/aws-cli:1": {},
+    "ghcr.io/devcontainers/features/common-utils:2": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/python:1": {},
+    "ghcr.io/devcontainers/features/terraform:1": {}
+  },
+  "onCreateCommand": {
+    "cleanup-ai-dirs": "rm -rf /workspaces/ai-devcontainer-sync/.claude || true",
+    "setup-claude-dir": "sudo mkdir -p /home/vscode/.claude && sudo chown -R vscode:vscode /home/vscode/.claude",
+    "setup-gemini-dir": "sudo mkdir -p /home/vscode/.gemini && sudo chown -R vscode:vscode /home/vscode/.gemini",
+    "setup-google-auth-dir": "sudo mkdir -p /home/vscode/.cache/google-vscode-extension/auth && sudo chown -R vscode:vscode /home/vscode/.cache/google-vscode-extension",
+    "setup-grte-symlink": "sudo mkdir -p /usr/grte/v5/lib && sudo ln -sf /lib/ld-linux-aarch64.so.1 /usr/grte/v5/lib/ld-linux-aarch64.so.1",
+    "setup-locales": "sudo apt-get update && sudo apt-get install -y locales && sudo locale-gen pl_PL.UTF-8 && sudo update-locale"
+  },
+  "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.cache && pipx install uv && uv tool install --from git+https://github.com/github/spec-kit.git specify-cli && npm install -g @anthropic-ai/claude-code@latest && npm install -g @google/gemini-cli && if [ -f .devcontainer/setup-env.sh ]; then chmod +x .devcontainer/setup-env.sh && ./.devcontainer/setup-env.sh; fi",
+  "mounts": [
+    {
+      "source": "claude-code-config-${devcontainerId}",
+      "target": "/home/vscode/.claude",
+      "type": "volume"
+    },
+    {
+      "source": "gemini-cli-config-${devcontainerId}",
+      "target": "/home/vscode/.gemini",
+      "type": "volume"
+    },
+    {
+      "source": "google-gemini-auth-${devcontainerId}",
+      "target": "/home/vscode/.cache/google-vscode-extension/auth",
+      "type": "volume"
+    },
+    {
+      "source": "/Users/mirek/Projekty",
+      "target": "/home/vscode/projects",
+      "type": "bind"
+    }
+  ],
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
+    "TZ": "Europe/Warsaw",
+    "LC_TIME": "pl_PL.UTF-8"
+  },
+  "runArgs": [
+    "--env-file",
+    ".devcontainer/.env"
+  ],
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "workbench.colorTheme": "GitHub Dark Default"
+      },
+      "extensions": [
+        "-AmazonWebServices.aws-toolkit-vscode",
+        "anthropic.claude-code",
+        "bierner.markdown-mermaid",
+        "github.github-vscode-themes",
+        "github.vscode-github-actions",
+        "google.geminicodeassist",
+        "hashicorp.terraform",
+        "ms-python.debugpy",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.vscode-python-envs",
+        "redhat.vscode-yaml"
+      ]
+    },
+    "codespaces": {
+      "disableAutomaticConfiguration": false
+    }
+  }
+}

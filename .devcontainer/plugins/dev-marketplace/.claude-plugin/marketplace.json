@@ -1,0 +1,22 @@
+{
+  "name": "dev-marketplace",
+  "description": "Local development marketplace for testing plugins",
+  "owner": {
+    "name": "Dev Team",
+    "email": "dev@example.com"
+  },
+  "plugins": [
+    {
+      "name": "placeholder-plugin",
+      "source": "./placeholder-plugin",
+      "version": "0.1.0",
+      "description": "Placeholder plugin for local marketplace development. Replace with actual plugins as needed.",
+      "keywords": [
+        "placeholder",
+        "template",
+        "development"
+      ],
+      "category": "development"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "placeholder-plugin",
+  "version": "0.1.0",
+  "description": "Placeholder plugin for local marketplace development. Replace with actual plugins as needed.",
+  "author": {
+    "name": "Dev Team",
+    "email": "dev@example.com"
+  },
+  "keywords": [
+    "placeholder",
+    "template",
+    "development"
+  ]
+}
