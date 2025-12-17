@@ -18,7 +18,7 @@
     "setup-grte-symlink": "sudo mkdir -p /usr/grte/v5/lib && sudo ln -sf /lib/ld-linux-aarch64.so.1 /usr/grte/v5/lib/ld-linux-aarch64.so.1",
     "setup-locales": "sudo apt-get update && sudo apt-get install -y locales && sudo locale-gen pl_PL.UTF-8 && sudo update-locale"
   },
-  "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.cache && pipx install uv && uv tool install --from git+https://github.com/github/spec-kit.git specify-cli && npm install -g @anthropic-ai/claude-code@latest && npm install -g @google/gemini-cli && if [ -f .devcontainer/setup-env.sh ]; then chmod +x .devcontainer/setup-env.sh && ./.devcontainer/setup-env.sh; fi",
+  "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.cache && pipx install uv && uv tool install --from git+https://github.com/github/spec-kit.git specify-cli && npm install -g @anthropic-ai/claude-code@latest && npm install -g @google/gemini-cli && npm install -g playwright && sudo env PATH=$PATH playwright install-deps && playwright install firefox chromium || true && if [ -f .devcontainer/setup-env.sh ]; then chmod +x .devcontainer/setup-env.sh && ./.devcontainer/setup-env.sh; fi",
   "mounts": [
     {
       "source": "claude-code-config-${devcontainerId}",

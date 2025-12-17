@@ -5,10 +5,8 @@
 # - Manages file-based locking to prevent concurrent initialization
 # - Verifies and configures GitHub CLI authentication (GH_TOKEN)
 # - Sets up SSH authentication from base64-encoded secrets
-# - Installs and enables Claude Code plugins from Anthropic marketplace
-# - Configures MCP servers for Claude Code and Gemini CLI
+# - Installs and enables Claude Code plugins from local marketplace
 # - Copies Claude Code settings, commands, and agents to user directories
-# - Automatically prunes obsolete MCP servers not in source configuration
 
 set -e
 
@@ -62,18 +60,6 @@ detect_workspace_folder() {
         WORKSPACE_FOLDER="${PWD}"
         echo "🖥️ Detected local DevContainer environment: $WORKSPACE_FOLDER"
     fi
-}
-
-validate_mcp_config() {
-    local mcp_config_file="$1"
-
-    if [[ ! -f "$mcp_config_file" ]]; then
-        echo "❌ MCP configuration file not found at: $mcp_config_file"
-        echo "    Check if the file exists in .devcontainer/configuration/"
-        exit 1
-    fi
-
-    echo "📖 Using MCP config: $mcp_config_file"
 }
 
 # =============================================================================
@@ -328,285 +314,10 @@ setup_claude_plugins() {
 
     echo "🔌 Setting up Claude Code plugins..."
 
-    # Setup local marketplace first (priority)
+    # Setup local marketplace only
     setup_local_marketplace "$workspace_folder"
 
-    # Define plugins to install from Anthropic official marketplace
-    # Full list: https://github.com/anthropics/claude-code/tree/main/plugins
-    # Add custom plugins by modifying this array or installing manually via 'claude plugin install'
-    local MARKETPLACE_REPO="anthropics/claude-code"
-    local MARKETPLACE_NAME="claude-code-plugins"
-    local PLUGINS=(
-        "commit-commands"
-        "pr-review-toolkit"
-        "feature-dev"
-        "plugin-dev"
-        "frontend-design"
-        "agent-sdk-dev"
-    )
-
-    # Add Anthropic marketplace
-    echo "➕ Adding Anthropic marketplace..."
-    if output=$(claude plugin marketplace add "$MARKETPLACE_REPO" 2>&1); then
-        echo "  ✅ Successfully added marketplace: $MARKETPLACE_NAME"
-    elif [[ "$output" == *"already"* ]]; then
-        echo "  ℹ️  Marketplace already configured"
-    else
-        echo "  ❌ Failed to add marketplace: $output"
-        return 1
-    fi
-
-    # Update marketplace to ensure latest plugin list
-    echo "🔄 Updating marketplace..."
-    if update_output=$(claude plugin marketplace update 2>&1); then
-        echo "  ✅ Marketplace updated"
-    else
-        echo "  ⚠️  Marketplace update warning: $update_output"
-    fi
-
-    # Install each plugin from marketplace
-    for plugin_name in "${PLUGINS[@]}"; do
-        local plugin_id="${plugin_name}@${MARKETPLACE_NAME}"
-        echo "➕ Installing plugin: $plugin_id"
-
-        if output=$(claude plugin install "$plugin_id" 2>&1); then
-            echo "  ✅ Successfully installed and enabled: $plugin_name"
-        elif [[ "$output" == *"already"* ]]; then
-            echo "  ℹ️  Plugin already installed: $plugin_name"
-        else
-            echo "  ❌ Failed to install $plugin_name: $output"
-            continue
-        fi
-    done
-
     echo "🎉 Claude plugins setup completed!"
-}
-
-# =============================================================================
-# GENERIC MCP SERVER MANAGEMENT
-# =============================================================================
-
-get_current_servers() {
-    local cli_command="$1"
-    local output
-    output=$($cli_command mcp list 2>/dev/null) || return 1
-    # Parse MCP server names from CLI output by:
-    # - Skipping header lines (NAME, Servers, etc.)
-    # - Removing line prefixes (bullets, spaces, checkmarks)
-    # - Extracting server name before colon
-    # - Validating format (alphanumeric with dots, dashes, underscores only)
-    # Different CLIs may format output differently, hence multiple header patterns
-    echo "$output" | awk '
-        /^[[:space:]]*$/ { next }
-        /^[[:space:]]*(Configured MCP servers|MCP Servers|NAME|Name|Servers)/ { next }
-        /^[[:space:]]*\.\.\.$/ { next }
-        {
-          line=$0
-          sub(/^[[:space:]]*[-*•✓✗]?[[:space:]]*/, "", line)
-          name=line
-          sub(/:.*$/, "", name)
-          sub(/[[:space:]]+$/, "", name)
-          if (name ~ /^[A-Za-z0-9._-]+$/) print name
-        }
-    ' | sort -u
-}
-
-remove_server() {
-    local cli_command="$1"
-    local name="$2"
-    local cli_name="$3"
-
-    echo "➖ Removing $cli_name MCP server not in config: $name"
-    if $cli_command mcp remove "$name" >/dev/null 2>&1; then
-        echo "  ✅ Removed $name"
-        return 0
-    fi
-    echo "  ❌ Failed to remove $name"
-    return 1
-}
-
-prune_obsolete_servers() {
-    local cli_command="$1"
-    local desired_servers="$2"
-    local cli_name="$3"
-
-    echo "🧹 Pruning $cli_name MCP servers not present in configuration..."
-    if current_servers=$(get_current_servers "$cli_command"); then
-        while IFS= read -r existing; do
-            [[ -z "$existing" ]] && continue
-            if ! grep -Fxq "$existing" <<< "$desired_servers"; then
-                remove_server "$cli_command" "$existing" "$cli_name" || true
-            else
-                echo "  ✅ Keeping $existing"
-            fi
-        done <<< "$current_servers"
-    else
-        echo "  ⚠️  Unable to list current $cli_name MCP servers; skipping prune step"
-    fi
-}
-
-# =============================================================================
-# CLAUDE MCP SERVER MANAGEMENT
-# =============================================================================
-
-add_claude_mcp_server() {
-    local server_name="$1"
-    local server_config="$2"
-
-    echo "➕ Adding MCP server: $server_name"
-
-    if output=$(claude mcp add-json --scope user "$server_name" "$server_config" 2>&1); then
-        echo "  ✅ Successfully added $server_name"
-    elif [[ "$output" == *"already exists"* ]]; then
-        echo "  ℹ️  $server_name already configured"
-    else
-        echo "  ❌ Failed to add $server_name"
-    fi
-}
-
-setup_claude_mcp_servers() {
-    local mcp_config_file="$1"
-
-    echo "📖 Parsing MCP server configurations..."
-
-    if ! command -v jq &> /dev/null; then
-        echo "❌ jq is required but not installed"
-        exit 1
-    fi
-
-    local desired_servers=$(jq -r '.mcpServers | keys[]' "$mcp_config_file" | sort -u)
-
-    prune_obsolete_servers "claude" "$desired_servers" "Claude"
-
-    jq -r '.mcpServers | to_entries | .[] | @base64' "$mcp_config_file" | while read -r server_data; do
-        local server_name=$(echo "$server_data" | base64 --decode | jq -r '.key')
-        local server_config=$(echo "$server_data" | base64 --decode | jq -c '.value')
-
-        add_claude_mcp_server "$server_name" "$server_config"
-    done
-
-    echo "🎉 MCP server setup completed!"
-}
-
-# =============================================================================
-# GEMINI MCP SERVER MANAGEMENT
-# =============================================================================
-
-add_gemini_mcp_server() {
-    local server_name="$1"
-    local command="$2"
-    shift 2
-    local args=("$@")
-
-    echo "➕ Adding Gemini MCP server: $server_name"
-
-    # Build the gemini mcp add command
-    local gemini_cmd=("gemini" "mcp" "add" "--scope" "user" "$server_name" "$command")
-
-    # Add arguments if provided
-    if [[ ${#args[@]} -gt 0 ]]; then
-        gemini_cmd+=("${args[@]}")
-    fi
-
-    if output=$("${gemini_cmd[@]}" 2>&1); then
-        if [[ "$output" == *"already configured"* ]]; then
-            echo "  ℹ️  $server_name already configured in Gemini"
-        else
-            echo "  ✅ Successfully added $server_name to Gemini"
-        fi
-    else
-        echo "  ❌ Failed to add $server_name to Gemini: $output"
-    fi
-}
-
-add_gemini_mcp_server_with_env() {
-    local server_name="$1"
-    local command="$2"
-    local env_vars="$3"
-    shift 3
-    local args=("$@")
-
-    echo "➕ Adding Gemini MCP server with env: $server_name"
-
-    # Build the gemini mcp add command
-    # IMPORTANT: Gemini CLI requires positional args before flags (-e)
-    # Order: gemini mcp add --scope user <name> <command> [args...] [-e KEY=VAL...]
-    local gemini_cmd=("gemini" "mcp" "add" "--scope" "user" "$server_name" "$command")
-
-    # Add arguments if provided
-    if [[ ${#args[@]} -gt 0 ]]; then
-        gemini_cmd+=("${args[@]}")
-    fi
-
-    # Add environment variables after positional arguments
-    if [[ -n "$env_vars" ]]; then
-        while IFS= read -r env_pair; do
-            if [[ -n "$env_pair" ]]; then
-                gemini_cmd+=("-e" "$env_pair")
-            fi
-        done <<< "$env_vars"
-    fi
-
-    if output=$("${gemini_cmd[@]}" 2>&1); then
-        if [[ "$output" == *"already configured"* ]]; then
-            echo "  ℹ️  $server_name already configured in Gemini"
-        else
-            echo "  ✅ Successfully added $server_name to Gemini"
-        fi
-    else
-        echo "  ❌ Failed to add $server_name to Gemini: $output"
-    fi
-}
-
-setup_gemini_mcp_servers() {
-    local mcp_config_file="$1"
-
-    echo "📖 Setting up Gemini MCP servers..."
-
-    if ! command -v gemini &> /dev/null; then
-        echo "⚠️  Gemini CLI not found, skipping Gemini MCP setup"
-        return 0
-    fi
-
-    if ! command -v jq &> /dev/null; then
-        echo "❌ jq is required but not installed"
-        exit 1
-    fi
-
-    local desired_servers=$(jq -r '.mcpServers | keys[]' "$mcp_config_file" | sort -u)
-
-    prune_obsolete_servers "gemini" "$desired_servers" "Gemini"
-
-    jq -r '.mcpServers | to_entries | .[] | @base64' "$mcp_config_file" | while read -r server_data; do
-        local server_name=$(echo "$server_data" | base64 --decode | jq -r '.key')
-        local server_config=$(echo "$server_data" | base64 --decode | jq -r '.value')
-
-        local command=$(echo "$server_config" | jq -r '.command // empty')
-        local args_json=$(echo "$server_config" | jq -r '.args // empty')
-        local env_json=$(echo "$server_config" | jq -r '.env // empty')
-
-        # Convert args from JSON array to bash array
-        local args=()
-        if [[ "$args_json" != "null" && "$args_json" != "empty" && -n "$args_json" ]]; then
-            while IFS= read -r arg; do
-                args+=("$arg")
-            done < <(echo "$args_json" | jq -r '.[]')
-        fi
-
-        # Convert env from JSON object to KEY=VALUE format
-        local env_vars=""
-        if [[ "$env_json" != "null" && "$env_json" != "empty" && -n "$env_json" ]]; then
-            env_vars=$(echo "$env_json" | jq -r 'to_entries | map(.key + "=" + .value) | .[]')
-        fi
-
-        if [[ -n "$env_vars" ]]; then
-            add_gemini_mcp_server_with_env "$server_name" "$command" "$env_vars" "${args[@]}"
-        else
-            add_gemini_mcp_server "$server_name" "$command" "${args[@]}"
-        fi
-    done
-
-    echo "🎉 Gemini MCP server setup completed!"
 }
 
 # =============================================================================
@@ -620,20 +331,12 @@ main() {
 
     detect_workspace_folder
 
-    local mcp_config_file="${WORKSPACE_FOLDER}/.devcontainer/configuration/mcp-servers.json"
-
-    validate_mcp_config "$mcp_config_file"
-
     setup_ssh_authentication
     setup_github_token
 
     setup_claude_configuration "$WORKSPACE_FOLDER"
 
     setup_claude_plugins "$WORKSPACE_FOLDER"
-
-    setup_claude_mcp_servers "$mcp_config_file"
-
-    setup_gemini_mcp_servers "$mcp_config_file"
 
     echo "✅ Development environment setup completed successfully!"
 }
