@@ -5,7 +5,6 @@
 # - Manages file-based locking to prevent concurrent initialization
 # - Verifies and configures GitHub CLI authentication (GH_TOKEN)
 # - Sets up SSH authentication from base64-encoded secrets
-# - Installs and enables Claude Code plugins from local marketplace
 # - Copies Claude Code settings, commands, and agents to user directories
 
 set -e
@@ -237,89 +236,6 @@ setup_claude_configuration() {
     echo "📄 Claude configuration files setup completed!"
 }
 
-setup_local_marketplace() {
-    local workspace_folder="$1"
-    local marketplace_path="$workspace_folder/.devcontainer/plugins/dev-marketplace"
-    local marketplace_json="$marketplace_path/.claude-plugin/marketplace.json"
-
-    echo "🏠 Setting up local Claude Code marketplace..."
-
-    if ! command -v jq &> /dev/null; then
-        echo "  ❌ jq is required but not installed"
-        return 1
-    fi
-
-    if [[ ! -d "$marketplace_path" ]]; then
-        echo "  ⚠️  Local marketplace directory not found: $marketplace_path"
-        echo "      Skipping local marketplace setup"
-        return 0
-    fi
-
-    if [[ ! -f "$marketplace_json" ]]; then
-        echo "  ⚠️  marketplace.json not found: $marketplace_json"
-        echo "      Skipping local marketplace setup"
-        return 0
-    fi
-
-    local marketplace_name=$(jq -r '.name // "dev-marketplace"' "$marketplace_json")
-
-    # Remove existing marketplace with same name to ensure fresh configuration
-    echo "🔄 Removing existing $marketplace_name marketplace (if any)..."
-    if claude plugin marketplace remove "$marketplace_name" >/dev/null 2>&1; then
-        echo "  ✅ Removed existing $marketplace_name"
-    else
-        echo "  ℹ️  No existing $marketplace_name to remove"
-    fi
-
-    # Add local marketplace from path
-    echo "➕ Adding local marketplace: $marketplace_name"
-    if output=$(claude plugin marketplace add "$marketplace_path" 2>&1); then
-        echo "  ✅ Successfully added local marketplace: $marketplace_name"
-    elif [[ "$output" == *"already"* ]]; then
-        echo "  ℹ️  Local marketplace already configured"
-    else
-        echo "  ❌ Failed to add local marketplace: $output"
-        return 1
-    fi
-
-    # Parse and install all plugins from marketplace.json
-    echo "📦 Installing plugins from local marketplace..."
-    local plugins=$(jq -r '.plugins[].name' "$marketplace_json" 2>/dev/null)
-
-    if [[ -z "$plugins" ]]; then
-        echo "  ⚠️  No plugins found in marketplace.json"
-        return 0
-    fi
-
-    while IFS= read -r plugin_name; do
-        [[ -z "$plugin_name" ]] && continue
-        local plugin_id="${plugin_name}@${marketplace_name}"
-        echo "➕ Installing local plugin: $plugin_id"
-
-        if output=$(claude plugin install "$plugin_id" 2>&1); then
-            echo "  ✅ Successfully installed and enabled: $plugin_name"
-        elif [[ "$output" == *"already"* ]]; then
-            echo "  ℹ️  Plugin already installed: $plugin_name"
-        else
-            echo "  ❌ Failed to install $plugin_name: $output"
-            continue
-        fi
-    done <<< "$plugins"
-
-    echo "🎉 Local marketplace setup completed!"
-}
-
-setup_claude_plugins() {
-    local workspace_folder="$1"
-
-    echo "🔌 Setting up Claude Code plugins..."
-
-    # Setup local marketplace only
-    setup_local_marketplace "$workspace_folder"
-
-    echo "🎉 Claude plugins setup completed!"
-}
-
 # =============================================================================
 # MAIN EXECUTION
 # =============================================================================
@@ -335,8 +251,6 @@ main() {
     setup_github_token
 
     setup_claude_configuration "$WORKSPACE_FOLDER"
-
-    setup_claude_plugins "$WORKSPACE_FOLDER"
 
     echo "✅ Development environment setup completed successfully!"
 }
