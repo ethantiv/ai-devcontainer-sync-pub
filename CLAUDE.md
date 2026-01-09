@@ -18,6 +18,7 @@ Standalone DevContainer environment for multi-AI agent development. Configures C
 │   ├── settings.devcontainer.json
 │   └── CLAUDE.md.memory       # Synced to ~/.claude/CLAUDE.md
 ├── commands/                  # Synced to ~/.claude/commands/
+├── agents/                    # Synced to ~/.claude/agents/
 └── plugins/dev-marketplace/   # Local plugin marketplace
 ```
 
@@ -25,7 +26,7 @@ Standalone DevContainer environment for multi-AI agent development. Configures C
 
 `devcontainer.json` → `postCreateCommand` → `setup-env.sh`:
 1. Configures SSH and GitHub authentication
-2. Copies commands and settings to `~/.claude/`
+2. Copies commands, agents, and settings to `~/.claude/`
 3. Syncs local marketplace plugins
 
 ## Environment Variables
@@ -43,7 +44,6 @@ Commands in `.devcontainer/commands/` are synced to `~/.claude/commands/`:
 
 - `/code-review` - Launch parallel code review agents for bugs, security issues, and code quality
 - `/git-message` - Generate short conventional commit messages
-- `/polish-correction` - Polish language text correction
 
 ## Local Plugin Marketplace
 
