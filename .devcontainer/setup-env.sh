@@ -71,8 +71,6 @@ detect_workspace_folder() {
 # =============================================================================
 
 setup_ssh_github_integration() {
-    local key_file="$1"
-
     if [[ ! -f "$SSH_KNOWN_HOSTS_FILE" ]] || ! grep -q "github.com" "$SSH_KNOWN_HOSTS_FILE" 2>/dev/null; then
         echo "🌐 Adding GitHub to SSH known_hosts..."
         ssh-keyscan github.com >> "$SSH_KNOWN_HOSTS_FILE" 2>/dev/null
@@ -112,7 +110,7 @@ setup_ssh_authentication() {
             echo "✅ SSH private key authentication configured successfully"
             echo "🔒 Set SSH key permissions to 600 (owner read/write only)"
 
-            setup_ssh_github_integration "$SSH_KEY_FILE"
+            setup_ssh_github_integration
         else
             echo "❌ Failed to decode SSH_PRIVATE_KEY - invalid base64 format"
             echo "    Please ensure SSH_PRIVATE_KEY is properly base64 encoded"
@@ -138,22 +136,18 @@ setup_github_token() {
 
     if [[ -n "${CODESPACES}" && -n "${GH_TOKEN}" ]]; then
         echo "✅ Codespaces environment with GH_TOKEN found"
-        echo "🔧 Using your personal GH_TOKEN from Codespaces secrets"
     elif [[ -n "${GH_TOKEN}" ]]; then
         echo "✅ GitHub token found (GH_TOKEN)"
     elif [[ -n "${GITHUB_TOKEN}" ]]; then
         echo "✅ GitHub token found (GITHUB_TOKEN)"
         export GH_TOKEN="${GITHUB_TOKEN}"
-        echo "🔧 Set GH_TOKEN=${GITHUB_TOKEN:0:20}... for GitHub CLI"
     else
         echo "❌ No GitHub token found (GH_TOKEN or GITHUB_TOKEN)"
         exit 1
     fi
 
-    if [[ -n "${GH_TOKEN}" ]]; then
-        echo "export GH_TOKEN='${GH_TOKEN}'" >> ~/.bashrc
-        echo "🔧 Added GH_TOKEN to ~/.bashrc for session persistence"
-    fi
+    echo "export GH_TOKEN='${GH_TOKEN}'" >> ~/.bashrc
+    echo "🔧 Added GH_TOKEN to ~/.bashrc for session persistence"
 }
 
 # =============================================================================
@@ -166,9 +160,9 @@ reset_config_if_requested() {
     local config_name="$3"
 
     if [[ "${!reset_var}" == "true" ]]; then
-        echo "  RESET_${reset_var}=true detected - performing full reset..."
+        echo "  $reset_var=true detected - performing full reset..."
         if [[ -d "$config_dir" ]]; then
-            rm -rf "$config_dir"/* "$config_dir"/.* 2>/dev/null || true
+            rm -rf "${config_dir:?}"/* "${config_dir:?}"/.* 2>/dev/null || true
             echo "  Cleared $config_dir directory"
         fi
     else
@@ -236,34 +230,36 @@ copy_claude_files() {
     local source_dir="$workspace_folder/.devcontainer/$file_type"
     local target_dir="$HOME/.claude/$file_type"
 
-    if [[ -d "$source_dir" ]]; then
-        local removed_count=0
-        if [[ -d "$target_dir" ]]; then
-            for existing_file in "$target_dir"/*.md; do
-                if [[ -f "$existing_file" ]]; then
-                    local filename=$(basename "$existing_file")
-                    if [[ ! -f "$source_dir/$filename" ]]; then
-                        rm -f "$existing_file"
-                        removed_count=$((removed_count + 1))
-                        echo "  🗑️  Removed deleted ${file_type%s}: $filename"
-                    fi
-                fi
-            done 2>/dev/null
-        fi
-
-        if [[ -n "$(ls -A "$source_dir"/*.md 2>/dev/null)" ]]; then
-            cp "$source_dir"/*.md "$target_dir/" 2>/dev/null
-            local copied_count=$(ls -1 "$source_dir"/*.md 2>/dev/null | wc -l)
-            echo "  ✅ Copied $copied_count $file_type files to ~/.claude/$file_type/"
-        else
-            echo "  ⚠️  No .md $file_type files found in: $source_dir"
-        fi
-
-        if [[ $removed_count -gt 0 ]]; then
-            echo "  🧹 Removed $removed_count obsolete $file_type files"
-        fi
-    else
+    if [[ ! -d "$source_dir" ]]; then
         echo "  ⚠️  ${file_type^} directory not found: $source_dir"
+        return
+    fi
+
+    local removed_count=0
+    if [[ -d "$target_dir" ]]; then
+        for existing_file in "$target_dir"/*.md; do
+            [[ -f "$existing_file" ]] || continue
+            local filename
+            filename=$(basename "$existing_file")
+            if [[ ! -f "$source_dir/$filename" ]]; then
+                rm -f "$existing_file"
+                removed_count=$((removed_count + 1))
+                echo "  🗑️  Removed deleted ${file_type%s}: $filename"
+            fi
+        done 2>/dev/null
+    fi
+
+    local source_files
+    source_files=("$source_dir"/*.md)
+    if [[ -e "${source_files[0]}" ]]; then
+        cp "$source_dir"/*.md "$target_dir/"
+        echo "  ✅ Copied ${#source_files[@]} $file_type files to ~/.claude/$file_type/"
+    else
+        echo "  ⚠️  No .md $file_type files found in: $source_dir"
+    fi
+
+    if [[ $removed_count -gt 0 ]]; then
+        echo "  🧹 Removed $removed_count obsolete $file_type files"
     fi
 }
 
@@ -271,11 +267,9 @@ setup_claude_configuration() {
     local workspace_folder="$1"
     echo "📄 Copying Claude configuration files..."
 
-    local claude_dir="$HOME/.claude"
-
-    ensure_directory "$claude_dir" ".claude"
-    ensure_directory "$claude_dir/commands" ".claude/commands"
-    ensure_directory "$claude_dir/agents" ".claude/agents"
+    ensure_directory "$CLAUDE_DIR" ".claude"
+    ensure_directory "$CLAUDE_DIR/commands" ".claude/commands"
+    ensure_directory "$CLAUDE_DIR/agents" ".claude/agents"
 
     apply_claude_settings
     copy_claude_memory "$workspace_folder"
@@ -293,6 +287,31 @@ setup_claude_configuration() {
 # See: .devcontainer/configuration/claude-plugins.txt
 # Official marketplace: https://github.com/anthropics/claude-plugins-official
 readonly CLAUDE_PLUGINS_FILE="configuration/claude-plugins.txt"
+readonly OFFICIAL_MARKETPLACE_NAME="claude-plugins-official"
+readonly OFFICIAL_MARKETPLACE_REPO="anthropics/claude-plugins-official"
+
+ensure_marketplace_available() {
+    echo "  🏪 Ensuring official marketplace is available..."
+
+    if claude plugin marketplace list 2>/dev/null | grep -q "$OFFICIAL_MARKETPLACE_NAME"; then
+        echo "  ✅ Marketplace '$OFFICIAL_MARKETPLACE_NAME' already configured"
+    else
+        echo "  📦 Adding official marketplace from GitHub..."
+        if claude plugin marketplace add "$OFFICIAL_MARKETPLACE_REPO" 2>/dev/null; then
+            echo "  ✅ Marketplace added successfully"
+        else
+            echo "  ⚠️  Failed to add marketplace - plugins may not install"
+            return 1
+        fi
+    fi
+
+    echo "  🔄 Updating marketplace..."
+    if claude plugin marketplace update "$OFFICIAL_MARKETPLACE_NAME" 2>/dev/null; then
+        echo "  ✅ Marketplace updated"
+    else
+        echo "  ⚠️  Failed to update marketplace - continuing with cached version"
+    fi
+}
 
 install_claude_plugins() {
     local workspace_folder="$1"
@@ -300,15 +319,18 @@ install_claude_plugins() {
 
     echo "📦 Installing Claude Code plugins..."
 
-    # Check if claude CLI is available
     if ! command -v claude &> /dev/null; then
         echo "  ⚠️  Claude CLI not found - skipping plugin installation"
         return 0
     fi
 
-    # Check if plugins file exists
     if [[ ! -f "$plugins_file" ]]; then
         echo "  ⚠️  Plugins file not found: $plugins_file"
+        return 0
+    fi
+
+    if ! ensure_marketplace_available; then
+        echo "  ⚠️  Marketplace not available - skipping plugin installation"
         return 0
     fi
 
@@ -316,28 +338,22 @@ install_claude_plugins() {
     local skipped_count=0
     local failed_count=0
 
-    # Read plugins from file, skip comments and empty lines
     while IFS= read -r plugin || [[ -n "$plugin" ]]; do
-        # Skip comments and empty lines
         [[ -z "$plugin" || "$plugin" =~ ^[[:space:]]*# ]] && continue
-        # Trim whitespace
         plugin=$(echo "$plugin" | xargs)
         [[ -z "$plugin" ]] && continue
 
         local plugin_name="${plugin%@*}"
 
-        # Check if plugin is already installed
         if claude plugin list 2>/dev/null | grep -q "$plugin_name"; then
             echo "  ✅ Plugin '$plugin_name' already installed"
             skipped_count=$((skipped_count + 1))
+        elif claude plugin install "$plugin" --scope user 2>/dev/null; then
+            echo "  ✅ Installed plugin: $plugin_name"
+            installed_count=$((installed_count + 1))
         else
-            if claude plugin install "$plugin" --scope user 2>/dev/null; then
-                echo "  ✅ Installed plugin: $plugin_name"
-                installed_count=$((installed_count + 1))
-            else
-                echo "  ⚠️  Failed to install plugin: $plugin"
-                failed_count=$((failed_count + 1))
-            fi
+            echo "  ⚠️  Failed to install plugin: $plugin"
+            failed_count=$((failed_count + 1))
         fi
     done < "$plugins_file"
 
@@ -351,7 +367,6 @@ install_claude_plugins() {
 setup_claude_mcp_servers() {
     echo "🔧 Setting up Claude Code MCP servers..."
 
-    # Check if claude CLI is available
     if ! command -v claude &> /dev/null; then
         echo "  ⚠️  Claude CLI not found - skipping MCP server setup"
         return 0
@@ -360,8 +375,6 @@ setup_claude_mcp_servers() {
     local added_count=0
     local skipped_count=0
 
-    # Playwright MCP server for browser automation
-    # See: https://github.com/anthropics/mcp-server-playwright
     if claude mcp list 2>/dev/null | grep -q "playwright"; then
         echo "  ✅ MCP server 'playwright' already configured"
         skipped_count=$((skipped_count + 1))
