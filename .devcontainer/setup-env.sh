@@ -16,10 +16,15 @@ set -e
 readonly LOCK_FILE="/tmp/dev-env-setup.lock"
 readonly LOCK_TIMEOUT=60
 
-readonly HOME_DIR="$HOME"
-readonly SSH_DIR="$HOME_DIR/.ssh"
+readonly SSH_DIR="$HOME/.ssh"
 readonly SSH_KEY_FILE="$SSH_DIR/id_rsa"
 readonly SSH_KNOWN_HOSTS_FILE="$SSH_DIR/known_hosts"
+
+# Environment variables for optional full reset (set to "true" to enable)
+# RESET_CLAUDE_CONFIG=true  - Clears ~/.claude including plugins cache
+# RESET_GEMINI_CONFIG=true  - Clears ~/.gemini
+readonly CLAUDE_DIR="$HOME/.claude"
+readonly GEMINI_DIR="$HOME/.gemini"
 
 # =============================================================================
 # UTILITY FUNCTIONS
@@ -152,19 +157,63 @@ setup_github_token() {
 }
 
 # =============================================================================
+# CONFIG RESET FUNCTIONS
+# =============================================================================
+
+reset_config_if_requested() {
+    local reset_var="$1"
+    local config_dir="$2"
+    local config_name="$3"
+
+    if [[ "${!reset_var}" == "true" ]]; then
+        echo "  RESET_${reset_var}=true detected - performing full reset..."
+        if [[ -d "$config_dir" ]]; then
+            rm -rf "$config_dir"/* "$config_dir"/.* 2>/dev/null || true
+            echo "  Cleared $config_dir directory"
+        fi
+    else
+        echo "  Preserving existing $config_name configuration"
+    fi
+}
+
+# =============================================================================
 # CLAUDE CONFIGURATION
 # =============================================================================
 
-copy_claude_settings() {
-    local workspace_folder="$1"
-    local source_file="$workspace_folder/.devcontainer/configuration/settings.devcontainer.json"
+apply_claude_settings() {
     local target_file="$HOME/.claude/settings.json"
 
-    if [[ -f "$source_file" ]]; then
-        cp "$source_file" "$target_file"
-        echo "  ✅ Copied settings.devcontainer.json → ~/.claude/settings.json"
+    # Default settings to apply (merged with existing settings)
+    # These won't overwrite user-added settings like enabledPlugins
+    local default_settings='{
+        "permissions": {
+            "allow": [],
+            "deny": [],
+            "ask": [],
+            "defaultMode": "bypassPermissions"
+        },
+        "language": "Polski"
+    }'
+
+    if [[ -f "$target_file" ]]; then
+        # Merge: existing settings take precedence, but add missing keys from defaults
+        # Using jq to deep merge (defaults * existing = existing wins on conflicts)
+        if command -v jq &> /dev/null; then
+            local merged
+            merged=$(jq -s '.[0] * .[1]' <(echo "$default_settings") "$target_file" 2>/dev/null)
+            if [[ -n "$merged" ]]; then
+                echo "$merged" > "$target_file"
+                echo "  ✅ Merged default settings into ~/.claude/settings.json"
+            else
+                echo "  ⚠️  Failed to merge settings - keeping existing file"
+            fi
+        else
+            echo "  ⚠️  jq not found - cannot merge settings"
+        fi
     else
-        echo "  ⚠️  settings.devcontainer.json not found at: $source_file"
+        # No existing file - create with defaults
+        echo "$default_settings" | jq '.' > "$target_file"
+        echo "  ✅ Created ~/.claude/settings.json with default settings"
     fi
 }
 
@@ -228,12 +277,117 @@ setup_claude_configuration() {
     ensure_directory "$claude_dir/commands" ".claude/commands"
     ensure_directory "$claude_dir/agents" ".claude/agents"
 
-    copy_claude_settings "$workspace_folder"
+    apply_claude_settings
     copy_claude_memory "$workspace_folder"
     copy_claude_files "$workspace_folder" "commands"
     copy_claude_files "$workspace_folder" "agents"
 
     echo "📄 Claude configuration files setup completed!"
+}
+
+# =============================================================================
+# CLAUDE PLUGINS (from official marketplace)
+# =============================================================================
+
+# Plugins list is loaded from external file for easier management
+# See: .devcontainer/configuration/claude-plugins.txt
+# Official marketplace: https://github.com/anthropics/claude-plugins-official
+readonly CLAUDE_PLUGINS_FILE="configuration/claude-plugins.txt"
+
+install_claude_plugins() {
+    local workspace_folder="$1"
+    local plugins_file="$workspace_folder/.devcontainer/$CLAUDE_PLUGINS_FILE"
+
+    echo "📦 Installing Claude Code plugins..."
+
+    # Check if claude CLI is available
+    if ! command -v claude &> /dev/null; then
+        echo "  ⚠️  Claude CLI not found - skipping plugin installation"
+        return 0
+    fi
+
+    # Check if plugins file exists
+    if [[ ! -f "$plugins_file" ]]; then
+        echo "  ⚠️  Plugins file not found: $plugins_file"
+        return 0
+    fi
+
+    local installed_count=0
+    local skipped_count=0
+    local failed_count=0
+
+    # Read plugins from file, skip comments and empty lines
+    while IFS= read -r plugin || [[ -n "$plugin" ]]; do
+        # Skip comments and empty lines
+        [[ -z "$plugin" || "$plugin" =~ ^[[:space:]]*# ]] && continue
+        # Trim whitespace
+        plugin=$(echo "$plugin" | xargs)
+        [[ -z "$plugin" ]] && continue
+
+        local plugin_name="${plugin%@*}"
+
+        # Check if plugin is already installed
+        if claude plugin list 2>/dev/null | grep -q "$plugin_name"; then
+            echo "  ✅ Plugin '$plugin_name' already installed"
+            skipped_count=$((skipped_count + 1))
+        else
+            if claude plugin install "$plugin" --scope user 2>/dev/null; then
+                echo "  ✅ Installed plugin: $plugin_name"
+                installed_count=$((installed_count + 1))
+            else
+                echo "  ⚠️  Failed to install plugin: $plugin"
+                failed_count=$((failed_count + 1))
+            fi
+        fi
+    done < "$plugins_file"
+
+    echo "  📊 Plugins: $installed_count installed, $skipped_count already present, $failed_count failed"
+}
+
+# =============================================================================
+# CLAUDE MCP SERVERS
+# =============================================================================
+
+setup_claude_mcp_servers() {
+    echo "🔧 Setting up Claude Code MCP servers..."
+
+    # Check if claude CLI is available
+    if ! command -v claude &> /dev/null; then
+        echo "  ⚠️  Claude CLI not found - skipping MCP server setup"
+        return 0
+    fi
+
+    local added_count=0
+    local skipped_count=0
+
+    # Playwright MCP server for browser automation
+    # See: https://github.com/anthropics/mcp-server-playwright
+    if claude mcp list 2>/dev/null | grep -q "playwright"; then
+        echo "  ✅ MCP server 'playwright' already configured"
+        skipped_count=$((skipped_count + 1))
+    else
+        local playwright_config='{
+            "type": "stdio",
+            "command": "npx",
+            "args": [
+                "-y",
+                "@playwright/mcp@latest",
+                "--headless",
+                "--browser",
+                "chromium",
+                "--executable-path",
+                "/home/vscode/.cache/ms-playwright/chromium-1200/chrome-linux/chrome"
+            ]
+        }'
+        if claude mcp add-json playwright "$playwright_config" --scope user 2>/dev/null; then
+            echo "  ✅ Added MCP server: playwright"
+            added_count=$((added_count + 1))
+        else
+            echo "  ⚠️  Failed to add MCP server: playwright"
+        fi
+    fi
+
+    echo "  📊 MCP servers: $added_count added, $skipped_count already present"
 }
 
 # =============================================================================
@@ -250,7 +404,13 @@ main() {
     setup_ssh_authentication
     setup_github_token
 
+    # Handle optional full reset before syncing configuration
+    reset_config_if_requested "RESET_CLAUDE_CONFIG" "$CLAUDE_DIR" "Claude Code"
+    reset_config_if_requested "RESET_GEMINI_CONFIG" "$GEMINI_DIR" "Gemini CLI"
+
     setup_claude_configuration "$WORKSPACE_FOLDER"
+    install_claude_plugins "$WORKSPACE_FOLDER"
+    setup_claude_mcp_servers
 
     echo "✅ Development environment setup completed successfully!"
 }

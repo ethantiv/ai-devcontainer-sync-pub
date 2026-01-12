@@ -12,13 +12,20 @@
   },
   "onCreateCommand": {
     "cleanup-ai-dirs": "rm -rf /workspaces/ai-devcontainer-sync/.claude || true",
-    "setup-claude-dir": "sudo mkdir -p /home/vscode/.claude && sudo chown -R vscode:vscode /home/vscode/.claude && rm -rf /home/vscode/.claude/* /home/vscode/.claude/.* 2>/dev/null || true",
+    "setup-claude-dir": "sudo mkdir -p /home/vscode/.claude && sudo chown -R vscode:vscode /home/vscode/.claude",
     "setup-gemini-dir": "sudo mkdir -p /home/vscode/.gemini && sudo chown -R vscode:vscode /home/vscode/.gemini",
     "setup-google-auth-dir": "sudo mkdir -p /home/vscode/.cache/google-vscode-extension/auth && sudo chown -R vscode:vscode /home/vscode/.cache/google-vscode-extension",
     "setup-grte-symlink": "sudo mkdir -p /usr/grte/v5/lib && sudo ln -sf /lib/ld-linux-aarch64.so.1 /usr/grte/v5/lib/ld-linux-aarch64.so.1",
     "setup-locales": "sudo apt-get update && sudo apt-get install -y locales && sudo locale-gen pl_PL.UTF-8 && sudo update-locale"
   },
-  "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.cache && pipx install uv && uv tool install --from git+https://github.com/github/spec-kit.git specify-cli && curl -fsSL https://claude.ai/install.sh | bash && npm install -g @google/gemini-cli && npm install -g playwright && npm install -g @fission-ai/openspec@latest && sudo env PATH=$PATH playwright install-deps && playwright install chromium || true && if [ -f .devcontainer/setup-env.sh ]; then chmod +x .devcontainer/setup-env.sh && ./.devcontainer/setup-env.sh; fi",
+  "postCreateCommand": {
+    "fix-cache-perms": "sudo chown -R vscode:vscode /home/vscode/.cache",
+    "install-uv-and-specify": "pipx install uv && uv tool install --from git+https://github.com/github/spec-kit.git specify-cli",
+    "install-claude-and-setup": "curl -fsSL https://claude.ai/install.sh | bash && if [ -f .devcontainer/setup-env.sh ]; then chmod +x .devcontainer/setup-env.sh && ./.devcontainer/setup-env.sh; fi",
+    "install-gemini-cli": "npm install -g @google/gemini-cli",
+    "install-playwright": "npm install -g playwright && sudo env PATH=$PATH playwright install-deps && playwright install chromium || true",
+    "install-openspec": "npm install -g @fission-ai/openspec@latest"
+  },
   "mounts": [
     {
       "source": "claude-code-config-${devcontainerId}",
