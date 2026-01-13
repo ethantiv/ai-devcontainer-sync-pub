@@ -1,0 +1,15 @@
+{
+  "name": "dev-marketplace",
+  "description": "Local development marketplace for DevContainer plugins",
+  "owner": {
+    "name": "Mirek Zaniewicz"
+  },
+  "plugins": [
+    {
+      "name": "template-generator",
+      "description": "Generate design system HTML templates with guided style questionnaire",
+      "source": "./template-generator",
+      "category": "development"
+    }
+  ]
+}

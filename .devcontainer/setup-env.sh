@@ -24,6 +24,7 @@ readonly SSH_KNOWN_HOSTS_FILE="$SSH_DIR/known_hosts"
 # RESET_CLAUDE_CONFIG=true  - Clears ~/.claude including plugins cache
 # RESET_GEMINI_CONFIG=true  - Clears ~/.gemini
 readonly CLAUDE_DIR="$HOME/.claude"
+readonly CLAUDE_SETTINGS_FILE="$HOME/.claude/settings.json"
 readonly GEMINI_DIR="$HOME/.gemini"
 
 # =============================================================================
@@ -290,6 +291,25 @@ readonly CLAUDE_PLUGINS_FILE="configuration/claude-plugins.txt"
 readonly OFFICIAL_MARKETPLACE_NAME="claude-plugins-official"
 readonly OFFICIAL_MARKETPLACE_REPO="anthropics/claude-plugins-official"
 
+# Helper function to install a single plugin
+# Returns: 0=installed, 1=already present, 2=failed
+install_single_plugin() {
+    local plugin="$1"
+    local display_name="${2:-$plugin}"
+
+    # Check if plugin is already in enabledPlugins (using --arg to prevent injection)
+    if [[ -f "$CLAUDE_SETTINGS_FILE" ]] && jq -e --arg p "$plugin" '.enabledPlugins[$p]' "$CLAUDE_SETTINGS_FILE" &>/dev/null; then
+        echo "  ✅ Plugin '$display_name' already installed"
+        return 1
+    elif claude plugin install "$plugin" --scope user 2>/dev/null; then
+        echo "  ✅ Installed plugin: $display_name"
+        return 0
+    else
+        echo "  ⚠️  Failed to install plugin: $display_name"
+        return 2
+    fi
+}
+
 ensure_marketplace_available() {
     echo "  🏪 Ensuring official marketplace is available..."
 
@@ -329,6 +349,11 @@ install_claude_plugins() {
         return 0
     fi
 
+    if ! command -v jq &> /dev/null; then
+        echo "  ⚠️  jq not found - cannot check installed plugins"
+        return 0
+    fi
+
     if ! ensure_marketplace_available; then
         echo "  ⚠️  Marketplace not available - skipping plugin installation"
         return 0
@@ -345,19 +370,76 @@ install_claude_plugins() {
 
         local plugin_name="${plugin%@*}"
 
-        if claude plugin list 2>/dev/null | grep -q "$plugin_name"; then
-            echo "  ✅ Plugin '$plugin_name' already installed"
-            skipped_count=$((skipped_count + 1))
-        elif claude plugin install "$plugin" --scope user 2>/dev/null; then
-            echo "  ✅ Installed plugin: $plugin_name"
-            installed_count=$((installed_count + 1))
-        else
-            echo "  ⚠️  Failed to install plugin: $plugin"
-            failed_count=$((failed_count + 1))
-        fi
+        install_single_plugin "$plugin" "$plugin_name"
+        case $? in
+            0) installed_count=$((installed_count + 1)) ;;
+            1) skipped_count=$((skipped_count + 1)) ;;
+            2) failed_count=$((failed_count + 1)) ;;
+        esac
     done < "$plugins_file"
 
     echo "  📊 Plugins: $installed_count installed, $skipped_count already present, $failed_count failed"
+}
+
+# =============================================================================
+# LOCAL DEV-MARKETPLACE PLUGINS
+# =============================================================================
+
+install_local_marketplace_plugins() {
+    local workspace_folder="$1"
+    local marketplace_dir="$workspace_folder/.devcontainer/plugins/dev-marketplace"
+    local marketplace_name="dev-marketplace"
+
+    echo "📦 Installing local dev-marketplace plugins..."
+
+    if ! command -v claude &> /dev/null; then
+        echo "  ⚠️  Claude CLI not found - skipping local marketplace setup"
+        return 0
+    fi
+
+    if [[ ! -f "$marketplace_dir/.claude-plugin/marketplace.json" ]]; then
+        echo "  ⚠️  Local marketplace not found: $marketplace_dir"
+        return 0
+    fi
+
+    # Add local marketplace if not already added
+    if claude plugin marketplace list 2>/dev/null | grep -q "$marketplace_name"; then
+        echo "  ✅ Marketplace '$marketplace_name' already configured"
+    else
+        echo "  📦 Adding local marketplace..."
+        if claude plugin marketplace add "$marketplace_dir" 2>/dev/null; then
+            echo "  ✅ Added local marketplace: $marketplace_name"
+        else
+            echo "  ⚠️  Failed to add local marketplace"
+            return 1
+        fi
+    fi
+
+    # Install plugins from local marketplace
+    if ! command -v jq &> /dev/null; then
+        echo "  ⚠️  jq not found - cannot parse marketplace.json"
+        return 0
+    fi
+
+    local plugins_file="$marketplace_dir/.claude-plugin/marketplace.json"
+    local installed_count=0
+    local skipped_count=0
+    local failed_count=0
+
+    # Use while read to handle plugin names with spaces correctly
+    while IFS= read -r plugin; do
+        [[ -z "$plugin" ]] && continue
+        local full_plugin_name="${plugin}@${marketplace_name}"
+
+        install_single_plugin "$full_plugin_name" "$plugin"
+        case $? in
+            0) installed_count=$((installed_count + 1)) ;;
+            1) skipped_count=$((skipped_count + 1)) ;;
+            2) failed_count=$((failed_count + 1)) ;;
+        esac
+    done < <(jq -r '.plugins[].name' "$plugins_file" 2>/dev/null)
+
+    echo "  📊 Local plugins: $installed_count installed, $skipped_count already present, $failed_count failed"
 }
 
 # =============================================================================
@@ -423,6 +505,7 @@ main() {
 
     setup_claude_configuration "$WORKSPACE_FOLDER"
     install_claude_plugins "$WORKSPACE_FOLDER"
+    install_local_marketplace_plugins "$WORKSPACE_FOLDER"
     setup_claude_mcp_servers
 
     echo "✅ Development environment setup completed successfully!"

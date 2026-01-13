@@ -1,0 +1,9 @@
+{
+  "name": "template-generator",
+  "version": "1.0.0",
+  "description": "Generate design system HTML templates with guided style questionnaire using frontend-design skill",
+  "author": {
+    "name": "Mirek Zaniewicz"
+  },
+  "keywords": ["templates", "design-system", "frontend", "html", "css"]
+}
