@@ -42,3 +42,16 @@ If you create any temporary new files, scripts, or helper files for iteration or
 <quality_solutions>
 Write high-quality, general-purpose solutions using standard tools available. Do not hard-code values or create solutions that only work for specific test inputs. Implement the actual logic that solves the problem generally. Tests verify correctness, not define the solution. If a task is unreasonable, infeasible, or if tests are incorrect, inform the user rather than working around them.
 </quality_solutions>
+
+<documentation_language_policy>
+**All documentation must be written in English.** This includes:
+- Code comments and docstrings
+- README files and markdown documentation
+- Commit messages
+- Pull request descriptions
+- Inline code explanations
+- API documentation
+- Architecture Decision Records (ADRs)
+
+This ensures consistency across the international team and maintains compatibility with existing documentation.
+</documentation_language_policy>
