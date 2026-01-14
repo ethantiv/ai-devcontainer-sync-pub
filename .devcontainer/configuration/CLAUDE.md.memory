@@ -63,6 +63,17 @@ Never claim a fix works based solely on code analysis or unit tests passing.
 Always test the actual user flow.
 </verify_fixes_in_ui>
 
+<ui_testing_with_playwright>
+Use MCP Playwright tools to test UI/frontend code:
+- Use `browser_navigate` to open the application URL
+- Use `browser_snapshot` (preferred over screenshots) for accessibility tree inspection
+- Use `browser_click`, `browser_type`, `browser_fill_form` to interact with elements
+- Use `browser_console_messages` to check for JavaScript errors
+- Use `browser_network_requests` to verify API calls
+- After making UI changes, navigate to the page and verify the changes work as expected
+- Test user flows end-to-end before marking tasks as complete
+</ui_testing_with_playwright>
+
 <use_absolute_paths>
 Always use absolute paths in generated projects and configuration files.
 Relative paths break across sessions and different working directories.
