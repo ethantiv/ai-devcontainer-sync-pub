@@ -296,28 +296,57 @@ install_local_marketplace_plugins() {
 # MCP SERVERS
 # =============================================================================
 
-setup_mcp_servers() {
-    echo "🔧 Setting up MCP servers..."
+add_mcp_server() {
+    local name="$1"
+    local config="$2"
 
-    require_command claude || return
-
-    if claude mcp list 2>/dev/null | grep -q "playwright"; then
-        echo "  ✅ playwright already configured"
+    if claude mcp list 2>/dev/null | grep -q "$name"; then
+        echo "  ✅ $name already configured"
         return
     fi
 
-    local config='{
+    if claude mcp add-json "$name" "$config" --scope user 2>/dev/null; then
+        echo "  ✅ Added: $name"
+    else
+        echo "  ⚠️  Failed to add $name"
+    fi
+}
+
+setup_mcp_servers() {
+    echo "🔧 Setting up MCP servers..."
+    require_command claude || return
+
+    add_mcp_server "playwright" '{
         "type": "stdio",
         "command": "npx",
         "args": ["-y", "@playwright/mcp@latest", "--headless", "--browser", "chromium",
                  "--executable-path", "/home/vscode/.cache/ms-playwright/chromium-1200/chrome-linux/chrome"]
     }'
 
-    if claude mcp add-json playwright "$config" --scope user 2>/dev/null; then
-        echo "  ✅ Added: playwright"
-    else
-        echo "  ⚠️  Failed to add playwright"
-    fi
+    add_mcp_server "aws-documentation" '{
+        "type": "stdio",
+        "command": "uvx",
+        "args": ["awslabs.aws-documentation-mcp-server@latest"],
+        "env": {
+            "FASTMCP_LOG_LEVEL": "ERROR",
+            "AWS_DOCUMENTATION_PARTITION": "aws"
+        }
+    }'
+
+    add_mcp_server "terraform" '{
+        "type": "stdio",
+        "command": "uvx",
+        "args": ["awslabs.terraform-mcp-server@latest"],
+        "env": {
+            "FASTMCP_LOG_LEVEL": "ERROR"
+        }
+    }'
+
+    add_mcp_server "aws-api" '{
+        "type": "stdio",
+        "command": "uvx",
+        "args": ["awslabs.aws-api-mcp-server@latest"]
+    }'
 }
 
 # =============================================================================
