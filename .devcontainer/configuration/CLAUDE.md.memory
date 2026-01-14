@@ -23,6 +23,16 @@ Only make changes that are directly requested or clearly necessary. Keep solutio
 - Reuse existing abstractions where possible and follow the DRY principle
 </avoid_overengineering>
 
+<no_backward_compatibility>
+When implementing new features or modifying existing ones:
+- Remove unused code completely instead of keeping deprecated versions
+- Do not create compatibility shims, adapters, or wrapper functions for old APIs
+- Do not rename unused variables to `_var` format - delete them entirely
+- Do not add `// deprecated` or `// removed` comments - simply remove the code
+- Do not re-export types or functions "for backward compatibility"
+- If a function signature changes, update all call sites instead of adding overloads
+</no_backward_compatibility>
+
 <default_to_action>
 By default, implement changes rather than only suggesting them. If the user's intent is unclear, infer the most useful likely action and proceed, using tools to discover any missing details instead of guessing. When making edits is clearly implied by context, proceed with implementation rather than asking for confirmation.
 </default_to_action>
@@ -43,6 +53,21 @@ If you create any temporary new files, scripts, or helper files for iteration or
 Write high-quality, general-purpose solutions using standard tools available. Do not hard-code values or create solutions that only work for specific test inputs. Implement the actual logic that solves the problem generally. Tests verify correctness, not define the solution. If a task is unreasonable, infeasible, or if tests are incorrect, inform the user rather than working around them.
 </quality_solutions>
 
+<security_awareness>
+Be careful not to introduce security vulnerabilities such as command injection, XSS, SQL injection, and other OWASP top 10 vulnerabilities. If you notice insecure code was written, immediately fix it.
+</security_awareness>
+
+<verify_fixes_in_ui>
+For UI changes, always verify fixes using the actual UI before claiming they work.
+Never claim a fix works based solely on code analysis or unit tests passing.
+Always test the actual user flow.
+</verify_fixes_in_ui>
+
+<use_absolute_paths>
+Always use absolute paths in generated projects and configuration files.
+Relative paths break across sessions and different working directories.
+</use_absolute_paths>
+
 <documentation_language_policy>
 **All documentation must be written in English.** This includes:
 - Code comments and docstrings
@@ -55,3 +80,8 @@ Write high-quality, general-purpose solutions using standard tools available. Do
 
 This ensures consistency across the international team and maintains compatibility with existing documentation.
 </documentation_language_policy>
+
+<documentation_diagrams>
+Use Mermaid for diagrams and schemas instead of ASCII art or text-based diagrams.
+Mermaid renders properly in GitHub, VS Code, and documentation tools.
+</documentation_diagrams>
