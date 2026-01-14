@@ -85,3 +85,11 @@ This ensures consistency across the international team and maintains compatibili
 Use Mermaid for diagrams and schemas instead of ASCII art or text-based diagrams.
 Mermaid renders properly in GitHub, VS Code, and documentation tools.
 </documentation_diagrams>
+
+<plan_mode_language>
+When operating in plan mode, generate all plan content in Polish (Polski). This includes:
+- Task descriptions and implementation steps
+- Architecture decisions and rationale
+- File modification summaries
+- Questions for clarification
+</plan_mode_language>
