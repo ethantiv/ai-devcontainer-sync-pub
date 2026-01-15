@@ -1,14 +1,13 @@
 # Template Generator Plugin
 
-Generate design system HTML templates with a guided style questionnaire or automatic context detection using the `frontend-design` skill.
+Generate design system HTML templates by delegating aesthetic decisions to the `frontend-design` skill.
 
 ## Features
 
-- **Interactive mode**: Guided questionnaire to define design preferences
-- **Random mode**: Auto-detect project context and generate templates without questions
+- **Interactive mode**: One question about project mood, then full delegation to `frontend-design`
+- **Random mode**: Auto-detect project context and delegate to `frontend-design`
 - Generates multiple template proposals in one go
 - Creates standalone HTML files with embedded CSS
-- Supports various aesthetic directions (brutalist, swiss, neon-cyber, etc.)
 - Customizable output directory and proposal count
 
 ## Usage
@@ -19,11 +18,18 @@ Generate design system HTML templates with a guided style questionnaire or autom
 /generate-template
 ```
 
-This launches an interactive questionnaire asking about:
-1. **Project Purpose** - Dashboard, landing page, e-commerce, etc.
-2. **Aesthetic Direction** - Brutalist, swiss, editorial, neon-cyber, etc.
-3. **Color Theme** - Light, dark, high contrast, warm/cool palettes
-4. **Typography Style** - Monospace, serif, sans-serif, display
+This asks one question about project mood:
+- **Minimalist** - clean, calm, lots of whitespace
+- **Bold** - strong colors, expressive elements
+- **Elegant** - refined, premium, subtle
+- **Playful** - colorful, friendly, rounded
+- **Corporate** - professional, trustworthy, structured
+- **Futuristic** - tech-forward, modern, innovative
+- **Organic** - natural, earthy, soft shapes
+- **Dark & Dramatic** - moody, high contrast, cinematic
+- **Retro** - nostalgic, vintage vibes, warm tones
+
+The `frontend-design` skill then determines all aesthetic details (colors, typography, animations).
 
 ### With Options
 
@@ -56,22 +62,17 @@ Generate 5 auto-detected templates.
 
 **How context detection works:**
 
-The agent analyzes your project to determine appropriate aesthetics:
+The agent analyzes your project to provide context to `frontend-design`:
 
-| Detection Method | Project Type | Aesthetic Pool |
-|------------------|--------------|----------------|
-| `react`, `vue`, `angular` in package.json | Web Application | Glassmorphism, Swiss, Brutalist, Neon |
-| `next`, `nuxt`, `gatsby` in package.json | JAMstack | Swiss, Japanese Minimalism, Editorial |
-| `dashboard/`, `admin/`, `analytics/` dirs | SaaS Dashboard | Swiss, Scandinavian, Glassmorphism |
-| `products/`, `cart/`, `checkout/` dirs | E-commerce | Scandinavian, Luxury, Organic |
-| `posts/`, `blog/`, `content/` dirs | Blog/Content | Editorial, Swiss, Japanese Minimalism |
-| `tailwind.config.*` detected | Modern utility-first | Swiss, Scandinavian |
-| No specific patterns | Fallback | Random from full pool |
+| Detection Method | Project Type |
+|------------------|--------------|
+| `react`, `vue`, `angular` in package.json | Web Application |
+| `next`, `nuxt`, `gatsby` in package.json | JAMstack |
+| `dashboard/`, `admin/`, `analytics/` dirs | SaaS Dashboard |
+| `products/`, `cart/`, `checkout/` dirs | E-commerce |
+| `posts/`, `blog/`, `content/` dirs | Blog/Content |
 
-Each generated template has a unique combination of:
-- Aesthetic direction (from detected pool)
-- Color theme (dark/light/contrast - no duplicates)
-- Typography style (matching the aesthetic)
+The `frontend-design` skill uses this context to select appropriate aesthetics.
 
 ## Generated Template Structure
 
@@ -86,26 +87,26 @@ Each template is a self-contained HTML file containing:
 - Badges/labels
 - Example layout (header, hero section, footer)
 
-## Template Styles
+## How It Works
 
-Available aesthetic directions:
+This plugin does NOT define aesthetics itself. Instead:
 
-| Style | Description |
-|-------|-------------|
-| Brutalist | Raw, exposed structure, monospace fonts, hard edges |
-| Swiss/Minimal | Clean grids, typography-focused, systematic |
-| Editorial/Geometric | Magazine-like, asymmetric, bold typography |
-| Neon/Cyber | Dark themes, glowing accents, futuristic |
-| Retro/Vintage | Nostalgic, textured, warm colors |
-| Organic/Nature | Soft shapes, earthy tones, flowing layouts |
-| Luxury/Refined | Elegant, premium feel, subtle animations |
-| Playful/Toy-like | Bright colors, rounded shapes, fun interactions |
+1. **Collects minimal input** (mood or project context)
+2. **Delegates to `frontend-design` skill** for all design decisions
+3. **Generates HTML** following the required structure
+4. **Saves templates** with descriptive filenames
+
+The `frontend-design` skill (from `frontend-design@claude-plugins-official`) handles:
+- Aesthetic direction selection
+- Color palette and theme choices
+- Typography selection
+- Animation and interaction style
 
 ## Installation
 
 ### In DevContainer (automatic)
 
-The plugin is automatically installed after DevContainer rebuild via `setup-env.sh`. It registers `dev-marketplace` as a local marketplace and installs plugins globally.
+The plugin is automatically installed after DevContainer rebuild via `setup-env.sh`.
 
 ### Manual installation
 
@@ -123,7 +124,7 @@ claude plugin install template-generator@dev-marketplace --scope user
 # Check marketplace is registered
 claude plugin marketplace list
 
-# Check plugin is enabled in settings
+# Check plugin is enabled
 cat ~/.claude/settings.json | jq '.enabledPlugins'
 ```
 

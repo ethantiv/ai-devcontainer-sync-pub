@@ -9,14 +9,16 @@ Generate design system HTML template(s) using the template-generator agent.
 Parse arguments from: $ARGUMENTS
 - `--count N` or `-c N`: Number of template proposals to generate (default: 3)
 - `--output DIR` or `-o DIR`: Output directory for templates (default: templates)
-- `--random` or `-r`: Skip questionnaire, auto-detect project context and generate templates with intelligent variation
+- `--random` or `-r`: Skip questionnaire, auto-detect project context
 
 **Mode Selection:**
-- **Interactive mode (default):** The agent asks design preference questions
-- **Random mode (`--random`):** The agent analyzes the current project (package.json, file structure, existing styles) to auto-detect context and generates N unique templates without asking questions
+- **Interactive mode (default):** Ask one question about project mood, then delegate to `frontend-design` skill
+- **Random mode (`--random`):** Analyze project context (package.json, structure), then delegate to `frontend-design` skill
 
 Launch the template-generator agent to:
-1. If `--random`: Auto-detect project context using Glob/Read and generate templates
-2. Otherwise: Ask the user a series of closed-ended questions about design preferences
-3. Use the frontend-design skill to generate requested number of template proposals
-4. Save templates to the specified output directory
+1. Parse command arguments
+2. If `--random`: Detect project type from package.json and directory structure
+3. Otherwise: Ask one question about desired mood (minimalist/bold/elegant/playful)
+4. Delegate all aesthetic decisions to the `frontend-design` skill
+5. Generate templates with required HTML structure (colors, typography, buttons, forms, cards)
+6. Save to output directory

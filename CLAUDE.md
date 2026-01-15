@@ -4,30 +4,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Purpose
 
-Standalone DevContainer environment for multi-AI agent development. Configures Claude Code and Gemini CLI with custom slash commands and local plugin marketplace.
+Standalone DevContainer environment for multi-AI agent development. Configures Claude Code and Gemini CLI with custom slash commands, MCP servers, and local plugin marketplace.
 
 **This is a configuration-only repository** - no build, test, or lint commands exist.
 
 ## Architecture
 
-```
-.devcontainer/
-├── devcontainer.json          # Container definition, features, extensions
-├── setup-env.sh               # Main initialization script
-├── configuration/
-│   ├── settings.devcontainer.json
-│   └── CLAUDE.md.memory       # Synced to ~/.claude/CLAUDE.md
-├── commands/                  # Synced to ~/.claude/commands/
-├── agents/                    # Synced to ~/.claude/agents/
-└── plugins/dev-marketplace/   # Local plugin marketplace
-```
-
-### Initialization Flow
-
 `devcontainer.json` → `postCreateCommand` → `setup-env.sh`:
 1. Configures SSH and GitHub authentication
-2. Copies commands, agents, and settings to `~/.claude/`
-3. Syncs local marketplace plugins
+2. Syncs commands and settings to `~/.claude/`
+3. Installs plugins from official and local marketplaces
+4. Configures MCP servers
+
+Key directories:
+- `.devcontainer/configuration/CLAUDE.md.memory` → synced to `~/.claude/CLAUDE.md` (behavioral rules)
+- `.devcontainer/commands/` → synced to `~/.claude/commands/`
+- `.devcontainer/plugins/dev-marketplace/` → local plugin marketplace
 
 ## Environment Variables
 
@@ -40,38 +32,45 @@ For Codespaces: add as repository secrets. For local: create `.devcontainer/.env
 
 ## Custom Slash Commands
 
-Commands in `.devcontainer/commands/` are synced to `~/.claude/commands/`:
+- `/code-review` - Launch parallel code review agents
+- `/git-message` - Generate conventional commit messages
 
-- `/code-review` - Launch parallel code review agents for bugs, security issues, and code quality
-- `/git-message` - Generate short conventional commit messages
+## MCP Servers
+
+Configured automatically by `setup-env.sh`:
+- `playwright` - Browser automation for UI testing
+- `aws-documentation` - AWS docs search and reading
+- `terraform` - Terraform/Terragrunt workflow and AWS provider docs
+- `aws-api` - Execute AWS CLI commands
 
 ## Local Plugin Marketplace
 
-`.devcontainer/plugins/dev-marketplace/` contains plugins for local development and testing. Currently includes `placeholder-plugin` as a template.
+`.devcontainer/plugins/dev-marketplace/` contains plugins for development and testing.
 
 ### Adding a Plugin
 
 1. Create plugin directory in `.devcontainer/plugins/dev-marketplace/`
 2. Add `.claude-plugin/plugin.json` with plugin metadata
-3. Update `marketplace.json` with plugin entry
-4. Rebuild DevContainer or run `.devcontainer/setup-env.sh`
+3. Add entry to `.claude-plugin/marketplace.json`
+4. Run `.devcontainer/setup-env.sh` or rebuild DevContainer
 
-## Persistent Storage
+### Updating a Plugin
 
-Docker volumes preserve configuration across container rebuilds:
-- `claude-code-config-${devcontainerId}` → `~/.claude`
-- `gemini-cli-config-${devcontainerId}` → `~/.gemini`
+Bump version in `.claude-plugin/plugin.json` after modifying plugin files.
+
+## Installed Tools
+
+- **Playwright** - UI testing via MCP
+- **specify-cli** - GitHub Spec-Kit (`specify init --here --ai claude`)
+- **openspec** - OpenAPI spec generation
 
 ## Key Commands
 
 ```bash
-# Verify Claude configuration
+# Verify configuration
 claude mcp list
 claude plugin marketplace list
 
-# Re-sync configuration after changes
+# Re-sync after changes
 ./.devcontainer/setup-env.sh
-
-# GitHub Spec-Kit (manual init per project)
-specify init --here --ai claude
 ```
