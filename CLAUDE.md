@@ -43,6 +43,19 @@ Configured automatically by `setup-env.sh`:
 - `terraform` - Terraform/Terragrunt workflow and AWS provider docs
 - `aws-api` - Execute AWS CLI commands
 
+## Vercel Skills
+
+Installed automatically to `~/.claude/skills/` from [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills):
+- `vercel-react-best-practices` - 45 rules for React/Next.js optimization (waterfalls, bundle size, re-renders, SSR)
+- `web-design-guidelines` - 100+ UI/UX rules (accessibility, forms, animation, dark mode, i18n)
+
+### Adding New Skills
+
+Use [add-skill](https://github.com/vercel-labs/add-skill) CLI:
+```bash
+npx add-skill -g vercel-labs/agent-skills -s <skill-name>
+```
+
 ## Local Plugin Marketplace
 
 `.devcontainer/plugins/dev-marketplace/` contains plugins for development and testing.

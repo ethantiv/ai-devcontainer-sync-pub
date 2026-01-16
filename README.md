@@ -26,6 +26,7 @@ Everything configures automatically on startup.
 - **Claude Code** with custom slash commands (`/code-review`, `/git-message`)
 - **Gemini CLI**
 - **Local plugin marketplace** for development and testing
+- **Vercel Skills** - React/Next.js best practices and UI/UX guidelines
 
 ## Common Commands
 

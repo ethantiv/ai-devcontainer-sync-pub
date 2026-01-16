@@ -350,6 +350,25 @@ setup_mcp_servers() {
 }
 
 # =============================================================================
+# VERCEL SKILLS
+# =============================================================================
+
+install_vercel_skills() {
+    local skills=(vercel-react-best-practices web-design-guidelines)
+
+    echo "📚 Installing Vercel skills..."
+
+    require_command npx || { echo "  ⚠️  npx not found"; return; }
+    ensure_directory "$CLAUDE_DIR/skills"
+
+    if npx -y add-skill -g -y vercel-labs/agent-skills -s "${skills[@]}" 2>/dev/null; then
+        echo "  ✅ Installed ${#skills[@]} skills: ${skills[*]}"
+    else
+        echo "  ⚠️  Failed to install Vercel skills"
+    fi
+}
+
+# =============================================================================
 # MAIN
 # =============================================================================
 
@@ -368,6 +387,7 @@ main() {
     reset_config_if_requested "RESET_GEMINI_CONFIG" "$GEMINI_DIR"
 
     setup_claude_configuration
+    install_vercel_skills
     install_claude_plugins
     install_local_marketplace_plugins
     setup_mcp_servers
