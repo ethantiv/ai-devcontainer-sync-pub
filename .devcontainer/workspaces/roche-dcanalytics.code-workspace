@@ -5,5 +5,8 @@
       "path": "/home/vscode/projects/Roche/dcanalytics"
     }
   ],
-  "settings": {}
+  "settings": {
+    "terminal.integrated.enablePersistentSessions": false,
+    "terminal.integrated.cwd": "${workspaceFolder}"
+  }
 }

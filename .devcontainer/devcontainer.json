@@ -60,7 +60,9 @@
   "customizations": {
     "vscode": {
       "settings": {
-        "workbench.colorTheme": "GitHub Dark Default"
+        "workbench.colorTheme": "GitHub Dark Default",
+        "terminal.integrated.enablePersistentSessions": false,
+        "terminal.integrated.cwd": "${workspaceFolder}"
       },
       "extensions": [
         "-AmazonWebServices.aws-toolkit-vscode",

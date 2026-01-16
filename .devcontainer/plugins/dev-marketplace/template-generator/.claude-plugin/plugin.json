@@ -1,9 +1,0 @@
-{
-  "name": "template-generator",
-  "version": "1.1.0",
-  "description": "Generate design system HTML templates by delegating aesthetic decisions to the frontend-design skill",
-  "author": {
-    "name": "Mirek Zaniewicz"
-  },
-  "keywords": ["templates", "design-system", "frontend", "html", "css"]
-}
