@@ -316,13 +316,6 @@ setup_mcp_servers() {
     echo "🔧 Setting up MCP servers..."
     require_command claude || return
 
-    add_mcp_server "playwright" '{
-        "type": "stdio",
-        "command": "npx",
-        "args": ["-y", "@playwright/mcp@latest", "--headless", "--browser", "chromium",
-                 "--executable-path", "/home/vscode/.cache/ms-playwright/chromium-1200/chrome-linux/chrome"]
-    }'
-
     add_mcp_server "aws-documentation" '{
         "type": "stdio",
         "command": "uvx",
@@ -361,10 +354,24 @@ install_vercel_skills() {
     require_command npx || { echo "  ⚠️  npx not found"; return; }
     ensure_directory "$CLAUDE_DIR/skills"
 
-    if npx -y add-skill -g -y vercel-labs/agent-skills -s "${skills[@]}" 2>/dev/null; then
+    if npx -y add-skill -g -y vercel-labs/agent-skills -a claude-code -s "${skills[@]}" 2>/dev/null; then
         echo "  ✅ Installed ${#skills[@]} skills: ${skills[*]}"
     else
         echo "  ⚠️  Failed to install Vercel skills"
+    fi
+}
+
+install_agent_browser_skill() {
+    echo "📚 Installing agent-browser skill..."
+
+    local skill_dir="$CLAUDE_DIR/skills/agent-browser"
+    ensure_directory "$skill_dir"
+
+    if curl -fsSL -o "$skill_dir/SKILL.md" \
+        "https://raw.githubusercontent.com/vercel-labs/agent-browser/main/skills/agent-browser/SKILL.md" 2>/dev/null; then
+        echo "  ✅ Installed agent-browser skill"
+    else
+        echo "  ⚠️  Failed to install agent-browser skill"
     fi
 }
 
@@ -388,6 +395,7 @@ main() {
 
     setup_claude_configuration
     install_vercel_skills
+    install_agent_browser_skill
     install_claude_plugins
     install_local_marketplace_plugins
     setup_mcp_servers

@@ -39,7 +39,6 @@ For Codespaces: add as repository secrets. For local: create `.devcontainer/.env
 ## MCP Servers
 
 Configured automatically by `setup-env.sh`:
-- `playwright` - Browser automation for UI testing
 - `aws-documentation` - AWS docs search and reading
 - `terraform` - Terraform/Terragrunt workflow and AWS provider docs
 - `aws-api` - Execute AWS CLI commands
@@ -74,7 +73,7 @@ Bump version in `.claude-plugin/plugin.json` after modifying plugin files.
 
 ## Installed Tools
 
-- **Playwright** - UI testing via MCP
+- **agent-browser** - CLI browser automation for AI agents
 - **specify-cli** - GitHub Spec-Kit (`specify init --here --ai claude`)
 - **openspec** - OpenAPI spec generation
 

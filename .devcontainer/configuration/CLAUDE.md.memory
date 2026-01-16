@@ -63,16 +63,29 @@ Never claim a fix works based solely on code analysis or unit tests passing.
 Always test the actual user flow.
 </verify_fixes_in_ui>
 
-<ui_testing_with_playwright>
-Use MCP Playwright tools to test UI/frontend code:
-- Use `browser_navigate` to open the application URL
-- Use `browser_snapshot` (preferred over screenshots) for accessibility tree inspection
-- Use `browser_click`, `browser_type`, `browser_fill_form` to interact with elements
-- Use `browser_console_messages` to check for JavaScript errors
-- Use `browser_network_requests` to verify API calls
-- After making UI changes, navigate to the page and verify the changes work as expected
-- Test user flows end-to-end before marking tasks as complete
-</ui_testing_with_playwright>
+<ui_testing_with_agent_browser>
+Use agent-browser CLI for browser automation and UI testing:
+
+Core workflow:
+1. `agent-browser open <url>` - Navigate to page
+2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
+3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
+4. Re-snapshot after navigation or DOM changes
+
+Common commands:
+- `agent-browser snapshot -i` - Get interactive elements (buttons, inputs, links)
+- `agent-browser click @e1` - Click element by ref
+- `agent-browser fill @e2 "text"` - Fill input field
+- `agent-browser get text @e1` - Get element text
+- `agent-browser screenshot path.png` - Take screenshot
+- `agent-browser console` - View console messages
+- `agent-browser errors` - View page errors
+- `agent-browser wait --load networkidle` - Wait for network idle
+- `agent-browser close` - Close browser
+
+For debugging, use `--headed` flag to show browser window.
+Run `agent-browser --help` for full command reference.
+</ui_testing_with_agent_browser>
 
 <use_absolute_paths>
 Always use absolute paths in generated projects and configuration files.
