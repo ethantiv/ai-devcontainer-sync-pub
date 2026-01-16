@@ -34,6 +34,7 @@ For Codespaces: add as repository secrets. For local: create `.devcontainer/.env
 
 - `/code-review` - Launch parallel code review agents
 - `/git-message` - Generate conventional commit messages
+- `/design-system` - Generate self-contained HTML design system templates with embedded CSS and theming
 
 ## MCP Servers
 
