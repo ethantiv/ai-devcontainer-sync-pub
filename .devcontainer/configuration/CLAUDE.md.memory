@@ -126,3 +126,12 @@ When making significant changes to the codebase (new features, configuration cha
 
 Documentation updates should be part of the same task, not a separate follow-up. This ensures documentation stays in sync with the codebase.
 </keep_documentation_updated>
+
+<frontend_skills_autoload>
+When working on frontend/UI tasks and projects, proactively load relevant skills using the Skill tool:
+- `web-design-guidelines` - Always load for any frontend/UI work (accessibility, forms, animation, dark mode, i18n)
+- `frontend-design` - Always load for any frontend/UI work (distinctive, production-grade interfaces)
+- `vercel-react-best-practices` - Additionally load for React/Next.js projects (waterfalls, bundle size, re-renders, SSR)
+
+Load these skills at the start of the task before writing any UI code. This ensures design quality and adherence to best practices.
+</frontend_skills_autoload>
