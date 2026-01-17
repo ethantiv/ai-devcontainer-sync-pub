@@ -15,9 +15,24 @@ This command operates in two modes:
 <project_analysis>
 Before generating or updating the roadmap, gather basic project context:
 
-1. **Check for package.json** - Extract project name, description, dependencies
-2. **Read README.md** - Understand project purpose and current features
+1. **Detect project manifests** - Search recursively for project definition files:
+   ```bash
+   # Find all manifest files (exclude node_modules, vendor, .git)
+   find . -type f \( \
+     -name "package.json" -o \
+     -name "pyproject.toml" -o \
+     -name "Cargo.toml" -o \
+     -name "go.mod" -o \
+     -name "pom.xml" \
+   \) -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/vendor/*" 2>/dev/null
+   ```
+   - For each found manifest, extract project name, description, and dependencies
+   - If multiple manifests found (monorepo), analyze the structure and relationships
+
+2. **Read README.md** - Check both root and subdirectory READMEs for context
+
 3. **Review git log** - `git log --oneline -20` to see recent development activity
+
 4. **Scan directory structure** - `ls -la` and key subdirectories to understand architecture
 
 This provides baseline context before deep codebase exploration.
