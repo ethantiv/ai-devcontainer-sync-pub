@@ -27,6 +27,8 @@ Key directories:
 |----------|----------|-------------|
 | `GH_TOKEN` | Yes | GitHub PAT with `repo`, `workflow` permissions |
 | `SSH_PRIVATE_KEY` | No | Base64-encoded SSH key for Git auth |
+| `RESET_CLAUDE_CONFIG` | No | Set to `true` to clear `~/.claude/` on startup |
+| `RESET_GEMINI_CONFIG` | No | Set to `true` to clear `~/.gemini/` on startup |
 
 For Codespaces: add as repository secrets. For local: create `.devcontainer/.env`.
 
@@ -74,9 +76,11 @@ Bump version in `.claude-plugin/plugin.json` after modifying plugin files.
 
 ## Installed Tools
 
-- **agent-browser** - CLI browser automation for AI agents
+- **agent-browser** - CLI browser automation for AI agents (`agent-browser --help`)
+- **ast-grep** - Structural code search and rewrite tool using AST patterns (`sg --help`)
 - **specify-cli** - GitHub Spec-Kit (`specify init --here --ai claude`)
-- **openspec** - OpenAPI spec generation
+- **openspec** - OpenAPI spec generation (`openspec --help`)
+- **Gemini CLI** - Google's AI CLI (`gemini`)
 
 ## Key Commands
 

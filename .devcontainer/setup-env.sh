@@ -375,6 +375,22 @@ install_agent_browser_skill() {
     fi
 }
 
+install_ast_grep_skill() {
+    echo "📚 Installing ast-grep skill..."
+
+    require_command claude || return
+
+    ensure_marketplace "ast-grep-marketplace" "ast-grep/claude-skill" || return
+
+    local rc=0
+    install_plugin "ast-grep@ast-grep-marketplace" "ast-grep" || rc=$?
+    case $rc in
+        0) echo "  ✅ ast-grep skill installed" ;;
+        1) echo "  ✅ ast-grep skill already present" ;;
+        2) echo "  ⚠️  Failed to install ast-grep skill" ;;
+    esac
+}
+
 # =============================================================================
 # MAIN
 # =============================================================================
@@ -396,6 +412,7 @@ main() {
     setup_claude_configuration
     install_vercel_skills
     install_agent_browser_skill
+    install_ast_grep_skill
     install_claude_plugins
     install_local_marketplace_plugins
     setup_mcp_servers
