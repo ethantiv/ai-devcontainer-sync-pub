@@ -63,7 +63,8 @@
       "settings": {
         "workbench.colorTheme": "GitHub Dark Default",
         "terminal.integrated.enablePersistentSessions": false,
-        "terminal.integrated.cwd": "${workspaceFolder}"
+        "terminal.integrated.cwd": "${workspaceFolder}",
+        "terminal.integrated.gpuAcceleration": "off"
       },
       "extensions": [
         "-AmazonWebServices.aws-toolkit-vscode",
