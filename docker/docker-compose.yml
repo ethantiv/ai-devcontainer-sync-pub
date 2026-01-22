@@ -1,0 +1,32 @@
+services:
+  claude:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: claude-terminal:latest
+    container_name: claude-dev
+    hostname: claude-dev
+    env_file:
+      - .env
+    volumes:
+      # Persistent configuration
+      - claude-config:/home/developer/.claude
+      - gemini-config:/home/developer/.gemini
+      # Projects directory (bind mount)
+      - ~/projekty:/home/developer/projects
+    stdin_open: true
+    tty: true
+    working_dir: /home/developer/projects
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
+
+volumes:
+  claude-config:
+    name: claude-config
+  gemini-config:
+    name: gemini-config
