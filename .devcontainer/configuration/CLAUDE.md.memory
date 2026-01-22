@@ -1,137 +1,60 @@
-<git_operations>
-Wait for explicit user permission before executing any Git or GitHub commands (git add, commit, push, pull, merge, rebase, gh pr create/merge, etc.). The user prefers to maintain full control over version control operations to review changes before they are committed. Execute Git commands only when:
+## Git Operations
+
+Wait for explicit user permission before executing Git or GitHub commands (git add, commit, push, pull, merge, rebase, gh pr create/merge). Execute Git commands only when:
 - The user explicitly requests it in their message
-- The user invokes a Claude Code slash command (e.g., /commit)
+- The user invokes a slash command (e.g., /commit)
 
-After completing coding tasks, present a summary of changes made and wait for the user to decide when to commit. This ensures the user can review, test, and verify changes before they become part of the repository history.
-</git_operations>
+After completing coding tasks, present a concise summary of changes and let the user decide when to commit. This allows them to review, test, and verify changes before committing.
 
-<investigate_before_answering>
-Read and understand relevant files before proposing code edits. Do not speculate about code you have not inspected. If the user references a specific file or path, open and inspect it before explaining or proposing fixes. Be rigorous and persistent in searching code for key facts. Thoroughly review the style, conventions, and abstractions of the codebase before implementing new features. This approach ensures grounded, hallucination-free answers based on actual code rather than assumptions.
-</investigate_before_answering>
+## Simplicity and Focus
 
-<avoid_overengineering>
-Only make changes that are directly requested or clearly necessary. Keep solutions simple and focused.
-- Do not add features, refactor code, or make "improvements" beyond what was asked
-- A bug fix does not need surrounding code cleaned up
-- A simple feature does not need extra configurability
-- Do not add error handling, fallbacks, or validation for scenarios that cannot happen
-- Trust internal code and framework guarantees; only validate at system boundaries (user input, external APIs)
-- Do not create helpers, utilities, or abstractions for one-time operations
-- Do not design for hypothetical future requirements
+Make only the changes that are directly requested or clearly necessary:
+
+- A bug fix stands on its own without cleaning up surrounding code
+- A simple feature works without extra configurability
+- Trust internal code and framework guarantees; validate only at system boundaries (user input, external APIs)
+- Create helpers or abstractions only when they'll be reused
 - The right amount of complexity is the minimum needed for the current task
 - Reuse existing abstractions where possible and follow the DRY principle
-</avoid_overengineering>
 
-<no_backward_compatibility>
-When implementing new features or modifying existing ones:
-- Remove unused code completely instead of keeping deprecated versions
-- Do not create compatibility shims, adapters, or wrapper functions for old APIs
-- Do not rename unused variables to `_var` format - delete them entirely
-- Do not add `// deprecated` or `// removed` comments - simply remove the code
-- Do not re-export types or functions "for backward compatibility"
-- If a function signature changes, update all call sites instead of adding overloads
-</no_backward_compatibility>
+When modifying code, remove unused code completely - delete deprecated versions, compatibility shims, and unused variables rather than commenting them out or renaming them.
 
-<default_to_action>
-By default, implement changes rather than only suggesting them. If the user's intent is unclear, infer the most useful likely action and proceed, using tools to discover any missing details instead of guessing. When making edits is clearly implied by context, proceed with implementation rather than asking for confirmation.
-</default_to_action>
+## Code Quality and Security
 
-<use_parallel_tool_calls>
-If you intend to call multiple tools and there are no dependencies between the tool calls, make all of the independent tool calls in parallel. Prioritize calling tools simultaneously whenever the actions can be done in parallel rather than sequentially. For example, when reading 3 files, run 3 tool calls in parallel to read all 3 files into context at the same time. This increases speed and efficiency. However, if some tool calls depend on previous calls to inform dependent values like parameters, call these tools sequentially. Do not use placeholders or guess missing parameters in tool calls.
-</use_parallel_tool_calls>
+Write general-purpose solutions using standard tools. Implement actual logic that solves the problem generally rather than hard-coding for specific test inputs. If a task is unreasonable or tests are incorrect, inform the user rather than working around them.
 
-<communication_style>
-Provide direct, fact-based progress reports rather than self-celebratory updates. Be conversational and natural, but avoid unnecessary verbosity. Skip detailed summaries unless specifically requested. After completing a task that involves tool use, provide a quick summary of the work done only when it adds value for the user.
-</communication_style>
+Be aware of security vulnerabilities such as command injection, XSS, SQL injection, and other OWASP top 10 issues. Fix insecure code when you notice it.
 
-<clean_up_temporary_files>
-If you create any temporary new files, scripts, or helper files for iteration or testing purposes, clean up these files by removing them at the end of the task. This keeps the workspace organized and prevents accumulation of unnecessary files.
-</clean_up_temporary_files>
+## Tool Usage
 
-<quality_solutions>
-Write high-quality, general-purpose solutions using standard tools available. Do not hard-code values or create solutions that only work for specific test inputs. Implement the actual logic that solves the problem generally. Tests verify correctness, not define the solution. If a task is unreasonable, infeasible, or if tests are incorrect, inform the user rather than working around them.
-</quality_solutions>
+When calling multiple tools with no dependencies between them, make all independent calls in parallel. For example, read 3 files simultaneously rather than sequentially. This increases speed and efficiency. When calls depend on previous results, call them sequentially without guessing missing parameters.
 
-<security_awareness>
-Be careful not to introduce security vulnerabilities such as command injection, XSS, SQL injection, and other OWASP top 10 vulnerabilities. If you notice insecure code was written, immediately fix it.
-</security_awareness>
+Use absolute paths in generated projects and configuration files because relative paths break across sessions and different working directories.
 
-<verify_fixes_in_ui>
-For UI changes, always verify fixes using the actual UI before claiming they work.
-Never claim a fix works based solely on code analysis or unit tests passing.
-Always test the actual user flow.
-</verify_fixes_in_ui>
+Clean up any temporary files, scripts, or helpers you create for iteration or testing at the end of the task.
 
-<ui_testing_with_agent_browser>
-Use agent-browser CLI for browser automation and UI testing:
+## UI Testing
 
-Core workflow:
-1. `agent-browser open <url>` - Navigate to page
-2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
-3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
-4. Re-snapshot after navigation or DOM changes
+For UI changes, verify fixes using the actual UI before claiming they work. Test the actual user flow rather than relying solely on code analysis or unit tests.
+Use agent-browser CLI for browser automation.
 
-Common commands:
-- `agent-browser snapshot -i` - Get interactive elements (buttons, inputs, links)
-- `agent-browser click @e1` - Click element by ref
-- `agent-browser fill @e2 "text"` - Fill input field
-- `agent-browser get text @e1` - Get element text
-- `agent-browser screenshot path.png` - Take screenshot
-- `agent-browser console` - View console messages
-- `agent-browser errors` - View page errors
-- `agent-browser wait --load networkidle` - Wait for network idle
-- `agent-browser close` - Close browser
+## Documentation
 
-For debugging, use `--headed` flag to show browser window.
-Run `agent-browser --help` for full command reference.
-</ui_testing_with_agent_browser>
+Write all documentation in English, including code comments, docstrings, README files, commit messages, PR descriptions, and API documentation. This ensures consistency across the international team.
 
-<use_absolute_paths>
-Always use absolute paths in generated projects and configuration files.
-Relative paths break across sessions and different working directories.
-</use_absolute_paths>
+When operating in plan mode, generate plan content in Polish (Polski) - task descriptions, implementation steps, architecture decisions, and questions for clarification.
 
-<documentation_language_policy>
-**All documentation must be written in English.** This includes:
-- Code comments and docstrings
-- README files and markdown documentation
-- Commit messages
-- Pull request descriptions
-- Inline code explanations
-- API documentation
-- Architecture Decision Records (ADRs)
+Use Mermaid for diagrams and schemas instead of ASCII art. Mermaid renders properly in GitHub, VS Code, and documentation tools.
 
-This ensures consistency across the international team and maintains compatibility with existing documentation.
-</documentation_language_policy>
+When making significant changes to the codebase (new features, configuration changes, architecture modifications), update relevant documentation files (README.md, CLAUDE.md) as part of the same task.
 
-<documentation_diagrams>
-Use Mermaid for diagrams and schemas instead of ASCII art or text-based diagrams.
-Mermaid renders properly in GitHub, VS Code, and documentation tools.
-</documentation_diagrams>
+## Communication
 
-<plan_mode_language>
-When operating in plan mode, generate all plan content in Polish (Polski). This includes:
-- Task descriptions and implementation steps
-- Architecture decisions and rationale
-- File modification summaries
-- Questions for clarification
-</plan_mode_language>
+Provide direct, fact-based progress reports. Be conversational and natural without unnecessary verbosity, skip detailed summaries.
 
-<keep_documentation_updated>
-When making significant changes to the codebase (new features, configuration changes, architecture modifications), update the relevant documentation files:
-- README.md for user-facing changes and quick start information
-- CLAUDE.md for architecture details and developer guidance
-- Other documentation files as appropriate
+## Frontend Skills
 
-Documentation updates should be part of the same task, not a separate follow-up. This ensures documentation stays in sync with the codebase.
-</keep_documentation_updated>
-
-<frontend_skills_autoload>
-When working on frontend/UI tasks and projects, proactively load relevant skills using the Skill tool:
-- `web-design-guidelines` - Always load for any frontend/UI work (accessibility, forms, animation, dark mode, i18n)
-- `frontend-design` - Always load for any frontend/UI work (distinctive, production-grade interfaces)
-- `vercel-react-best-practices` - Additionally load for React/Next.js projects (waterfalls, bundle size, re-renders, SSR)
-
-Load these skills at the start of the task before writing any UI code. This ensures design quality and adherence to best practices.
-</frontend_skills_autoload>
+When working on frontend/UI tasks, load relevant skills at the start before writing UI code:
+- `web-design-guidelines` - For any frontend/UI work (accessibility, forms, animation, dark mode, i18n)
+- `frontend-design` - For any frontend/UI work (distinctive, production-grade interfaces)
+- `vercel-react-best-practices` - Additionally for React/Next.js projects (waterfalls, bundle size, re-renders, SSR)

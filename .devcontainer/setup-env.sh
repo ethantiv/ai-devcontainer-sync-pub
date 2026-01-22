@@ -29,11 +29,10 @@ readonly LOCAL_MARKETPLACE_NAME="dev-marketplace"
 # =============================================================================
 
 ensure_directory() {
-    local dir="$1"
-    [[ -d "$dir" ]] || mkdir -p "$dir"
+    [[ -d "$1" ]] || mkdir -p "$1"
 }
 
-require_command() {
+has_command() {
     command -v "$1" &>/dev/null
 }
 
@@ -88,7 +87,7 @@ setup_ssh_authentication() {
 
     if [[ -f "$SSH_KEY_FILE" ]]; then
         echo "📄 Using existing ~/.ssh/id_rsa"
-        [[ "$(stat -c '%a' "$SSH_KEY_FILE")" == "600" ]] || chmod 600 "$SSH_KEY_FILE"
+        chmod 600 "$SSH_KEY_FILE" 2>/dev/null || true
         return
     fi
 
@@ -145,7 +144,7 @@ apply_claude_settings() {
         "language": "Polski"
     }'
 
-    require_command jq || { echo "  ⚠️  jq not found - cannot manage settings"; return; }
+    has_command jq || { echo "  ⚠️  jq not found - cannot manage settings"; return; }
 
     if [[ -f "$CLAUDE_SETTINGS_FILE" ]]; then
         local merged
@@ -201,7 +200,8 @@ setup_claude_configuration() {
 # CLAUDE PLUGINS
 # =============================================================================
 
-# Returns: 0=installed, 1=already present, 2=failed
+# Install a Claude plugin. Returns: 0=installed, 1=already present, 2=failed
+# Note: < /dev/null prevents claude CLI from consuming stdin (breaks while-read loops)
 install_plugin() {
     local plugin="$1"
     local display_name="${2:-$plugin}"
@@ -210,12 +210,27 @@ install_plugin() {
         return 1
     fi
 
-    if claude plugin install "$plugin" --scope user 2>/dev/null; then
+    if claude plugin install "$plugin" --scope user < /dev/null 2>/dev/null; then
         echo "  ✅ Installed: $display_name"
         return 0
     fi
     echo "  ⚠️  Failed: $display_name"
     return 2
+}
+
+# Update counters based on install_plugin return code
+# Usage: update_counters $? installed skipped failed
+update_plugin_counters() {
+    local rc="$1"
+    local -n _installed="$2"
+    local -n _skipped="$3"
+    local -n _failed="$4"
+
+    case $rc in
+        0) ((_installed++)) || true ;;
+        1) ((_skipped++)) || true ;;
+        2) ((_failed++)) || true ;;
+    esac
 }
 
 ensure_marketplace() {
@@ -234,34 +249,63 @@ ensure_marketplace() {
     return 1
 }
 
-install_claude_plugins() {
+# Parse plugins and skills from configuration file
+# Handles: official marketplace, external marketplaces, vercel skills, github skills
+install_all_plugins_and_skills() {
     local plugins_file="$WORKSPACE_FOLDER/.devcontainer/$CLAUDE_PLUGINS_FILE"
 
-    echo "📦 Installing plugins..."
+    echo "📦 Installing plugins and skills..."
 
-    require_command claude || { echo "  ⚠️  Claude CLI not found"; return; }
-    require_command jq || { echo "  ⚠️  jq not found"; return; }
+    has_command claude || { echo "  ⚠️  Claude CLI not found"; return; }
+    has_command jq || { echo "  ⚠️  jq not found"; return; }
     [[ -f "$plugins_file" ]] || { echo "  ⚠️  $plugins_file not found"; return; }
+
     ensure_marketplace "$OFFICIAL_MARKETPLACE_NAME" "$OFFICIAL_MARKETPLACE_REPO" || return
     claude plugin marketplace update "$OFFICIAL_MARKETPLACE_NAME" 2>/dev/null || true
 
-    local installed=0 skipped=0 failed=0
+    local plugins_installed=0 plugins_skipped=0 plugins_failed=0
+    local skills_installed=0 skills_failed=0
+    declare -A external_marketplaces
 
-    while IFS= read -r plugin || [[ -n "$plugin" ]]; do
-        [[ -z "$plugin" || "$plugin" =~ ^[[:space:]]*# ]] && continue
-        plugin=$(echo "$plugin" | xargs)
-        [[ -z "$plugin" ]] && continue
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+        line=$(echo "$line" | xargs)
+        [[ -z "$line" ]] && continue
 
-        local rc=0
-        install_plugin "$plugin" "${plugin%@*}" || rc=$?
-        case $rc in
-            0) installed=$((installed + 1)) ;;
-            1) skipped=$((skipped + 1)) ;;
-            2) failed=$((failed + 1)) ;;
-        esac
+        if [[ "$line" =~ @ ]]; then
+            local name="${line%%@*}"
+            local rest="${line#*@}"
+            local type="${rest%%=*}"
+            local source="${rest#*=}"
+
+            case "$type" in
+                *-marketplace)
+                    if [[ -z "${external_marketplaces[$type]}" ]]; then
+                        ensure_marketplace "$type" "$source" || continue
+                        claude plugin marketplace update "$type" 2>/dev/null || true
+                        external_marketplaces[$type]=1
+                    fi
+                    local rc=0; install_plugin "${name}@${type}" "$name" || rc=$?
+                    update_plugin_counters $rc plugins_installed plugins_skipped plugins_failed
+                    ;;
+                vercel-skills)
+                    install_vercel_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
+                    ;;
+                github)
+                    install_github_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
+                    ;;
+                *)
+                    echo "  ⚠️  Unknown source type: $type for $name"
+                    ;;
+            esac
+        else
+            local rc=0; install_plugin "${line}@${OFFICIAL_MARKETPLACE_NAME}" "$line" || rc=$?
+            update_plugin_counters $rc plugins_installed plugins_skipped plugins_failed
+        fi
     done < "$plugins_file"
 
-    echo "  📊 Official: $installed installed, $skipped present, $failed failed"
+    echo "  📊 Plugins: $plugins_installed installed, $plugins_skipped present, $plugins_failed failed"
+    echo "  📊 Skills: $skills_installed installed, $skills_failed failed"
 }
 
 install_local_marketplace_plugins() {
@@ -270,8 +314,8 @@ install_local_marketplace_plugins() {
 
     echo "📦 Installing local plugins..."
 
-    require_command claude || return
-    require_command jq || return
+    has_command claude || return
+    has_command jq || return
     [[ -f "$manifest" ]] || { echo "  ⚠️  Local marketplace not found"; return; }
     ensure_marketplace "$LOCAL_MARKETPLACE_NAME" "$marketplace_dir" || return
 
@@ -279,14 +323,8 @@ install_local_marketplace_plugins() {
 
     while IFS= read -r plugin; do
         [[ -z "$plugin" ]] && continue
-
-        local rc=0
-        install_plugin "${plugin}@${LOCAL_MARKETPLACE_NAME}" "$plugin" || rc=$?
-        case $rc in
-            0) installed=$((installed + 1)) ;;
-            1) skipped=$((skipped + 1)) ;;
-            2) failed=$((failed + 1)) ;;
-        esac
+        local rc=0; install_plugin "${plugin}@${LOCAL_MARKETPLACE_NAME}" "$plugin" || rc=$?
+        update_plugin_counters $rc installed skipped failed
     done < <(jq -r '.plugins[].name' "$manifest" 2>/dev/null)
 
     echo "  📊 Local: $installed installed, $skipped present, $failed failed"
@@ -314,7 +352,7 @@ add_mcp_server() {
 
 setup_mcp_servers() {
     echo "🔧 Setting up MCP servers..."
-    require_command claude || return
+    has_command claude || return
 
     add_mcp_server "aws-documentation" '{
         "type": "stdio",
@@ -343,52 +381,49 @@ setup_mcp_servers() {
 }
 
 # =============================================================================
-# VERCEL SKILLS
+# SKILL INSTALLATION HELPERS
 # =============================================================================
 
-install_vercel_skills() {
-    local skills=(vercel-react-best-practices web-design-guidelines)
+# Install skill from Vercel skills repo using add-skill CLI
+# Args: skill_name, repo (e.g., vercel-labs/agent-skills)
+install_vercel_skill() {
+    local name="$1"
+    local repo="$2"
 
-    echo "📚 Installing Vercel skills..."
-
-    require_command npx || { echo "  ⚠️  npx not found"; return; }
+    has_command npx || return 1
     ensure_directory "$CLAUDE_DIR/skills"
 
-    if npx -y add-skill -g -y vercel-labs/agent-skills -a claude-code -s "${skills[@]}" 2>/dev/null; then
-        echo "  ✅ Installed ${#skills[@]} skills: ${skills[*]}"
-    else
-        echo "  ⚠️  Failed to install Vercel skills"
+    # Note: < /dev/null prevents npx from consuming stdin (which would break the while-read loop)
+    if npx -y add-skill -g -y "$repo" -a claude-code -s "$name" < /dev/null 2>/dev/null; then
+        echo "  ✅ Installed skill: $name"
+        return 0
     fi
+    echo "  ⚠️  Failed to install skill: $name"
+    return 1
 }
 
-install_agent_browser_skill() {
-    echo "📚 Installing agent-browser skill..."
+# Install skill from direct GitHub path
+# Args: skill_name, path (e.g., owner/repo/path-to-SKILL.md)
+install_github_skill() {
+    local name="$1"
+    local path="$2"
 
-    local skill_dir="$CLAUDE_DIR/skills/agent-browser"
+    local skill_dir="$CLAUDE_DIR/skills/$name"
     ensure_directory "$skill_dir"
 
-    if curl -fsSL -o "$skill_dir/SKILL.md" \
-        "https://raw.githubusercontent.com/vercel-labs/agent-browser/main/skills/agent-browser/SKILL.md" 2>/dev/null; then
-        echo "  ✅ Installed agent-browser skill"
-    else
-        echo "  ⚠️  Failed to install agent-browser skill"
+    # Reconstruct URL: owner/repo/path -> raw.githubusercontent.com/owner/repo/main/path
+    local owner="${path%%/*}"
+    local rest="${path#*/}"
+    local repo="${rest%%/*}"
+    local file_path="${rest#*/}"
+    local url="https://raw.githubusercontent.com/${owner}/${repo}/main/${file_path}"
+
+    if curl -fsSL -o "$skill_dir/SKILL.md" "$url" < /dev/null 2>/dev/null; then
+        echo "  ✅ Installed skill: $name"
+        return 0
     fi
-}
-
-install_ast_grep_skill() {
-    echo "📚 Installing ast-grep skill..."
-
-    require_command claude || return
-
-    ensure_marketplace "ast-grep-marketplace" "ast-grep/claude-skill" || return
-
-    local rc=0
-    install_plugin "ast-grep@ast-grep-marketplace" "ast-grep" || rc=$?
-    case $rc in
-        0) echo "  ✅ ast-grep skill installed" ;;
-        1) echo "  ✅ ast-grep skill already present" ;;
-        2) echo "  ⚠️  Failed to install ast-grep skill" ;;
-    esac
+    echo "  ⚠️  Failed to install skill: $name"
+    return 1
 }
 
 # =============================================================================
@@ -410,10 +445,7 @@ main() {
     reset_config_if_requested "RESET_GEMINI_CONFIG" "$GEMINI_DIR"
 
     setup_claude_configuration
-    install_vercel_skills
-    install_agent_browser_skill
-    install_ast_grep_skill
-    install_claude_plugins
+    install_all_plugins_and_skills
     install_local_marketplace_plugins
     setup_mcp_servers
 
