@@ -1,25 +1,32 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Standalone DevContainer for multi-AI agent development. Configures Claude Code and Gemini CLI with custom slash commands, MCP servers, plugins, and skills.
 
-## Repository Purpose
-
-Standalone DevContainer environment for multi-AI agent development. Configures Claude Code and Gemini CLI with custom slash commands, MCP servers, and local plugin marketplace.
-
-**This is a configuration-only repository** - no build, test, or lint commands exist.
+**Configuration-only repository** - no build, test, or lint commands.
 
 ## Architecture
 
-`devcontainer.json` → `postCreateCommand` → `setup-env.sh`:
-1. Configures SSH and GitHub authentication
-2. Syncs commands and settings to `~/.claude/`
-3. Installs plugins from official and local marketplaces
-4. Configures MCP servers
+```mermaid
+flowchart TD
+    A[devcontainer.json] --> B[postCreateCommand]
+    B --> C[setup-env.sh]
 
-Key directories:
-- `.devcontainer/configuration/CLAUDE.md.memory` → synced to `~/.claude/CLAUDE.md` (behavioral rules)
-- `.devcontainer/commands/` → synced to `~/.claude/commands/`
-- `.devcontainer/plugins/dev-marketplace/` → local plugin marketplace
+    C --> D[SSH & GitHub auth]
+    C --> E[Claude configuration]
+    C --> F[MCP servers]
+
+    E --> G[commands/]
+    E --> H[CLAUDE.md.memory]
+    E --> I[claude-plugins.txt]
+    E --> J[dev-marketplace/]
+```
+
+| Source | Destination |
+|--------|-------------|
+| `.devcontainer/configuration/CLAUDE.md.memory` | `~/.claude/CLAUDE.md` |
+| `.devcontainer/configuration/claude-plugins.txt` | plugin/skill manifest |
+| `.devcontainer/commands/` | `~/.claude/commands/` |
+| `.devcontainer/plugins/dev-marketplace/` | local marketplace |
 
 ## Environment Variables
 
@@ -27,68 +34,71 @@ Key directories:
 |----------|----------|-------------|
 | `GH_TOKEN` | Yes | GitHub PAT with `repo`, `workflow` permissions |
 | `SSH_PRIVATE_KEY` | No | Base64-encoded SSH key for Git auth |
-| `RESET_CLAUDE_CONFIG` | No | Set to `true` to clear `~/.claude/` on startup |
-| `RESET_GEMINI_CONFIG` | No | Set to `true` to clear `~/.gemini/` on startup |
+| `RESET_CLAUDE_CONFIG` | No | Clear `~/.claude/` on startup |
+| `RESET_GEMINI_CONFIG` | No | Clear `~/.gemini/` on startup |
 
-For Codespaces: add as repository secrets. For local: create `.devcontainer/.env`.
+Codespaces: add as repository secrets. Local: create `.devcontainer/.env`.
 
-## Custom Slash Commands
+## Plugins & Skills
 
-- `/code-review` - Launch parallel code review agents
-- `/git-message` - Generate conventional commit messages
-- `/design-system` - Generate self-contained HTML design system templates with embedded CSS and theming
-- `/roadmap` - Generate or update ROADMAP.json with completed features and future proposals
+Configured in `.devcontainer/configuration/claude-plugins.txt`:
+
+```bash
+plugin-name                                    # Official marketplace
+plugin-name@marketplace=owner/repo             # External marketplace
+skill-name@vercel-skills=vercel-labs/agent-skills  # Vercel skills
+skill-name@github=owner/repo/path-to-SKILL.md  # GitHub direct
+```
+
+**Installed**: agent-sdk-dev, code-simplifier, commit-commands, feature-dev, frontend-design, ralph-loop, pyright-lsp, typescript-lsp, context7, ast-grep
+
+**Skills**: vercel-react-best-practices, web-design-guidelines, agent-browser
+
+### Local Marketplace
+
+Directory `.devcontainer/plugins/dev-marketplace/` hosts plugins for development.
+
+To add a plugin:
+1. Create directory with `.claude-plugin/plugin.json`
+2. Add entry to `.claude-plugin/marketplace.json`
+3. Run `.devcontainer/setup-env.sh`
+
+To update: bump version in `plugin.json` after changes.
+
+## Slash Commands
+
+Located in `.devcontainer/commands/`:
+
+| Command | Description |
+|---------|-------------|
+| `/code-review` | Launch parallel code review agents |
+| `/git-message` | Generate conventional commit messages |
+| `/design-system` | Generate HTML design system templates |
+| `/roadmap` | Generate or update ROADMAP.json |
 
 ## MCP Servers
 
-Configured automatically by `setup-env.sh`:
-- `aws-documentation` - AWS docs search and reading
-- `terraform` - Terraform/Terragrunt workflow and AWS provider docs
-- `aws-api` - Execute AWS CLI commands
-
-## Vercel Skills
-
-Installed automatically to `~/.claude/skills/` from [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills):
-- `vercel-react-best-practices` - 45 rules for React/Next.js optimization (waterfalls, bundle size, re-renders, SSR)
-- `web-design-guidelines` - 100+ UI/UX rules (accessibility, forms, animation, dark mode, i18n)
-
-### Adding New Skills
-
-Use [add-skill](https://github.com/vercel-labs/add-skill) CLI:
-```bash
-npx add-skill -g vercel-labs/agent-skills -s <skill-name>
-```
-
-## Local Plugin Marketplace
-
-`.devcontainer/plugins/dev-marketplace/` contains plugins for development and testing.
-
-### Adding a Plugin
-
-1. Create plugin directory in `.devcontainer/plugins/dev-marketplace/`
-2. Add `.claude-plugin/plugin.json` with plugin metadata
-3. Add entry to `.claude-plugin/marketplace.json`
-4. Run `.devcontainer/setup-env.sh` or rebuild DevContainer
-
-### Updating a Plugin
-
-Bump version in `.claude-plugin/plugin.json` after modifying plugin files.
+| Server | Description |
+|--------|-------------|
+| `aws-documentation` | AWS docs search and reading |
+| `terraform` | Terraform/Terragrunt workflow and AWS provider docs |
+| `aws-api` | Execute AWS CLI commands |
 
 ## Installed Tools
 
-- **agent-browser** - CLI browser automation for AI agents (`agent-browser --help`)
-- **ast-grep** - Structural code search and rewrite tool using AST patterns (`sg --help`)
-- **specify-cli** - GitHub Spec-Kit (`specify init --here --ai claude`)
-- **openspec** - OpenAPI spec generation (`openspec --help`)
-- **Gemini CLI** - Google's AI CLI (`gemini`)
+| Tool | Command | Description |
+|------|---------|-------------|
+| agent-browser | `agent-browser` | CLI browser automation |
+| ast-grep | `sg` | Structural code search using AST patterns |
+| specify-cli | `specify` | GitHub Spec-Kit |
+| openspec | `openspec` | OpenAPI spec generation |
+| Gemini CLI | `gemini` | Google's AI CLI |
 
-## Key Commands
+## Quick Reference
 
 ```bash
-# Verify configuration
-claude mcp list
-claude plugin marketplace list
-
-# Re-sync after changes
-./.devcontainer/setup-env.sh
+claude mcp list                                    # Verify MCP servers
+claude plugin marketplace list                     # List installed plugins
+claude plugin marketplace update claude-plugins-official  # Update plugins
+./.devcontainer/setup-env.sh                       # Re-sync configuration
 ```
