@@ -1,12 +1,14 @@
 {
   "name": "AI Agents Sandbox",
-  "image": "mcr.microsoft.com/devcontainers/base:noble",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "features": {
     "ghcr.io/devcontainers/features/aws-cli:1": {},
     "ghcr.io/devcontainers/features/common-utils:2": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "installYarnUsingApt": false
+    },
     "ghcr.io/devcontainers/features/python:1": {},
     "ghcr.io/devcontainers/features/terraform:1": {}
   },
@@ -24,7 +26,6 @@
     "install-claude-and-setup": "curl -fsSL https://claude.ai/install.sh | bash && if [ -f .devcontainer/setup-env.sh ]; then chmod +x .devcontainer/setup-env.sh && ./.devcontainer/setup-env.sh; fi",
     "install-gemini-cli": "npm install -g @google/gemini-cli",
     "install-agent-browser": "npm install -g agent-browser && npx --yes playwright install-deps chromium && CI=1 agent-browser install || true",
-    "install-openspec": "npm install -g @fission-ai/openspec@latest",
     "install-ast-grep": "npm install -g @ast-grep/cli"
   },
   "mounts": [

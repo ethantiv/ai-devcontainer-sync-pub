@@ -43,7 +43,6 @@ RUN npm install -g --force \
     @anthropic-ai/claude-code \
     @google/gemini-cli \
     @ast-grep/cli \
-    @fission-ai/openspec \
     agent-browser
 
 # Install uv (Python package manager)
@@ -127,7 +126,6 @@ COPY --from=builder /usr/local/bin/terraform /usr/local/bin/terraform
 RUN ln -sf ../lib/node_modules/@anthropic-ai/claude-code/cli.js /usr/bin/claude \
     && ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini \
     && ln -sf ../lib/node_modules/@ast-grep/cli/sg /usr/bin/sg \
-    && ln -sf ../lib/node_modules/@fission-ai/openspec/bin/openspec.js /usr/bin/openspec \
     && ln -sf ../lib/node_modules/agent-browser/bin/index.js /usr/bin/agent-browser
 
 # Copy uv and tools from builder
