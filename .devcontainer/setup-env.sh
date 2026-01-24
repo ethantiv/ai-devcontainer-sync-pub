@@ -427,6 +427,90 @@ install_github_skill() {
 }
 
 # =============================================================================
+# PLUGIN SYNCHRONIZATION
+# =============================================================================
+
+# Build list of expected plugins from configuration
+# Sets global: expected_plugins[plugin_id]=1
+build_expected_plugins_list() {
+    local plugins_file="$WORKSPACE_FOLDER/.devcontainer/$CLAUDE_PLUGINS_FILE"
+    local local_manifest="$WORKSPACE_FOLDER/.devcontainer/plugins/$LOCAL_MARKETPLACE_NAME/.claude-plugin/marketplace.json"
+
+    declare -gA expected_plugins
+    expected_plugins=()
+
+    # Parse claude-plugins.txt (only plugins, skip skills)
+    if [[ -f "$plugins_file" ]]; then
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+            line=$(echo "$line" | xargs)
+            [[ -z "$line" ]] && continue
+
+            if [[ "$line" =~ @ ]]; then
+                local name="${line%%@*}"
+                local rest="${line#*@}"
+                local type="${rest%%=*}"
+                case "$type" in
+                    *-marketplace) expected_plugins["${name}@${type}"]=1 ;;
+                    # vercel-skills, github - skip (not in settings.json)
+                esac
+            else
+                expected_plugins["${line}@${OFFICIAL_MARKETPLACE_NAME}"]=1
+            fi
+        done < "$plugins_file"
+    fi
+
+    # Parse local marketplace
+    if [[ -f "$local_manifest" ]]; then
+        while IFS= read -r plugin; do
+            [[ -n "$plugin" ]] && expected_plugins["${plugin}@${LOCAL_MARKETPLACE_NAME}"]=1
+        done < <(jq -r '.plugins[].name // empty' "$local_manifest" 2>/dev/null)
+    fi
+}
+
+# Get installed plugins from settings.json
+# Sets global: installed_plugins[plugin_id]=1
+get_installed_plugins() {
+    declare -gA installed_plugins
+    installed_plugins=()
+    [[ -f "$CLAUDE_SETTINGS_FILE" ]] || return 0
+    while IFS= read -r plugin; do
+        [[ -n "$plugin" ]] && installed_plugins["$plugin"]=1
+    done < <(jq -r '.enabledPlugins | keys[]' "$CLAUDE_SETTINGS_FILE" 2>/dev/null)
+}
+
+# Uninstall plugin
+uninstall_plugin() {
+    local plugin="$1"
+    local display_name="${plugin%%@*}"
+    if claude plugin uninstall "$plugin" --scope user < /dev/null 2>/dev/null; then
+        echo "  🗑️  Uninstalled: $display_name"
+        return 0
+    fi
+    echo "  ⚠️  Failed to uninstall: $display_name"
+    return 1
+}
+
+# Sync: remove plugins not in expected list
+sync_plugins() {
+    echo "🔄 Synchronizing plugins..."
+    has_command claude || { echo "  ⚠️  Claude CLI not found"; return; }
+    has_command jq || { echo "  ⚠️  jq not found"; return; }
+
+    build_expected_plugins_list
+    get_installed_plugins
+
+    local removed=0 failed=0
+    for plugin in "${!installed_plugins[@]}"; do
+        if [[ -z "${expected_plugins[$plugin]}" ]]; then
+            uninstall_plugin "$plugin" && { ((removed++)) || true; } || { ((failed++)) || true; }
+        fi
+    done
+
+    ((removed > 0 || failed > 0)) && echo "  📊 Sync: $removed removed, $failed failed" || echo "  ✅ All plugins in sync"
+}
+
+# =============================================================================
 # MAIN
 # =============================================================================
 
@@ -445,6 +529,7 @@ main() {
     reset_config_if_requested "RESET_GEMINI_CONFIG" "$GEMINI_DIR"
 
     setup_claude_configuration
+    sync_plugins
     install_all_plugins_and_skills
     install_local_marketplace_plugins
     setup_mcp_servers

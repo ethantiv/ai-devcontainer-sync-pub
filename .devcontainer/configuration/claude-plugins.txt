@@ -18,14 +18,10 @@ code-simplifier
 commit-commands
 feature-dev
 frontend-design
-ralph-loop
 
 # Language Server Protocol (LSP) plugins
 pyright-lsp
 typescript-lsp
-
-# External plugins
-context7
 
 # =============================================================================
 # EXTERNAL SOURCES

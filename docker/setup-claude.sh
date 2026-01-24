@@ -99,10 +99,8 @@ install_official_plugins() {
         "commit-commands"
         "feature-dev"
         "frontend-design"
-        "ralph-loop"
         "pyright-lsp"
         "typescript-lsp"
-        "context7"
     )
 
     local installed=0 skipped=0 failed=0

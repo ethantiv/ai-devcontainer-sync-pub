@@ -74,10 +74,10 @@ docker run -it --rm \
 
 On first run (with `CLAUDE_CODE_OAUTH_TOKEN` set), these are automatically installed:
 
-**Official plugins (9):**
+**Official plugins (7):**
 - agent-sdk-dev, code-simplifier, commit-commands
-- feature-dev, frontend-design, ralph-loop
-- pyright-lsp, typescript-lsp, context7
+- feature-dev, frontend-design
+- pyright-lsp, typescript-lsp
 
 **External plugins/skills (4):**
 - ast-grep (structural code search)

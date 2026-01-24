@@ -50,7 +50,7 @@ skill-name@vercel-skills=vercel-labs/agent-skills  # Vercel skills
 skill-name@github=owner/repo/path-to-SKILL.md  # GitHub direct
 ```
 
-**Installed**: agent-sdk-dev, code-simplifier, commit-commands, feature-dev, frontend-design, ralph-loop, pyright-lsp, typescript-lsp, context7, ast-grep
+**Installed**: agent-sdk-dev, code-simplifier, commit-commands, feature-dev, frontend-design, pyright-lsp, typescript-lsp, ast-grep
 
 **Skills**: vercel-react-best-practices, web-design-guidelines, agent-browser
 
