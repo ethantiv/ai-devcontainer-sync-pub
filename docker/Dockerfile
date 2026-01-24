@@ -65,6 +65,7 @@ ARG USER_UID=1000
 ARG USER_GID=1000
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV DO_NOT_TRACK=1
 ENV HOME=/home/${USERNAME}
 ENV PATH="${HOME}/.local/bin:${HOME}/.uv/bin:/usr/local/bin:${PATH}"
 ENV NODE_OPTIONS="--max-old-space-size=512"

@@ -53,6 +53,7 @@
   ],
   "containerEnv": {
     "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
+    "DO_NOT_TRACK": "1",
     "TZ": "Europe/Warsaw",
     "LC_TIME": "pl_PL.UTF-8"
   },
