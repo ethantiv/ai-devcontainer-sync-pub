@@ -27,9 +27,6 @@ typescript-lsp
 # EXTERNAL SOURCES
 # =============================================================================
 
-# Marketplace plugins (format: name@marketplace-name=repo)
-ast-grep@ast-grep-marketplace=ast-grep/claude-skill
-
 # Vercel skills (format: name@vercel-skills=repo)
 vercel-react-best-practices@vercel-skills=vercel-labs/agent-skills
 web-design-guidelines@vercel-skills=vercel-labs/agent-skills

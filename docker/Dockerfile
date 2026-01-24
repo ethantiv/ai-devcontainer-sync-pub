@@ -38,11 +38,9 @@ RUN curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/te
 
 # Install npm global packages
 # Note: Claude Code must be installed via npm (not curl script) due to ARM64 bug #3569
-# --force needed because @ast-grep/cli's 'sg' conflicts with /usr/bin/sg (shadow-utils)
-RUN npm install -g --force \
+RUN npm install -g \
     @anthropic-ai/claude-code \
     @google/gemini-cli \
-    @ast-grep/cli \
     @fission-ai/openspec \
     agent-browser
 
@@ -127,7 +125,6 @@ COPY --from=builder /usr/local/bin/terraform /usr/local/bin/terraform
 # Note: bin paths vary by package, using the actual entry points
 RUN ln -sf ../lib/node_modules/@anthropic-ai/claude-code/cli.js /usr/bin/claude \
     && ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini \
-    && ln -sf ../lib/node_modules/@ast-grep/cli/sg /usr/bin/sg \
     && ln -sf ../lib/node_modules/@fission-ai/openspec/bin/openspec.js /usr/bin/openspec \
     && ln -sf ../lib/node_modules/agent-browser/bin/index.js /usr/bin/agent-browser
 

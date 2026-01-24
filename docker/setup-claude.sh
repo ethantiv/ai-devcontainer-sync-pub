@@ -118,19 +118,6 @@ install_official_plugins() {
     echo "  📊 Official: $installed installed, $skipped present, $failed failed"
 }
 
-install_external_plugins() {
-    echo "📦 Installing external plugins..."
-
-    # ast-grep from external marketplace
-    local AST_GREP_MARKETPLACE="ast-grep-marketplace"
-    local AST_GREP_REPO="ast-grep/claude-skill"
-
-    ensure_marketplace "$AST_GREP_MARKETPLACE" "$AST_GREP_REPO" || return
-    claude plugin marketplace update "$AST_GREP_MARKETPLACE" 2>/dev/null || true
-
-    install_plugin "ast-grep@${AST_GREP_MARKETPLACE}" "ast-grep" || true
-}
-
 # =============================================================================
 # SKILLS INSTALLATION
 # =============================================================================
@@ -243,7 +230,6 @@ main() {
 
     apply_claude_settings
     install_official_plugins
-    install_external_plugins
     install_skills
     setup_mcp_servers
 

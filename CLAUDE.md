@@ -50,7 +50,7 @@ skill-name@vercel-skills=vercel-labs/agent-skills  # Vercel skills
 skill-name@github=owner/repo/path-to-SKILL.md  # GitHub direct
 ```
 
-**Installed**: agent-sdk-dev, code-simplifier, commit-commands, feature-dev, frontend-design, pyright-lsp, typescript-lsp, ast-grep
+**Installed**: agent-sdk-dev, code-simplifier, commit-commands, feature-dev, frontend-design, pyright-lsp, typescript-lsp
 
 **Skills**: vercel-react-best-practices, web-design-guidelines, agent-browser
 
@@ -89,7 +89,6 @@ Located in `.devcontainer/commands/`:
 | Tool | Command | Description |
 |------|---------|-------------|
 | agent-browser | `agent-browser` | CLI browser automation |
-| ast-grep | `sg` | Structural code search using AST patterns |
 | specify-cli | `specify` | GitHub Spec-Kit |
 | openspec | `openspec` | OpenAPI spec generation |
 | Gemini CLI | `gemini` | Google's AI CLI |

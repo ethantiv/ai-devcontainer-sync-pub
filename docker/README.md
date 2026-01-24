@@ -8,7 +8,6 @@ Lightweight Docker image with Claude Code, Gemini CLI, and development tools. Op
 - **Gemini CLI** - Google's AI assistant
 - **Infrastructure tools** - Terraform, AWS CLI, GitHub CLI
 - **Browser automation** - agent-browser with Playwright/Chromium
-- **Code analysis** - ast-grep structural search
 
 ## Quick Start
 
@@ -62,7 +61,6 @@ docker run -it --rm \
 |------|---------|-------------|
 | Claude Code | `claude` | Anthropic's AI coding assistant |
 | Gemini CLI | `gemini` | Google's AI assistant |
-| ast-grep | `sg` | Structural code search using AST |
 | openspec | `openspec` | OpenAPI spec generation |
 | specify-cli | `specify` | GitHub Spec-Kit |
 | AWS CLI | `aws` | AWS command-line interface |
@@ -79,8 +77,7 @@ On first run (with `CLAUDE_CODE_OAUTH_TOKEN` set), these are automatically insta
 - feature-dev, frontend-design
 - pyright-lsp, typescript-lsp
 
-**External plugins/skills (4):**
-- ast-grep (structural code search)
+**External plugins/skills (3):**
 - vercel-react-best-practices, web-design-guidelines
 - agent-browser
 
