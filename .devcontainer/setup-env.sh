@@ -17,6 +17,7 @@ readonly SSH_KNOWN_HOSTS_FILE="$SSH_DIR/known_hosts"
 
 readonly CLAUDE_DIR="$HOME/.claude"
 readonly CLAUDE_SETTINGS_FILE="$CLAUDE_DIR/settings.json"
+readonly CLAUDE_SCRIPTS_DIR="$CLAUDE_DIR/scripts"
 readonly GEMINI_DIR="$HOME/.gemini"
 
 readonly CLAUDE_PLUGINS_FILE="configuration/claude-plugins.txt"
@@ -141,7 +142,11 @@ apply_claude_settings() {
             "ask": [],
             "defaultMode": "bypassPermissions"
         },
-        "language": "Polski"
+        "language": "Polski",
+        "statusLine": {
+            "type": "command",
+            "command": "~/.claude/scripts/context-bar.sh"
+        }
     }'
 
     has_command jq || { echo "  ⚠️  jq not found - cannot manage settings"; return; }
@@ -183,6 +188,20 @@ sync_claude_files() {
     fi
 }
 
+sync_claude_scripts() {
+    local source_dir="$1/.devcontainer/scripts"
+    [[ -d "$source_dir" ]] || return
+
+    ensure_directory "$CLAUDE_SCRIPTS_DIR"
+
+    for script in "$source_dir"/*.sh; do
+        [[ -f "$script" ]] || continue
+        cp "$script" "$CLAUDE_SCRIPTS_DIR/"
+        chmod +x "$CLAUDE_SCRIPTS_DIR/$(basename "$script")"
+    done
+    echo "  ✅ Synced scripts to ~/.claude/scripts/"
+}
+
 setup_claude_configuration() {
     echo "📄 Setting up Claude configuration..."
 
@@ -194,6 +213,7 @@ setup_claude_configuration() {
     copy_claude_memory "$WORKSPACE_FOLDER"
     sync_claude_files "$WORKSPACE_FOLDER" "commands"
     sync_claude_files "$WORKSPACE_FOLDER" "agents"
+    sync_claude_scripts "$WORKSPACE_FOLDER"
 }
 
 # =============================================================================
