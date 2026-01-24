@@ -90,7 +90,6 @@ Located in `.devcontainer/commands/`:
 |------|---------|-------------|
 | agent-browser | `agent-browser` | CLI browser automation |
 | specify-cli | `specify` | GitHub Spec-Kit |
-| openspec | `openspec` | OpenAPI spec generation |
 | Gemini CLI | `gemini` | Google's AI CLI |
 
 ## Quick Reference

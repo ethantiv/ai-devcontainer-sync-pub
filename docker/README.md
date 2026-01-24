@@ -61,7 +61,6 @@ docker run -it --rm \
 |------|---------|-------------|
 | Claude Code | `claude` | Anthropic's AI coding assistant |
 | Gemini CLI | `gemini` | Google's AI assistant |
-| openspec | `openspec` | OpenAPI spec generation |
 | specify-cli | `specify` | GitHub Spec-Kit |
 | AWS CLI | `aws` | AWS command-line interface |
 | GitHub CLI | `gh` | GitHub command-line tool |

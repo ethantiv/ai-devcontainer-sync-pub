@@ -41,7 +41,6 @@ RUN curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/te
 RUN npm install -g \
     @anthropic-ai/claude-code \
     @google/gemini-cli \
-    @fission-ai/openspec \
     agent-browser
 
 # Install uv (Python package manager)
@@ -125,7 +124,6 @@ COPY --from=builder /usr/local/bin/terraform /usr/local/bin/terraform
 # Note: bin paths vary by package, using the actual entry points
 RUN ln -sf ../lib/node_modules/@anthropic-ai/claude-code/cli.js /usr/bin/claude \
     && ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini \
-    && ln -sf ../lib/node_modules/@fission-ai/openspec/bin/openspec.js /usr/bin/openspec \
     && ln -sf ../lib/node_modules/agent-browser/bin/index.js /usr/bin/agent-browser
 
 # Copy uv and tools from builder
