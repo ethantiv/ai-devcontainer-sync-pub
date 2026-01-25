@@ -139,7 +139,8 @@ COPY --from=builder /root/.cache/ms-playwright /opt/playwright
 RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME} \
     && mkdir -p ${HOME}/.claude ${HOME}/.claude/commands ${HOME}/.claude/skills ${HOME}/.gemini ${HOME}/projects \
-    && chown -R ${USERNAME}:${USERNAME} ${HOME}
+    && chown -R ${USERNAME}:${USERNAME} ${HOME} \
+    && echo "alias cc='clear && claude'" >> ${HOME}/.bashrc
 
 # Setup Playwright for non-root user
 RUN mkdir -p ${HOME}/.cache \

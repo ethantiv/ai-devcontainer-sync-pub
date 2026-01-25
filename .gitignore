@@ -1,3 +1,4 @@
 .devcontainer/.env
 docker/.env
 .DS_Store
+loop/

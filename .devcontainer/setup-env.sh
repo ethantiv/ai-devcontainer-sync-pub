@@ -118,6 +118,7 @@ setup_github_token() {
 
     echo "✅ GitHub token configured"
     echo "export GH_TOKEN='${GH_TOKEN}'" >> ~/.bashrc
+    echo "alias cc='clear && claude'" >> ~/.bashrc
 }
 
 # =============================================================================

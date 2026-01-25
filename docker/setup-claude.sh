@@ -95,6 +95,7 @@ install_official_plugins() {
 
     local plugins=(
         "agent-sdk-dev"
+        "claude-code-setup"
         "code-simplifier"
         "commit-commands"
         "feature-dev"
