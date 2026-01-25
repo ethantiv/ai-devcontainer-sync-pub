@@ -25,7 +25,7 @@
     "install-uv-and-specify": "pipx install uv && uv tool install --from git+https://github.com/github/spec-kit.git specify-cli",
     "install-claude-and-setup": "curl -fsSL https://claude.ai/install.sh | bash && if [ -f .devcontainer/setup-env.sh ]; then chmod +x .devcontainer/setup-env.sh && ./.devcontainer/setup-env.sh; fi",
     "install-gemini-cli": "npm install -g @google/gemini-cli",
-    "install-agent-browser": "npm install -g agent-browser && npx --yes playwright install-deps chromium && CI=1 agent-browser install || true"
+    "install-playwright-cli": "npm install -g @playwright/mcp && npx --yes playwright install chromium --with-deps && sudo mkdir -p /opt/google/chrome && sudo ln -sf $(find $HOME/.cache/ms-playwright -name chrome -path '*/chrome-linux/*' | head -1) /opt/google/chrome/chrome || true"
   },
   "mounts": [
     {

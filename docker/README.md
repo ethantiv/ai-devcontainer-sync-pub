@@ -7,7 +7,7 @@ Lightweight Docker image with Claude Code, Gemini CLI, and development tools. Op
 - **Claude Code** - Anthropic's AI coding assistant
 - **Gemini CLI** - Google's AI assistant
 - **Infrastructure tools** - Terraform, AWS CLI, GitHub CLI
-- **Browser automation** - agent-browser with Playwright/Chromium
+- **Browser automation** - playwright-cli with Playwright/Chromium
 
 ## Quick Start
 
@@ -65,7 +65,7 @@ docker run -it --rm \
 | AWS CLI | `aws` | AWS command-line interface |
 | GitHub CLI | `gh` | GitHub command-line tool |
 | Terraform | `terraform` | Infrastructure as Code |
-| agent-browser | `agent-browser` | Browser automation CLI |
+| playwright-cli | `playwright-cli` | Browser automation CLI |
 
 ## Pre-configured Plugins
 
@@ -78,7 +78,7 @@ On first run (with `CLAUDE_CODE_OAUTH_TOKEN` set), these are automatically insta
 
 **External plugins/skills (3):**
 - vercel-react-best-practices, web-design-guidelines
-- agent-browser
+- playwright-cli
 
 ## MCP Servers
 
@@ -157,7 +157,7 @@ uvx awslabs.aws-documentation-mcp-server@latest --help
 
 ### Browser automation fails
 
-agent-browser requires Playwright browsers. Verify installation:
+playwright-cli requires Playwright browsers. Verify installation:
 
 ```bash
 npx playwright install --help

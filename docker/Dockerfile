@@ -41,7 +41,7 @@ RUN curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/te
 RUN npm install -g \
     @anthropic-ai/claude-code \
     @google/gemini-cli \
-    agent-browser
+    @playwright/mcp
 
 # Install uv (Python package manager)
 RUN pip3 install --break-system-packages uv
@@ -49,7 +49,7 @@ RUN pip3 install --break-system-packages uv
 # Install specify-cli via uv
 RUN uv tool install --python python3 specify-cli
 
-# Install Playwright with Chromium for agent-browser
+# Install Playwright with Chromium for playwright-cli
 RUN npx -y playwright install chromium --with-deps
 
 # =============================================================================
@@ -124,7 +124,7 @@ COPY --from=builder /usr/local/bin/terraform /usr/local/bin/terraform
 # Note: bin paths vary by package, using the actual entry points
 RUN ln -sf ../lib/node_modules/@anthropic-ai/claude-code/cli.js /usr/bin/claude \
     && ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini \
-    && ln -sf ../lib/node_modules/agent-browser/bin/index.js /usr/bin/agent-browser
+    && ln -sf ../lib/node_modules/@playwright/mcp/cli.js /usr/bin/playwright-cli
 
 # Copy uv and tools from builder
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
@@ -143,9 +143,12 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && echo "alias cc='clear && claude'" >> ${HOME}/.bashrc
 
 # Setup Playwright for non-root user
+# Note: playwright-cli expects chrome at /opt/google/chrome/chrome, create symlink
 RUN mkdir -p ${HOME}/.cache \
     && cp -r /opt/playwright ${HOME}/.cache/ms-playwright \
-    && chown -R ${USERNAME}:${USERNAME} ${HOME}/.cache
+    && chown -R ${USERNAME}:${USERNAME} ${HOME}/.cache \
+    && mkdir -p /opt/google/chrome \
+    && ln -sf $(find ${HOME}/.cache/ms-playwright -name chrome -path "*/chrome-linux/*" | head -1) /opt/google/chrome/chrome
 
 # Copy configuration files to /opt (for runtime sync to volume)
 COPY .devcontainer/configuration/CLAUDE.md.memory /opt/claude-config/CLAUDE.md

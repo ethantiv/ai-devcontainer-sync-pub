@@ -52,7 +52,7 @@ skill-name@github=owner/repo/path-to-SKILL.md  # GitHub direct
 
 **Installed**: agent-sdk-dev, code-simplifier, commit-commands, feature-dev, frontend-design, pyright-lsp, typescript-lsp
 
-**Skills**: vercel-react-best-practices, web-design-guidelines, agent-browser
+**Skills**: vercel-react-best-practices, web-design-guidelines, playwright-cli
 
 ### Local Marketplace
 
@@ -88,7 +88,7 @@ Located in `.devcontainer/commands/`:
 
 | Tool | Command | Description |
 |------|---------|-------------|
-| agent-browser | `agent-browser` | CLI browser automation |
+| playwright-cli | `playwright-cli` | CLI browser automation |
 | specify-cli | `specify` | GitHub Spec-Kit |
 | Gemini CLI | `gemini` | Google's AI CLI |
 

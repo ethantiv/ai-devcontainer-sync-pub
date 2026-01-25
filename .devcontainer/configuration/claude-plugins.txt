@@ -33,4 +33,4 @@ vercel-react-best-practices@vercel-skills=vercel-labs/agent-skills
 web-design-guidelines@vercel-skills=vercel-labs/agent-skills
 
 # GitHub skills (format: name@github=owner/repo/path-to-SKILL.md)
-agent-browser@github=vercel-labs/agent-browser/skills/agent-browser/SKILL.md
+playwright-cli@github=microsoft/playwright-cli/skills/playwright-cli/SKILL.md

@@ -164,8 +164,8 @@ install_skills() {
     done
 
     # GitHub skills (direct URL)
-    local agent_browser_url="https://raw.githubusercontent.com/vercel-labs/agent-browser/main/skills/agent-browser/SKILL.md"
-    install_github_skill "agent-browser" "$agent_browser_url" && ((skills_installed++)) || ((skills_failed++))
+    local playwright_cli_url="https://raw.githubusercontent.com/microsoft/playwright-cli/main/skills/playwright-cli/SKILL.md"
+    install_github_skill "playwright-cli" "$playwright_cli_url" && ((skills_installed++)) || ((skills_failed++))
 
     echo "  📊 Skills: $skills_installed installed, $skills_failed failed"
 }
