@@ -148,7 +148,8 @@ RUN mkdir -p ${HOME}/.cache \
     && cp -r /opt/playwright ${HOME}/.cache/ms-playwright \
     && chown -R ${USERNAME}:${USERNAME} ${HOME}/.cache \
     && mkdir -p /opt/google/chrome \
-    && ln -sf $(find ${HOME}/.cache/ms-playwright -name chrome -path "*/chrome-linux/*" | head -1) /opt/google/chrome/chrome
+    && CHROME_PATH=$(find ${HOME}/.cache/ms-playwright -name chrome -type f -path "*/chrome-linux/*" | head -1) \
+    && ln -sf "$CHROME_PATH" /opt/google/chrome/chrome
 
 # Copy configuration files to /opt (for runtime sync to volume)
 COPY .devcontainer/configuration/CLAUDE.md.memory /opt/claude-config/CLAUDE.md
