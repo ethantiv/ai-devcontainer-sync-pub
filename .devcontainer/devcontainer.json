@@ -12,27 +12,28 @@
   },
   "onCreateCommand": {
     "cleanup-ai-dirs": "rm -rf /workspaces/ai-devcontainer-sync/.claude || true",
-    "setup-claude-dir": "sudo mkdir -p /home/vscode/.claude/tmp && sudo chown -R vscode:vscode /home/vscode/.claude",
+    "setup-claude-dir": "sudo mkdir -p /home/vscode/.claude && sudo chown -R vscode:vscode /home/vscode/.claude",
     "setup-gemini-dir": "sudo mkdir -p /home/vscode/.gemini && sudo chown -R vscode:vscode /home/vscode/.gemini",
-    "setup-google-auth-dir": "sudo mkdir -p /home/vscode/.cache/google-vscode-extension/auth && sudo chown -R vscode:vscode /home/vscode/.cache/google-vscode-extension",
-    "setup-grte-symlink": "sudo mkdir -p /usr/grte/v5/lib && sudo ln -sf /lib/ld-linux-aarch64.so.1 /usr/grte/v5/lib/ld-linux-aarch64.so.1"
+    "setup-google-auth-dir": "sudo mkdir -p /home/vscode/.cache/google-vscode-extension/auth && sudo chown -R vscode:vscode /home/vscode/.cache/google-vscode-extension"
   },
   "postCreateCommand": {
-    "run-setup": "chmod +x .devcontainer/setup-env.sh && ./.devcontainer/setup-env.sh"
+    "install-specify": "pipx install uv && uv tool install --from git+https://github.com/github/spec-kit.git specify-cli",
+    "install-claude": "curl -fsSL https://claude.ai/install.sh | bash && if [ -f .devcontainer/setup-env.sh ]; then chmod +x .devcontainer/setup-env.sh && ./.devcontainer/setup-env.sh; fi",
+    "install-gemini": "sudo npm install -g @google/gemini-cli"
   },
   "mounts": [
     {
-      "source": "claude-code-config-${devcontainerId}",
+      "source": "claude-config-${devcontainerId}",
       "target": "/home/vscode/.claude",
       "type": "volume"
     },
     {
-      "source": "gemini-cli-config-${devcontainerId}",
+      "source": "gemini-config-${devcontainerId}",
       "target": "/home/vscode/.gemini",
       "type": "volume"
     },
     {
-      "source": "google-gemini-auth-${devcontainerId}",
+      "source": "gemini-auth-${devcontainerId}",
       "target": "/home/vscode/.cache/google-vscode-extension/auth",
       "type": "volume"
     },
@@ -44,10 +45,6 @@
   ],
   "containerEnv": {
     "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
-    "TMPDIR": "/home/vscode/.claude/tmp",
-    "DO_NOT_TRACK": "1",
-    "NODE_ENV": "production",
-    "PLAYWRIGHT_BROWSERS_PATH": "/home/vscode/.cache/ms-playwright",
     "TZ": "Europe/Warsaw",
     "LC_TIME": "pl_PL.UTF-8"
   },
@@ -77,9 +74,6 @@
         "ms-python.vscode-python-envs",
         "redhat.vscode-yaml"
       ]
-    },
-    "codespaces": {
-      "disableAutomaticConfiguration": false
     }
   }
 }
