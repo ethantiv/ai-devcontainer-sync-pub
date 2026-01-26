@@ -1,22 +1,29 @@
 ## Git Operations
 
-Wait for explicit user permission before executing Git or GitHub commands (git add, commit, push, pull, merge, rebase, gh pr create/merge). Execute Git commands only when:
-- The user explicitly requests it in their message
-- The user invokes a slash command (e.g., /commit)
-
-## UI Testing and Browser Automation
-
-For UI changes, verify fixes using the actual UI before claiming they work. Test the actual user flow rather than relying solely on code analysis or unit tests. Use playwright-cli for browser automation.
-
-## Frontend Skills
-
-When working on frontend/UI tasks, load relevant skills at the start before writing UI code:
-- `frontend-design` - For every task that requires the creation of a UI design (distinctive, production-grade interfaces, without AI slop)
-- `web-design-guidelines` - For any frontend/UI work (accessibility, forms, animation, dark mode, i18n etc.)
-- `vercel-react-best-practices` - Additionally for React/Next.js projects (waterfalls, bundle size, re-renders, SSR etc.)
+Wait for explicit user permission before executing Git or GitHub commands (git add, commit, push, pull, merge, rebase, gh pr create/merge). Execute Git commands only when user explicitly requests it in their message or user invokes a slash command (e.g., /commit)
 
 ## Documentation
 
 Write all documentation in English, including code comments, docstrings, README files, commit messages, PR descriptions, and API documentation. This ensures consistency across the project.
 When operating in plan mode, generate plan content in Polish (Polski).
 Use Mermaid for diagrams and schemas instead of ASCII art. Mermaid renders properly in GitHub, VS Code, and documentation tools.
+
+## Validation
+
+Run these after implementing to get immediate feedback:
+- Tests: `[test command]`
+- Typecheck: `[typecheck command]`
+- Lint: `[lint command]`
+- UI Review: `/web-design-guidelines <file>` - check accessibility, forms, animation, dark mode, i18n
+- Browser Test: `/playwright-cli open <url>` - verify UI changes in actual browser
+
+## Skills
+
+Load these skills at the start of relevant tasks:
+
+| Skill | When to load |
+|-------|--------------|
+| `/frontend-design` | Building new UI components, pages, or applications |
+| `/web-design-guidelines` | Reviewing UI for accessibility, forms, dark mode, i18n |
+| `/vercel-react-best-practices` | Writing or optimizing React/Next.js code |
+| `/playwright-cli` | Testing UI changes in actual browser |

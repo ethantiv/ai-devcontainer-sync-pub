@@ -1,31 +1,24 @@
 {
   "name": "AI Agents Sandbox",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
   "features": {
     "ghcr.io/devcontainers/features/aws-cli:1": {},
-    "ghcr.io/devcontainers/features/common-utils:2": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers/features/node:1": {
-      "installYarnUsingApt": false
-    },
-    "ghcr.io/devcontainers/features/python:1": {},
     "ghcr.io/devcontainers/features/terraform:1": {}
   },
   "onCreateCommand": {
     "cleanup-ai-dirs": "rm -rf /workspaces/ai-devcontainer-sync/.claude || true",
-    "setup-claude-dir": "sudo mkdir -p /home/vscode/.claude && sudo chown -R vscode:vscode /home/vscode/.claude",
+    "setup-claude-dir": "sudo mkdir -p /home/vscode/.claude/tmp && sudo chown -R vscode:vscode /home/vscode/.claude",
     "setup-gemini-dir": "sudo mkdir -p /home/vscode/.gemini && sudo chown -R vscode:vscode /home/vscode/.gemini",
     "setup-google-auth-dir": "sudo mkdir -p /home/vscode/.cache/google-vscode-extension/auth && sudo chown -R vscode:vscode /home/vscode/.cache/google-vscode-extension",
-    "setup-grte-symlink": "sudo mkdir -p /usr/grte/v5/lib && sudo ln -sf /lib/ld-linux-aarch64.so.1 /usr/grte/v5/lib/ld-linux-aarch64.so.1",
-    "setup-locales": "sudo apt-get update && sudo apt-get install -y locales && sudo locale-gen pl_PL.UTF-8 && sudo update-locale"
+    "setup-grte-symlink": "sudo mkdir -p /usr/grte/v5/lib && sudo ln -sf /lib/ld-linux-aarch64.so.1 /usr/grte/v5/lib/ld-linux-aarch64.so.1"
   },
   "postCreateCommand": {
-    "fix-cache-perms": "sudo chown -R vscode:vscode /home/vscode/.cache",
-    "install-uv-and-specify": "pipx install uv && uv tool install --from git+https://github.com/github/spec-kit.git specify-cli",
-    "install-claude-and-setup": "curl -fsSL https://claude.ai/install.sh | bash && if [ -f .devcontainer/setup-env.sh ]; then chmod +x .devcontainer/setup-env.sh && ./.devcontainer/setup-env.sh; fi",
-    "install-gemini-cli": "npm install -g @google/gemini-cli",
-    "install-playwright-cli": "npm install -g @playwright/mcp && npx --yes playwright install chromium --with-deps && CHROME_PATH=$(find $HOME/.cache/ms-playwright -name chrome -type f -path '*/chrome-linux/*' 2>/dev/null | head -1) && if [ -n \"$CHROME_PATH\" ]; then sudo mkdir -p /opt/google/chrome && sudo ln -sf \"$CHROME_PATH\" /opt/google/chrome/chrome; fi"
+    "run-setup": "chmod +x .devcontainer/setup-env.sh && ./.devcontainer/setup-env.sh"
   },
   "mounts": [
     {
@@ -51,7 +44,10 @@
   ],
   "containerEnv": {
     "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
+    "TMPDIR": "/home/vscode/.claude/tmp",
     "DO_NOT_TRACK": "1",
+    "NODE_ENV": "production",
+    "PLAYWRIGHT_BROWSERS_PATH": "/home/vscode/.cache/ms-playwright",
     "TZ": "Europe/Warsaw",
     "LC_TIME": "pl_PL.UTF-8"
   },

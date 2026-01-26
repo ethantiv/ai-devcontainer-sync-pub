@@ -150,7 +150,7 @@ apply_claude_settings() {
         }
     }'
 
-    has_command jq || { echo "  ⚠️  jq not found - cannot manage settings"; return; }
+    has_command jq || { echo "  ⚠️  jq not found - cannot manage settings"; return 0; }
 
     if [[ -f "$CLAUDE_SETTINGS_FILE" ]]; then
         local merged
@@ -171,7 +171,7 @@ sync_claude_files() {
     local source_dir="$1/.devcontainer/$2"
     local target_dir="$CLAUDE_DIR/$2"
 
-    [[ -d "$source_dir" ]] || return
+    [[ -d "$source_dir" ]] || return 0
 
     # Remove files that no longer exist in source
     if [[ -d "$target_dir" ]]; then
@@ -191,7 +191,7 @@ sync_claude_files() {
 
 sync_claude_scripts() {
     local source_dir="$1/.devcontainer/scripts"
-    [[ -d "$source_dir" ]] || return
+    [[ -d "$source_dir" ]] || return 0
 
     ensure_directory "$CLAUDE_SCRIPTS_DIR"
 
@@ -207,6 +207,7 @@ setup_claude_configuration() {
     echo "📄 Setting up Claude configuration..."
 
     ensure_directory "$CLAUDE_DIR"
+    ensure_directory "$CLAUDE_DIR/tmp"
     ensure_directory "$CLAUDE_DIR/commands"
     ensure_directory "$CLAUDE_DIR/agents"
 
@@ -277,11 +278,14 @@ install_all_plugins_and_skills() {
 
     echo "📦 Installing plugins and skills..."
 
-    has_command claude || { echo "  ⚠️  Claude CLI not found"; return; }
-    has_command jq || { echo "  ⚠️  jq not found"; return; }
-    [[ -f "$plugins_file" ]] || { echo "  ⚠️  $plugins_file not found"; return; }
+    has_command claude || { echo "  ⚠️  Claude CLI not found"; return 0; }
+    has_command jq || { echo "  ⚠️  jq not found"; return 0; }
+    [[ -f "$plugins_file" ]] || { echo "  ⚠️  $plugins_file not found"; return 0; }
 
-    ensure_marketplace "$OFFICIAL_MARKETPLACE_NAME" "$OFFICIAL_MARKETPLACE_REPO" || return
+    if ! ensure_marketplace "$OFFICIAL_MARKETPLACE_NAME" "$OFFICIAL_MARKETPLACE_REPO"; then
+        echo "  ⚠️  Skipping official marketplace plugins"
+        return 0
+    fi
     claude plugin marketplace update "$OFFICIAL_MARKETPLACE_NAME" 2>/dev/null || true
 
     local plugins_installed=0 plugins_skipped=0 plugins_failed=0
@@ -335,10 +339,13 @@ install_local_marketplace_plugins() {
 
     echo "📦 Installing local plugins..."
 
-    has_command claude || return
-    has_command jq || return
-    [[ -f "$manifest" ]] || { echo "  ⚠️  Local marketplace not found"; return; }
-    ensure_marketplace "$LOCAL_MARKETPLACE_NAME" "$marketplace_dir" || return
+    has_command claude || return 0
+    has_command jq || return 0
+    [[ -f "$manifest" ]] || { echo "  ⚠️  Local marketplace not found"; return 0; }
+    if ! ensure_marketplace "$LOCAL_MARKETPLACE_NAME" "$marketplace_dir"; then
+        echo "  ⚠️  Skipping local marketplace plugins"
+        return 0
+    fi
 
     local installed=0 skipped=0 failed=0
 
@@ -373,7 +380,7 @@ add_mcp_server() {
 
 setup_mcp_servers() {
     echo "🔧 Setting up MCP servers..."
-    has_command claude || return
+    has_command claude || return 0
 
     add_mcp_server "aws-documentation" '{
         "type": "stdio",
@@ -515,8 +522,8 @@ uninstall_plugin() {
 # Sync: remove plugins not in expected list
 sync_plugins() {
     echo "🔄 Synchronizing plugins..."
-    has_command claude || { echo "  ⚠️  Claude CLI not found"; return; }
-    has_command jq || { echo "  ⚠️  jq not found"; return; }
+    has_command claude || { echo "  ⚠️  Claude CLI not found"; return 0; }
+    has_command jq || { echo "  ⚠️  jq not found"; return 0; }
 
     build_expected_plugins_list
     get_installed_plugins
