@@ -1,29 +1,52 @@
-## Git Operations
+## Validation
 
-Wait for explicit user permission before executing Git or GitHub commands (git add, commit, push, pull, merge, rebase, gh pr create/merge). Execute Git commands only when user explicitly requests it in their message or user invokes a slash command (e.g., /commit)
+- Tests: `[test command]`
+- Typecheck: `[typecheck command]`
+- Lint: `[lint command]`
+- UI Review: `/web-design-guidelines <file>`
+- Browser Test: `/playwright-cli open <url>`
 
-## Documentation
+## Operational Notes
 
-Write all documentation in English, including code comments, docstrings, README files, commit messages, PR descriptions, and API documentation. This ensures consistency across the project.
-When operating in plan mode, generate plan content in Polish (Polski).
-Use Mermaid for diagrams and schemas instead of ASCII art. Mermaid renders properly in GitHub, VS Code, and documentation tools.
+Wait for explicit user permission before Git/GitHub commands. Execute only when user explicitly requests or invokes slash command (e.g., /commit).
+
+Write documentation in English. Plan mode content in Polish. Use Mermaid for diagrams.
+
+Make only changes directly requested. Bug fixes stand alone. Simple features work without extra configurability. Validate only at system boundaries. Create abstractions only when reused. Follow DRY principle.
+
+### Skills
+
+| Skill | When to load |
+|-------|--------------|
+| `/frontend-design` | Building new UI components |
+| `/web-design-guidelines` | Reviewing UI accessibility |
+| `/vercel-react-best-practices` | React/Next.js code |
+| `/playwright-cli` | Testing UI in browser |
+
+### CLAUDE.md Template
+
+When generating CLAUDE.md via `/init`, use this structure:
+
+```markdown
+## Build & Run
+
+Succinct rules for how to BUILD the project:
 
 ## Validation
 
 Run these after implementing to get immediate feedback:
+
 - Tests: `[test command]`
 - Typecheck: `[typecheck command]`
 - Lint: `[lint command]`
-- UI Review: `/web-design-guidelines <file>` - check accessibility, forms, animation, dark mode, i18n
-- Browser Test: `/playwright-cli open <url>` - verify UI changes in actual browser
 
-## Skills
+## Operational Notes
 
-Load these skills at the start of relevant tasks:
+Succinct learnings about how to RUN the project:
 
-| Skill | When to load |
-|-------|--------------|
-| `/frontend-design` | Building new UI components, pages, or applications |
-| `/web-design-guidelines` | Reviewing UI for accessibility, forms, dark mode, i18n |
-| `/vercel-react-best-practices` | Writing or optimizing React/Next.js code |
-| `/playwright-cli` | Testing UI changes in actual browser |
+...
+
+### Codebase Patterns
+
+...
+```
