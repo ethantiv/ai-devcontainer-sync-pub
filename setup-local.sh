@@ -259,13 +259,11 @@ setup_claude_configuration() {
 
     ensure_directory "$CLAUDE_DIR"
     ensure_directory "$CLAUDE_DIR/tmp"
-    ensure_directory "$CLAUDE_DIR/commands"
     ensure_directory "$CLAUDE_DIR/agents"
     ensure_directory "$CLAUDE_DIR/skills"
 
     apply_claude_settings
     copy_claude_memory
-    sync_claude_files "commands" ".md"
     sync_claude_files "agents" ".md"
     sync_claude_scripts
 }
@@ -325,7 +323,7 @@ ensure_marketplace() {
 # SKILL INSTALLATION HELPERS
 # =============================================================================
 
-# Install skill from Vercel skills repo using add-skill CLI
+# Install skill from Vercel skills repo using skills CLI
 install_vercel_skill() {
     local name="$1"
     local repo="$2"
@@ -333,7 +331,7 @@ install_vercel_skill() {
     has_command npx || return 1
     ensure_directory "$CLAUDE_DIR/skills"
 
-    if npx -y add-skill -g -y "$repo" -a claude-code -s "$name" < /dev/null 2>/dev/null; then
+    if npx -y skills add -g -y "$repo" -a claude-code -s "$name" < /dev/null 2>/dev/null; then
         echo "  ✅ Installed skill: $name"
         return 0
     fi
@@ -442,11 +440,6 @@ print_final_report() {
     echo "   ~/.claude/settings.json"
     echo "   ~/.claude/CLAUDE.md"
 
-    if [[ -d "$CLAUDE_DIR/commands" ]]; then
-        local cmd_count=$(find "$CLAUDE_DIR/commands" -name "*.md" 2>/dev/null | wc -l | xargs)
-        echo "   ~/.claude/commands/ ($cmd_count commands)"
-    fi
-
     if [[ -d "$CLAUDE_DIR/scripts" ]]; then
         local script_count=$(find "$CLAUDE_DIR/scripts" -name "*.sh" 2>/dev/null | wc -l | xargs)
         echo "   ~/.claude/scripts/ ($script_count scripts)"
@@ -466,7 +459,6 @@ print_final_report() {
     echo "🔍 Verification commands:"
     echo "   claude mcp list                    # Check MCP servers"
     echo "   claude plugin marketplace list     # Check marketplaces"
-    echo "   ls ~/.claude/commands/             # List custom commands"
     echo "   ls ~/.claude/skills/               # List installed skills"
     echo ""
     echo "💡 Note: MCP servers are NOT installed by this script."

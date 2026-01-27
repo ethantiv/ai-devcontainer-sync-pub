@@ -1,0 +1,8 @@
+{
+  "name": "design-system",
+  "version": "0.1.0",
+  "description": "Generate self-contained HTML design system templates with embedded CSS and theming",
+  "author": {
+    "name": "Mirek Zaniewicz"
+  }
+}

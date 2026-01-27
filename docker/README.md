@@ -61,7 +61,6 @@ docker run -it --rm \
 |------|---------|-------------|
 | Claude Code | `claude` | Anthropic's AI coding assistant |
 | Gemini CLI | `gemini` | Google's AI assistant |
-| specify-cli | `specify` | GitHub Spec-Kit |
 | AWS CLI | `aws` | AWS command-line interface |
 | GitHub CLI | `gh` | GitHub command-line tool |
 | Terraform | `terraform` | Infrastructure as Code |
@@ -122,10 +121,6 @@ Edit `docker/setup-claude.sh` to change the list of installed plugins.
 ### Changing default settings
 
 Claude settings are in `docker/setup-claude.sh` (`apply_claude_settings` function).
-
-### Adding commands
-
-Add `.md` files to `.devcontainer/commands/` before building.
 
 ## Troubleshooting
 

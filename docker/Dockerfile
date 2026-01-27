@@ -46,9 +46,6 @@ RUN npm install -g \
 # Install uv (Python package manager)
 RUN pip3 install --break-system-packages uv
 
-# Install specify-cli via uv
-RUN uv tool install --python python3 specify-cli
-
 # Install Playwright with Chromium for playwright-cli
 RUN npx -y playwright install chromium --with-deps
 
@@ -129,8 +126,6 @@ RUN ln -sf ../lib/node_modules/@anthropic-ai/claude-code/cli.js /usr/bin/claude 
 # Copy uv and tools from builder
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
-COPY --from=builder /root/.local/bin/specify /usr/local/bin/specify
-COPY --from=builder /root/.local/share/uv /opt/uv-tools
 
 # Copy Playwright browsers
 COPY --from=builder /root/.cache/ms-playwright /opt/playwright
@@ -138,7 +133,7 @@ COPY --from=builder /root/.cache/ms-playwright /opt/playwright
 # Create non-root user
 RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME} \
-    && mkdir -p ${HOME}/.claude ${HOME}/.claude/commands ${HOME}/.claude/scripts ${HOME}/.claude/skills ${HOME}/.gemini ${HOME}/projects \
+    && mkdir -p ${HOME}/.claude ${HOME}/.claude/scripts ${HOME}/.claude/skills ${HOME}/.gemini ${HOME}/projects \
     && chown -R ${USERNAME}:${USERNAME} ${HOME} \
     && echo "alias cc='clear && claude'" >> ${HOME}/.bashrc
 
@@ -153,7 +148,6 @@ RUN mkdir -p ${HOME}/.cache \
 
 # Copy configuration files to /opt (for runtime sync to volume)
 COPY .devcontainer/configuration/CLAUDE.md.memory /opt/claude-config/CLAUDE.md
-COPY .devcontainer/commands/*.md /opt/claude-config/commands/
 COPY .devcontainer/scripts/*.sh /opt/claude-config/scripts/
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY docker/setup-claude.sh /usr/local/bin/setup-claude.sh

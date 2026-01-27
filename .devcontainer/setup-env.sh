@@ -210,12 +210,10 @@ setup_claude_configuration() {
 
     ensure_directory "$CLAUDE_DIR"
     ensure_directory "$CLAUDE_DIR/tmp"
-    ensure_directory "$CLAUDE_DIR/commands"
     ensure_directory "$CLAUDE_DIR/agents"
 
     apply_claude_settings
     copy_claude_memory "$WORKSPACE_FOLDER"
-    sync_claude_files "$WORKSPACE_FOLDER" "commands"
     sync_claude_files "$WORKSPACE_FOLDER" "agents"
     sync_claude_scripts "$WORKSPACE_FOLDER"
 }
@@ -417,7 +415,7 @@ setup_mcp_servers() {
 # SKILL INSTALLATION HELPERS
 # =============================================================================
 
-# Install skill from Vercel skills repo using add-skill CLI
+# Install skill from Vercel skills repo using skills CLI
 # Args: skill_name, repo (e.g., vercel-labs/agent-skills)
 install_vercel_skill() {
     local name="$1"
@@ -427,7 +425,7 @@ install_vercel_skill() {
     ensure_directory "$CLAUDE_DIR/skills"
 
     # Note: < /dev/null prevents npx from consuming stdin (which would break the while-read loop)
-    if npx -y add-skill -g -y "$repo" -a claude-code -s "$name" < /dev/null 2>/dev/null; then
+    if npx -y skills add -g -y "$repo" -a claude-code -s "$name" < /dev/null 2>/dev/null; then
         echo "  ✅ Installed skill: $name"
         return 0
     fi

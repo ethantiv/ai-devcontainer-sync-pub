@@ -138,7 +138,7 @@ if [[ -n "$transcript_path" && -f "$transcript_path" ]]; then
         if [[ $progress -ge 8 ]]; then
             bar+="${C_ACCENT}█${C_RESET}"
         elif [[ $progress -ge 3 ]]; then
-            bar+="${C_ACCENT}▄${C_RESET}"
+            bar+="${C_ACCENT}▓${C_RESET}"
         else
             bar+="${C_BAR_EMPTY}░${C_RESET}"
         fi
@@ -159,7 +159,7 @@ else
         if [[ $progress -ge 8 ]]; then
             bar+="${C_ACCENT}█${C_RESET}"
         elif [[ $progress -ge 3 ]]; then
-            bar+="${C_ACCENT}▄${C_RESET}"
+            bar+="${C_ACCENT}▓${C_RESET}"
         else
             bar+="${C_BAR_EMPTY}░${C_RESET}"
         fi

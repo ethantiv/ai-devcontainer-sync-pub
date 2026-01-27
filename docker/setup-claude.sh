@@ -133,7 +133,7 @@ install_vercel_skill() {
 
     ensure_directory "$CLAUDE_DIR/skills"
 
-    if npx -y add-skill -g -y "$repo" -a claude-code -s "$name" < /dev/null 2>/dev/null; then
+    if npx -y skills add -g -y "$repo" -a claude-code -s "$name" < /dev/null 2>/dev/null; then
         echo "  ✅ Installed skill: $name"
         return 0
     fi

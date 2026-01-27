@@ -20,9 +20,8 @@ claude plugin marketplace list     # List installed plugins
 
 ## Custom Slash Commands
 
-Available commands synced to `~/.claude/commands/`:
+Available as local marketplace plugins (`dev-marketplace`):
 - `/code-review` - parallel code review with multiple agents
-- `/git-message` - generate conventional commit messages
 - `/design-system` - generate HTML design system templates
 - `/roadmap` - manage ROADMAP.json with features and proposals
 
@@ -49,19 +48,36 @@ Codespaces: add as repository secrets. Local: create `.devcontainer/.env`.
 ### Adding New Plugins/Skills/Commands
 
 1. **Plugins**: Edit `.devcontainer/configuration/claude-plugins.txt` (see file for format examples)
-2. **Commands**: Add `.md` files to `.devcontainer/commands/`
+2. **Local plugins**: Add to `.devcontainer/plugins/dev-marketplace/` and register in `marketplace.json`
 3. **Scripts**: Add `.sh` files to `.devcontainer/scripts/`
 4. **Run** `./.devcontainer/setup-env.sh` to sync changes
 
+### Local Plugin Structure
+
+```
+plugins/dev-marketplace/<plugin-name>/
+  .claude-plugin/plugin.json    # name, version, description, author
+  commands/<command>.md          # slash command (with YAML frontmatter)
+  hooks/                        # optional hooks
+```
+
+Register in `plugins/dev-marketplace/.claude-plugin/marketplace.json`.
+
+### Key Files for Config Changes
+
+Changes to setup/sync logic must be applied in parallel across:
+- `.devcontainer/setup-env.sh` — DevContainer/Codespaces setup
+- `setup-local.sh` — macOS local setup
+- `docker/Dockerfile` + `docker/entrypoint.sh` — Docker image build and runtime
+
 ### Setup Flow
 
-Container start → `setup-env.sh` → SSH/GH auth → Claude config → sync plugins/commands → add MCP servers
+Container start → `setup-env.sh` → SSH/GH auth → Claude config → sync plugins → add MCP servers
 
 ### File Sync Mapping
 
 | Source | Destination |
 |--------|-------------|
 | `configuration/CLAUDE.md.memory` | `~/.claude/CLAUDE.md` |
-| `commands/*.md` | `~/.claude/commands/` |
 | `scripts/*.sh` | `~/.claude/scripts/` |
 | `plugins/dev-marketplace/` | local plugin marketplace |
