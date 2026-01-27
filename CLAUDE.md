@@ -36,6 +36,7 @@ Available commands synced to `~/.claude/commands/`:
 | `SSH_PRIVATE_KEY` | No | Base64-encoded SSH key for Git auth |
 | `RESET_CLAUDE_CONFIG` | No | Clear `~/.claude/` on startup |
 | `RESET_GEMINI_CONFIG` | No | Clear `~/.gemini/` on startup |
+| `CONTEXT7_API_KEY` | No | API key for Context7 MCP server |
 
 Codespaces: add as repository secrets. Local: create `.devcontainer/.env`.
 
@@ -43,6 +44,7 @@ Codespaces: add as repository secrets. Local: create `.devcontainer/.env`.
 
 - `aws-documentation` - AWS docs search and reading
 - `terraform` - Terraform/Terragrunt execution, AWS provider docs
+- `context7` - Context7 documentation search (requires `CONTEXT7_API_KEY`)
 
 ### Adding New Plugins/Skills/Commands
 

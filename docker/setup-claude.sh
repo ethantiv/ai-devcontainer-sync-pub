@@ -215,6 +215,15 @@ setup_mcp_servers() {
             "FASTMCP_LOG_LEVEL": "ERROR"
         }
     }'
+
+    add_mcp_server "context7" '{
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@upstash/context7-mcp"],
+        "env": {
+            "CONTEXT7_API_KEY": "'"${CONTEXT7_API_KEY:-}"'"
+        }
+    }'
 }
 
 # =============================================================================
