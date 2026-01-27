@@ -68,7 +68,7 @@ Register in `plugins/dev-marketplace/.claude-plugin/marketplace.json`.
 Changes to setup/sync logic must be applied in parallel across:
 - `.devcontainer/setup-env.sh` — DevContainer/Codespaces setup
 - `setup-local.sh` — macOS local setup
-- `docker/Dockerfile` + `docker/entrypoint.sh` — Docker image build and runtime
+- `docker/Dockerfile` + `docker/entrypoint.sh` + `docker/setup-claude.sh` — Docker image build and runtime
 
 ### Setup Flow
 
@@ -81,3 +81,8 @@ Container start → `setup-env.sh` → SSH/GH auth → Claude config → sync pl
 | `configuration/CLAUDE.md.memory` | `~/.claude/CLAUDE.md` |
 | `scripts/*.sh` | `~/.claude/scripts/` |
 | `plugins/dev-marketplace/` | local plugin marketplace |
+
+### Codebase Patterns
+
+- `~/.claude` is a named Docker volume (ext4), `/tmp` is tmpfs — `rename()` fails cross-device (EXDEV). Setup scripts export `TMPDIR="$CLAUDE_DIR/tmp"` to keep all temp ops on the same filesystem.
+- `claude-plugins.txt` external format: `name@type=owner/repo` — `type` matching: `vercel-skills` and `github` are special-cased, everything else is treated as external marketplace name.

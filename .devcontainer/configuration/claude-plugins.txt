@@ -33,5 +33,5 @@ typescript-lsp
 vercel-react-best-practices@vercel-skills=vercel-labs/agent-skills
 web-design-guidelines@vercel-skills=vercel-labs/agent-skills
 
-# GitHub skills (format: name@github=owner/repo/path-to-SKILL.md)
-playwright-cli@github=microsoft/playwright-cli/skills/playwright-cli/SKILL.md
+# External marketplaces (format: name@marketplace-name=repo)
+playwright-cli@playwright-cli=microsoft/playwright-cli

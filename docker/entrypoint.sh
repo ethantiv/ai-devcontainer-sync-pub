@@ -69,6 +69,7 @@ echo "║  claude --version    : $(claude --version 2>/dev/null || echo 'not ava
 echo "║  gemini --version    : $(gemini --version 2>/dev/null || echo 'not available')                         ║"
 echo "║  terraform version   : $(terraform version -json 2>/dev/null | jq -r '.terraform_version' || echo 'n/a')                              ║"
 echo "║  aws --version       : $(aws --version 2>/dev/null | cut -d' ' -f1 | cut -d'/' -f2 || echo 'n/a')                              ║"
+echo "║  playwright-cli      : $(playwright-cli --version 2>/dev/null || echo 'not available')                         ║"
 echo "╠══════════════════════════════════════════════════════════════╣"
 echo "║  Working directory   : $(pwd)                    ║"
 echo "║  API Key configured  : $([ -n "${CLAUDE_CODE_OAUTH_TOKEN}" ] && echo 'Yes' || echo 'No')                                ║"

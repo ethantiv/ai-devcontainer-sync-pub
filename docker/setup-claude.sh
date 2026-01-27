@@ -167,9 +167,12 @@ install_skills() {
         install_vercel_skill "$skill" "$vercel_repo" && ((skills_installed++)) || ((skills_failed++))
     done
 
-    # GitHub skills (direct URL)
-    local playwright_cli_url="https://raw.githubusercontent.com/microsoft/playwright-cli/main/skills/playwright-cli/SKILL.md"
-    install_github_skill "playwright-cli" "$playwright_cli_url" && ((skills_installed++)) || ((skills_failed++))
+    # Playwright CLI (external marketplace plugin)
+    if ensure_marketplace "playwright-cli" "microsoft/playwright-cli"; then
+        install_plugin "playwright-cli@playwright-cli" "playwright-cli" && ((skills_installed++)) || ((skills_failed++))
+    else
+        ((skills_failed++))
+    fi
 
     echo "  📊 Skills: $skills_installed installed, $skills_failed failed"
 }
@@ -235,6 +238,9 @@ main() {
 
     has_command claude || { echo "❌ Claude CLI not found"; exit 1; }
     has_command jq || { echo "❌ jq not found"; exit 1; }
+
+    ensure_directory "$CLAUDE_DIR/tmp"
+    export TMPDIR="$CLAUDE_DIR/tmp"
 
     apply_claude_settings
     install_official_plugins

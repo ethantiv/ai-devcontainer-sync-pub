@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 # Install npm global packages with cache
 RUN --mount=type=cache,target=/root/.npm \
-    npm install -g @playwright/mcp
+    npm install -g @playwright/cli
 
 # Install Playwright Chromium
 RUN npx -y playwright install chromium --with-deps
@@ -65,15 +65,12 @@ RUN if grep -q '^# pl_PL.UTF-8' /etc/locale.gen 2>/dev/null; then \
 # Copy Node.js global packages from builder
 COPY --from=builder /usr/lib/node_modules /usr/lib/node_modules
 
-# Create symlink for playwright-cli
-RUN ln -sf /usr/lib/node_modules/@playwright/mcp/cli.js /usr/bin/playwright-cli
+# Create symlinks for npm global packages (COPY doesn't include /usr/bin links)
+RUN ln -sf /usr/lib/node_modules/@playwright/cli/playwright-cli.js /usr/bin/playwright-cli
 
 # Copy Playwright browsers
 COPY --chown=vscode:vscode --from=builder /root/.cache/ms-playwright /home/vscode/.cache/ms-playwright
 
-# Create Chrome symlink for playwright-cli
-RUN mkdir -p /opt/google/chrome && \
-    CHROME_PATH=$(find /home/vscode/.cache/ms-playwright -name chrome -type f -path "*/chrome-linux/*" 2>/dev/null | head -1) && \
-    if [ -n "$CHROME_PATH" ]; then ln -sf "$CHROME_PATH" /opt/google/chrome/chrome; fi
+RUN mkdir -p /tmp/playwright-output
 
 USER vscode

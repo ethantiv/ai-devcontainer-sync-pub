@@ -44,12 +44,15 @@
   ],
   "containerEnv": {
     "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
+    "PLAYWRIGHT_MCP_BROWSER": "chromium",
+    "PLAYWRIGHT_MCP_VIEWPORT_SIZE": "1920x1080",
     "TZ": "Europe/Warsaw",
     "LC_TIME": "pl_PL.UTF-8"
   },
   "runArgs": [
     "--env-file",
-    ".devcontainer/.env"
+    ".devcontainer/.env",
+    "--shm-size=256m"
   ],
   "customizations": {
     "vscode": {

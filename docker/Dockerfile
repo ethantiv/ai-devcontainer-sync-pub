@@ -41,7 +41,7 @@ RUN curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/te
 RUN npm install -g \
     @anthropic-ai/claude-code \
     @google/gemini-cli \
-    @playwright/mcp
+    @playwright/cli
 
 # Install uv (Python package manager)
 RUN pip3 install --break-system-packages uv
@@ -121,7 +121,7 @@ COPY --from=builder /usr/local/bin/terraform /usr/local/bin/terraform
 # Note: bin paths vary by package, using the actual entry points
 RUN ln -sf ../lib/node_modules/@anthropic-ai/claude-code/cli.js /usr/bin/claude \
     && ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini \
-    && ln -sf ../lib/node_modules/@playwright/mcp/cli.js /usr/bin/playwright-cli
+    && ln -sf ../lib/node_modules/@playwright/cli/playwright-cli.js /usr/bin/playwright-cli
 
 # Copy uv and tools from builder
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
@@ -138,13 +138,9 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && echo "alias cc='clear && claude'" >> ${HOME}/.bashrc
 
 # Setup Playwright for non-root user
-# Note: playwright-cli expects chrome at /opt/google/chrome/chrome, create symlink
 RUN mkdir -p ${HOME}/.cache \
     && cp -r /opt/playwright ${HOME}/.cache/ms-playwright \
-    && chown -R ${USERNAME}:${USERNAME} ${HOME}/.cache \
-    && mkdir -p /opt/google/chrome \
-    && CHROME_PATH=$(find ${HOME}/.cache/ms-playwright -name chrome -type f -path "*/chrome-linux/*" | head -1) \
-    && ln -sf "$CHROME_PATH" /opt/google/chrome/chrome
+    && chown -R ${USERNAME}:${USERNAME} ${HOME}/.cache
 
 # Copy configuration files to /opt (for runtime sync to volume)
 COPY .devcontainer/configuration/CLAUDE.md.memory /opt/claude-config/CLAUDE.md
@@ -155,6 +151,9 @@ COPY docker/setup-claude.sh /usr/local/bin/setup-claude.sh
 # Set permissions
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/setup-claude.sh \
     && chown -R ${USERNAME}:${USERNAME} ${HOME}/.claude /opt/claude-config
+
+# Create Playwright output directory
+RUN mkdir -p /tmp/playwright-output && chown ${USERNAME}:${USERNAME} /tmp/playwright-output
 
 # Declare volumes for persistence
 VOLUME ["${HOME}/.claude", "${HOME}/.gemini", "${HOME}/projects"]

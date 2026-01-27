@@ -157,19 +157,37 @@ install_claude_cli() {
 install_playwright() {
     print_header "Playwright + Chromium"
 
-    if npm ls -g @playwright/mcp &>/dev/null; then
-        echo "✅ @playwright/mcp already installed"
+    if npm ls -g @playwright/cli &>/dev/null; then
+        echo "✅ @playwright/cli already installed"
     else
-        echo "📥 Installing @playwright/mcp..."
-        npm install -g @playwright/mcp
-        echo "✅ @playwright/mcp installed"
+        echo "📥 Installing @playwright/cli..."
+        npm install -g @playwright/cli
+        echo "✅ @playwright/cli installed"
     fi
 
-    if npx playwright install chromium; then
+    if npx playwright install chromium --with-deps; then
         echo "✅ Chromium installed"
     else
         echo "⚠️  Failed to install Chromium"
     fi
+
+    # Set Playwright environment variables
+    local shell_rc="$HOME/.zshrc"
+    [[ -f "$shell_rc" ]] || shell_rc="$HOME/.bashrc"
+
+    local env_vars=(
+        "PLAYWRIGHT_MCP_BROWSER=chromium"
+        "PLAYWRIGHT_MCP_VIEWPORT_SIZE=1920x1080"
+    )
+
+    for var in "${env_vars[@]}"; do
+        local key="${var%%=*}"
+        if ! grep -q "export $key=" "$shell_rc" 2>/dev/null; then
+            echo "export $var" >> "$shell_rc"
+        fi
+        export "$var"
+    done
+    echo "✅ Playwright environment configured"
 }
 
 # =============================================================================
@@ -259,6 +277,7 @@ setup_claude_configuration() {
 
     ensure_directory "$CLAUDE_DIR"
     ensure_directory "$CLAUDE_DIR/tmp"
+    export TMPDIR="$CLAUDE_DIR/tmp"
     ensure_directory "$CLAUDE_DIR/skills"
 
     apply_claude_settings
@@ -471,7 +490,7 @@ print_final_report() {
 
     echo ""
     echo "🎭 Playwright:"
-    echo "   @playwright/mcp (global npm package)"
+    echo "   @playwright/cli (global npm package)"
     echo "   Chromium browser"
 
     echo ""

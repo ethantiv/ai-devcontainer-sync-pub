@@ -210,6 +210,7 @@ setup_claude_configuration() {
 
     ensure_directory "$CLAUDE_DIR"
     ensure_directory "$CLAUDE_DIR/tmp"
+    export TMPDIR="$CLAUDE_DIR/tmp"
 
     apply_claude_settings
     copy_claude_memory "$WORKSPACE_FOLDER"
@@ -302,15 +303,6 @@ install_all_plugins_and_skills() {
             local source="${rest#*=}"
 
             case "$type" in
-                *-marketplace)
-                    if [[ -z "${external_marketplaces[$type]}" ]]; then
-                        ensure_marketplace "$type" "$source" || continue
-                        claude plugin marketplace update "$type" 2>/dev/null || true
-                        external_marketplaces[$type]=1
-                    fi
-                    local rc=0; install_plugin "${name}@${type}" "$name" || rc=$?
-                    update_plugin_counters $rc plugins_installed plugins_skipped plugins_failed
-                    ;;
                 vercel-skills)
                     install_vercel_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
                     ;;
@@ -318,7 +310,13 @@ install_all_plugins_and_skills() {
                     install_github_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
                     ;;
                 *)
-                    echo "  ⚠️  Unknown source type: $type for $name"
+                    if [[ -z "${external_marketplaces[$type]}" ]]; then
+                        ensure_marketplace "$type" "$source" || continue
+                        claude plugin marketplace update "$type" 2>/dev/null || true
+                        external_marketplaces[$type]=1
+                    fi
+                    local rc=0; install_plugin "${name}@${type}" "$name" || rc=$?
+                    update_plugin_counters $rc plugins_installed plugins_skipped plugins_failed
                     ;;
             esac
         else
@@ -480,8 +478,8 @@ build_expected_plugins_list() {
                 local rest="${line#*@}"
                 local type="${rest%%=*}"
                 case "$type" in
-                    *-marketplace) expected_plugins["${name}@${type}"]=1 ;;
-                    # vercel-skills, github - skip (not in settings.json)
+                    vercel-skills|github) ;; # skills - not in settings.json
+                    *) expected_plugins["${name}@${type}"]=1 ;;
                 esac
             else
                 expected_plugins["${line}@${OFFICIAL_MARKETPLACE_NAME}"]=1
