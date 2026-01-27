@@ -43,7 +43,6 @@ Codespaces: add as repository secrets. Local: create `.devcontainer/.env`.
 
 - `aws-documentation` - AWS docs search and reading
 - `terraform` - Terraform/Terragrunt execution, AWS provider docs
-- `aws-api` - AWS CLI command execution
 
 ### Adding New Plugins/Skills/Commands
 

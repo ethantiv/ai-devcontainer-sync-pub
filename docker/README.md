@@ -88,7 +88,6 @@ Pre-configured Model Context Protocol servers:
 |--------|-------------|
 | `aws-documentation` | Search and read AWS docs |
 | `terraform` | Terraform/Terragrunt workflow and provider docs |
-| `aws-api` | Execute AWS CLI commands |
 
 Verify with: `claude mcp list`
 

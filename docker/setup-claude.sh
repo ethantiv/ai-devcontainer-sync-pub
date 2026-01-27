@@ -68,7 +68,11 @@ apply_claude_settings() {
             "ask": [],
             "defaultMode": "bypassPermissions"
         },
-        "language": "Polski"
+        "language": "Polski",
+        "statusLine": {
+            "type": "command",
+            "command": "~/.claude/scripts/context-bar.sh"
+        }
     }'
 
     ensure_directory "$CLAUDE_DIR"
@@ -210,12 +214,6 @@ setup_mcp_servers() {
         "env": {
             "FASTMCP_LOG_LEVEL": "ERROR"
         }
-    }'
-
-    add_mcp_server "aws-api" '{
-        "type": "stdio",
-        "command": "uvx",
-        "args": ["awslabs.aws-api-mcp-server@latest"]
     }'
 }
 

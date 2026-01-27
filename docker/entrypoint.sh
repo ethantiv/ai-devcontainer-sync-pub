@@ -14,7 +14,7 @@ readonly CONFIG_SOURCE="/opt/claude-config"
 
 sync_config_files() {
     # Ensure directories exist
-    mkdir -p "$CLAUDE_DIR/commands" "$CLAUDE_DIR/skills"
+    mkdir -p "$CLAUDE_DIR/commands" "$CLAUDE_DIR/scripts" "$CLAUDE_DIR/skills"
 
     # Sync CLAUDE.md (global user instructions)
     if [[ -f "$CONFIG_SOURCE/CLAUDE.md" ]]; then
@@ -30,6 +30,18 @@ sync_config_files() {
         done
         # Copy all source commands
         cp "$CONFIG_SOURCE/commands"/*.md "$CLAUDE_DIR/commands/" 2>/dev/null || true
+    fi
+
+    # Sync scripts
+    if [[ -d "$CONFIG_SOURCE/scripts" ]]; then
+        # Remove scripts that no longer exist in source
+        for file in "$CLAUDE_DIR/scripts"/*.sh; do
+            [[ -f "$file" ]] || continue
+            [[ -f "$CONFIG_SOURCE/scripts/$(basename "$file")" ]] || rm -f "$file"
+        done
+        # Copy all source scripts and make executable
+        cp "$CONFIG_SOURCE/scripts"/*.sh "$CLAUDE_DIR/scripts/" 2>/dev/null || true
+        chmod +x "$CLAUDE_DIR/scripts"/*.sh 2>/dev/null || true
     fi
 }
 

@@ -400,12 +400,6 @@ setup_mcp_servers() {
             "FASTMCP_LOG_LEVEL": "ERROR"
         }
     }'
-
-    add_mcp_server "aws-api" '{
-        "type": "stdio",
-        "command": "uvx",
-        "args": ["awslabs.aws-api-mcp-server@latest"]
-    }'
 }
 
 # =============================================================================
