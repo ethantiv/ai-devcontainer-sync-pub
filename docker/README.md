@@ -35,7 +35,7 @@ docker build -t claude-terminal -f docker/Dockerfile .
 docker run -it --rm \
     -e CLAUDE_CODE_OAUTH_TOKEN="sk-ant-..." \
     -e GH_TOKEN="ghp_..." \
-    -v $(pwd):/home/developer/projects \
+    -v projects:/home/developer/projects \
     -v claude-config:/home/developer/.claude \
     claude-terminal
 ```
@@ -53,7 +53,7 @@ docker run -it --rm \
 |--------|-------------|---------|
 | `claude-config` | `/home/developer/.claude` | Claude configuration, plugins, settings |
 | `gemini-config` | `/home/developer/.gemini` | Gemini CLI configuration |
-| bind mount | `/home/developer/projects` | Your project files |
+| `projects` | `/home/developer/projects` | Persistent projects storage |
 
 ## Included Tools
 

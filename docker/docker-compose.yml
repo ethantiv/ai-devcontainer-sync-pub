@@ -12,8 +12,8 @@ services:
       # Persistent configuration
       - claude-config:/home/developer/.claude
       - gemini-config:/home/developer/.gemini
-      # Projects directory (bind mount)
-      - ~/projekty:/home/developer/projects
+      # Projects directory
+      - projects:/home/developer/projects
     stdin_open: true
     tty: true
     working_dir: /home/developer/projects
@@ -30,3 +30,5 @@ volumes:
     name: claude-config
   gemini-config:
     name: gemini-config
+  projects:
+    name: projects

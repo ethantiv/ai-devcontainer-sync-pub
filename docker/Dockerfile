@@ -163,7 +163,7 @@ RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/setup-claude.sh \
     && chown -R ${USERNAME}:${USERNAME} ${HOME}/.claude /opt/claude-config
 
 # Declare volumes for persistence
-VOLUME ["${HOME}/.claude", "${HOME}/.gemini"]
+VOLUME ["${HOME}/.claude", "${HOME}/.gemini", "${HOME}/projects"]
 
 # Switch to non-root user
 USER ${USERNAME}
