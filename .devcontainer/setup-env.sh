@@ -210,11 +210,9 @@ setup_claude_configuration() {
 
     ensure_directory "$CLAUDE_DIR"
     ensure_directory "$CLAUDE_DIR/tmp"
-    ensure_directory "$CLAUDE_DIR/agents"
 
     apply_claude_settings
     copy_claude_memory "$WORKSPACE_FOLDER"
-    sync_claude_files "$WORKSPACE_FOLDER" "agents"
     sync_claude_scripts "$WORKSPACE_FOLDER"
 }
 

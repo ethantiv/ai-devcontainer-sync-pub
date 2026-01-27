@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# macOS local setup: Install Claude Code configuration identical to DevContainer
-# This script installs plugins, skills, commands, and settings on local macOS machine
+# macOS local setup: Install Claude Code configuration for local development
+# Installs CLI, Playwright, plugins, skills, scripts, and settings on macOS
 
 set -e
 
@@ -259,17 +259,15 @@ setup_claude_configuration() {
 
     ensure_directory "$CLAUDE_DIR"
     ensure_directory "$CLAUDE_DIR/tmp"
-    ensure_directory "$CLAUDE_DIR/agents"
     ensure_directory "$CLAUDE_DIR/skills"
 
     apply_claude_settings
     copy_claude_memory
-    sync_claude_files "agents" ".md"
     sync_claude_scripts
 }
 
 # =============================================================================
-# CLAUDE PLUGINS
+# PLUGIN INSTALLATION HELPERS
 # =============================================================================
 
 # Install a Claude plugin. Returns: 0=installed, 1=already present, 2=failed
@@ -448,6 +446,27 @@ print_final_report() {
     if [[ -d "$CLAUDE_DIR/skills" ]]; then
         local skill_count=$(find "$CLAUDE_DIR/skills" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | xargs)
         echo "   ~/.claude/skills/ ($skill_count skills)"
+    fi
+
+    if [[ -f "$CLAUDE_SETTINGS_FILE" ]]; then
+        local plugin_count
+        plugin_count=$(jq -r '.enabledPlugins // {} | keys | length' "$CLAUDE_SETTINGS_FILE" 2>/dev/null || echo "0")
+        if [[ "$plugin_count" -gt 0 ]]; then
+            echo ""
+            echo "🔌 Plugins: $plugin_count installed (official marketplace)"
+        fi
+    fi
+
+    if [[ -d "$CLAUDE_DIR/skills" ]]; then
+        local skill_dirs=("$CLAUDE_DIR/skills"/*/)
+        if [[ -d "${skill_dirs[0]}" ]]; then
+            echo ""
+            echo "🎯 Skills:"
+            for skill_dir in "${skill_dirs[@]}"; do
+                [[ -d "$skill_dir" ]] || continue
+                echo "   $(basename "$skill_dir")"
+            done
+        fi
     fi
 
     echo ""
