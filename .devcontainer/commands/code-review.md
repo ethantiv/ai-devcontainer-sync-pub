@@ -1,67 +1,77 @@
 ---
-description: Launch parallel code review agents to find bugs, security issues, and code quality problems
-argument-hint: [files/dirs] or empty for staged changes
+allowed-tools: Bash(git diff:*), Bash(git log:*), Bash(git blame:*), Bash(git show:*), Bash(git status:*)
+description: Code review git staged changes
+disable-model-invocation: false
 ---
 
-# Code Review
+Provide a code review for the current git staged changes.
 
-<context>
-You are performing a systematic code review. High-quality code reviews catch bugs early, improve security, and maintain code quality. Your review ensures code is simple, DRY, elegant, readable, and functionally correct before it reaches production.
-</context>
+To do this, follow these steps precisely:
 
-<scope_detection>
-Determine review scope based on arguments:
-1. If specific files/directories provided as arguments: review those paths
-2. If no arguments: review staged changes (`git diff --cached`)
-3. If no staged changes: review unstaged changes (`git diff`)
-4. If no changes at all: inform user there is nothing to review
-</scope_detection>
+1. Use a Haiku agent to check if there are any staged changes by running `git diff --cached --quiet`. If there are no staged changes, do not proceed.
+2. Use another Haiku agent to give you a list of file paths to (but not the contents of) any relevant CLAUDE.md files from the codebase: the root CLAUDE.md file (if one exists), as well as any CLAUDE.md files in the directories whose files the staged changes modified (use `git diff --cached --name-only` to get the list of modified files)
+3. Use a Haiku agent to view the staged changes via `git diff --staged`, and ask the agent to return a summary of the change
+4. Then, launch 5 parallel Sonnet agents to independently code review the change. The agents should do the following, then return a list of issues and the reason each issue was flagged (eg. CLAUDE.md adherence, bug, historical git context, etc.):
+   a. Agent #1: Audit the changes to make sure they comply with the CLAUDE.md. Note that CLAUDE.md is guidance for Claude as it writes code, so not all instructions will be applicable during code review.
+   b. Agent #2: Read the staged changes via `git diff --staged`, then do a shallow scan for obvious bugs. Avoid reading extra context beyond the changes, focusing just on the changes themselves. Focus on large bugs, and avoid small issues and nitpicks. Ignore likely false positives.
+   c. Agent #3: Read the git blame and history of the code modified, to identify any bugs in light of that historical context
+   d. Agent #4: Read recent git log history for the modified files (using `git log` on each file), and check for any patterns or recurring issues that may also apply to the current staged changes.
+   e. Agent #5: Read code comments in the modified files, and make sure the staged changes comply with any guidance in the comments.
+5. For each issue found in #4, launch a parallel Haiku agent that takes the staged changes, issue description, and list of CLAUDE.md files (from step 2), and returns a score to indicate the agent's level of confidence for whether the issue is real or false positive. To do that, the agent should score each issue on a scale from 0-100, indicating its level of confidence. For issues that were flagged due to CLAUDE.md instructions, the agent should double check that the CLAUDE.md actually calls out that issue specifically. The scale is (give this rubric to the agent verbatim):
+   a. 0: Not confident at all. This is a false positive that doesn't stand up to light scrutiny, or is a pre-existing issue.
+   b. 25: Somewhat confident. This might be a real issue, but may also be a false positive. The agent wasn't able to verify that it's a real issue. If the issue is stylistic, it is one that was not explicitly called out in the relevant CLAUDE.md.
+   c. 50: Moderately confident. The agent was able to verify this is a real issue, but it might be a nitpick or not happen very often in practice. Relative to the rest of the staged changes, it's not very important.
+   d. 75: Highly confident. The agent double checked the issue, and verified that it is very likely it is a real issue that will be hit in practice. The existing approach in the staged changes is insufficient. The issue is very important and will directly impact the code's functionality, or it is an issue that is directly mentioned in the relevant CLAUDE.md.
+   e. 100: Absolutely certain. The agent double checked the issue, and confirmed that it is definitely a real issue, that will happen frequently in practice. The evidence directly confirms this.
+6. Filter out any issues with a score less than 80. If there are no issues that meet this criteria, do not proceed.
+7. Finally, output the review results directly in the terminal. When writing your review, keep in mind to:
+   a. Keep your output brief
+   b. Avoid emojis
+   c. Link and cite relevant code, files, and locations using `file_path:line_number` format
 
-<parallel_agent_execution>
-Launch 3 code-reviewer agents in parallel. Each agent should focus on a distinct aspect to maximize coverage:
+Examples of false positives, for steps 4 and 5:
 
-Agent 1 - Code Quality Focus:
-- Simplicity and readability
-- DRY violations and code duplication
-- Function/method length and complexity
-- Naming conventions and clarity
+- Pre-existing issues
+- Something that looks like a bug but is not actually a bug
+- Pedantic nitpicks that a senior engineer wouldn't call out
+- Issues that a linter, typechecker, or compiler would catch (eg. missing or incorrect imports, type errors, broken tests, formatting issues, pedantic style issues like newlines). No need to run these build steps yourself -- it is safe to assume that they will be run separately as part of CI.
+- General code quality issues (eg. lack of test coverage, general security issues, poor documentation), unless explicitly required in CLAUDE.md
+- Issues that are called out in CLAUDE.md, but explicitly silenced in the code (eg. due to a lint ignore comment)
+- Changes in functionality that are likely intentional or are directly related to the broader change
+- Real issues, but on lines that are not part of the staged changes
 
-Agent 2 - Correctness & Security Focus:
-- Logic errors and edge cases
-- Security vulnerabilities (OWASP top 10)
-- Error handling gaps
-- Race conditions and concurrency issues
+Notes:
 
-Agent 3 - Architecture & Conventions Focus:
-- Consistency with project patterns and abstractions
-- API design and interface contracts
-- Test coverage gaps
-- Documentation accuracy
+- Do not check build signal or attempt to build or typecheck the app. These will run separately, and are not relevant to your code review.
+- Use `git diff --staged` to get the staged changes
+- Make a todo list first
+- You must cite and link each bug (eg. if referring to a CLAUDE.md, you must reference it with its file path)
+- For your final output, follow the following format precisely (assuming for this example that you found 3 issues):
 
-If you intend to call multiple agents and there are no dependencies between the calls, make all calls in parallel to maximize efficiency.
-</parallel_agent_execution>
+---
 
-<consolidation>
-After agents complete, consolidate findings:
-1. Deduplicate overlapping issues found by multiple agents
-2. Group issues by severity (agents provide their own severity ratings)
-3. Prioritize issues that multiple agents flagged independently
-4. Create a clear, structured summary
-</consolidation>
+### Code review
 
-<user_interaction>
-Present consolidated findings to user with clear options:
-- Which issues to fix immediately
-- Which to defer for later
-- Which to dismiss as acceptable
+Found 3 issues:
 
-Wait for user decision before taking any action. Do not automatically fix issues without explicit approval.
-</user_interaction>
+1. <brief description of bug> (CLAUDE.md says "<...>")
 
-<output_format>
-Structure your final report as:
-1. **Scope**: What was reviewed (files, lines changed)
-2. **Summary**: Brief overview of findings
-3. **Issues by Severity**: Grouped list with file:line references
-4. **Recommendations**: Suggested action for each issue category
-</output_format>
+   Location: path/to/file.ts:13-17
+
+2. <brief description of bug> (some/other/CLAUDE.md says "<...>")
+
+   Location: path/to/other/file.ts:42-45
+
+3. <brief description of bug> (bug due to <file and code snippet>)
+
+   Location: path/to/file.ts:78-82
+
+---
+
+- Or, if you found no issues:
+
+---
+
+### Code review
+
+No issues found. Checked for bugs and CLAUDE.md compliance.
