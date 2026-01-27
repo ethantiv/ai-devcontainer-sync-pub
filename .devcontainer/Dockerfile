@@ -66,7 +66,7 @@ RUN if grep -q '^# pl_PL.UTF-8' /etc/locale.gen 2>/dev/null; then \
 COPY --from=builder /usr/lib/node_modules /usr/lib/node_modules
 
 # Create symlink for playwright-cli
-RUN ln -sf /usr/lib/node_modules/@playwright/mcp/playwright-cli.js /usr/bin/playwright-cli
+RUN ln -sf /usr/lib/node_modules/@playwright/mcp/cli.js /usr/bin/playwright-cli
 
 # Copy Playwright browsers
 COPY --chown=vscode:vscode --from=builder /root/.cache/ms-playwright /home/vscode/.cache/ms-playwright
