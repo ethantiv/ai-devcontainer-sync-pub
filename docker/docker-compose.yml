@@ -3,7 +3,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: claude-terminal:latest
+    image: claude-code:latest
     container_name: claude-dev
     hostname: claude-dev
     env_file:
@@ -23,13 +23,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-        reservations:
-          memory: 1G
 
 volumes:
   claude-config:
