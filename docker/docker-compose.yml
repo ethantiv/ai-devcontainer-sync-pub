@@ -17,6 +17,12 @@ services:
     stdin_open: true
     tty: true
     working_dir: /home/developer/projects
+    healthcheck:
+      test: ["CMD", "node", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     # Resource limits
     deploy:
       resources:
