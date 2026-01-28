@@ -48,22 +48,17 @@ sync_config_files() {
 sync_config_files
 
 # =============================================================================
-# FIRST-RUN SETUP (plugins and MCP servers)
+# FIRST-RUN SETUP (MCP servers, settings, plugins)
 # =============================================================================
 
+# Run full setup on first start (no token required)
 if [[ ! -f "$CONFIGURED_MARKER" ]]; then
-    if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN}" ]]; then
-        echo "🚀 First run detected - configuring Claude Code..."
-
-        if /usr/local/bin/setup-claude.sh; then
-            touch "$CONFIGURED_MARKER"
-            echo "✅ Configuration complete!"
-        else
-            echo "⚠️  Setup encountered errors (will retry on next start)"
-        fi
+    echo "🚀 First run detected - configuring Claude Code..."
+    if /usr/local/bin/setup-claude.sh; then
+        touch "$CONFIGURED_MARKER"
+        echo "✅ Configuration complete!"
     else
-        echo "⚠️  CLAUDE_CODE_OAUTH_TOKEN not set - skipping plugin setup"
-        echo "   Set the key and restart container to configure plugins"
+        echo "⚠️  Setup encountered errors (will retry on next start)"
     fi
 fi
 
@@ -80,7 +75,7 @@ echo "║  gemini --version    : $(gemini --version 2>/dev/null || echo 'not ava
 echo "║  playwright-cli      : $(playwright-cli --version 2>/dev/null || echo 'not available')                         ║"
 echo "╠══════════════════════════════════════════════════════════════╣"
 echo "║  Working directory   : $(pwd)                    ║"
-echo "║  API Key configured  : $([ -n "${CLAUDE_CODE_OAUTH_TOKEN}" ] && echo 'Yes' || echo 'No')                                ║"
+echo "║  Config initialized  : $([ -f "$CONFIGURED_MARKER" ] && echo 'Yes' || echo 'No')                                ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
 
