@@ -25,6 +25,13 @@ ok()   { echo -e "  \033[32m✔︎\033[0m $1"; }
 warn() { echo -e "  \033[33m⚠️\033[0m  $1"; }
 fail() { echo -e "  \033[31m❌\033[0m $1"; }
 
+setup_github_token() {
+    if [[ -n "${GH_TOKEN}" ]]; then
+        echo "export GH_TOKEN='${GH_TOKEN}'" >> ~/.bashrc
+        ok "GitHub token exported to ~/.bashrc"
+    fi
+}
+
 # Install a Claude plugin (returns: 0=installed, 1=already present, 2=failed)
 install_plugin() {
     local plugin="$1"
@@ -243,6 +250,7 @@ main() {
     ensure_directory "$CLAUDE_DIR/tmp"
     export TMPDIR="$CLAUDE_DIR/tmp"
 
+    setup_github_token
     apply_claude_settings
     install_official_plugins
     install_skills

@@ -34,3 +34,5 @@ vercel-react-best-practices@skills=vercel-labs/agent-skills
 web-design-guidelines@skills=vercel-labs/agent-skills
 agent-browser@skills=vercel-labs/agent-browser
 playwright-cli@skills=microsoft/playwright
+ui-ux-pro-max@skills=nextlevelbuilder/ui-ux-pro-max-skill
+brainstorming@skills=obra/superpowers
