@@ -50,16 +50,20 @@ print_header() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
+ok()   { echo -e "  \033[32m✔︎\033[0m $1"; }
+warn() { echo -e "  \033[33m⚠️\033[0m  $1"; }
+fail() { echo -e "  \033[31m❌\033[0m $1"; }
+
 # =============================================================================
 # REQUIREMENTS CHECK
 # =============================================================================
 
 check_macos() {
     if [[ "$(uname)" != "Darwin" ]]; then
-        echo "❌ This script is designed for macOS only"
+        fail "This script is designed for macOS only"
         exit 1
     fi
-    echo "✅ Running on macOS $(sw_vers -productVersion)"
+    ok "Running on macOS $(sw_vers -productVersion)"
 }
 
 check_requirements() {
@@ -71,48 +75,40 @@ check_requirements() {
 
     if ! has_command jq; then
         missing+=("jq")
-        echo "❌ jq not found"
+        fail "jq not found"
     else
-        echo "✅ jq $(jq --version 2>/dev/null | head -1)"
+        ok "jq $(jq --version 2>/dev/null | head -1)"
     fi
 
     if ! has_command node; then
         missing+=("node")
-        echo "❌ node not found"
+        fail "node not found"
     else
-        echo "✅ node $(node --version)"
+        ok "node $(node --version)"
     fi
 
     if ! has_command npm; then
         missing+=("npm")
-        echo "❌ npm not found"
+        fail "npm not found"
     else
-        echo "✅ npm $(npm --version 2>/dev/null)"
+        ok "npm $(npm --version 2>/dev/null)"
     fi
 
     if ! has_command npx; then
         missing+=("npx")
-        echo "❌ npx not found"
+        fail "npx not found"
     else
-        echo "✅ npx available"
-    fi
-
-    if ! has_command uvx; then
-        missing+=("uvx")
-        echo "❌ uvx not found (required for MCP servers)"
-    else
-        echo "✅ uvx available"
+        ok "npx available"
     fi
 
     if [[ ${#missing[@]} -gt 0 ]]; then
         echo ""
-        echo "⚠️  Missing dependencies. Install them with:"
+        warn "Missing dependencies. Install them with:"
         echo ""
         for dep in "${missing[@]}"; do
             case "$dep" in
                 jq) echo "  brew install jq" ;;
                 node|npm|npx) echo "  brew install node" ;;
-                uvx) echo "  brew install uv  # or: pipx install uv" ;;
             esac
         done
         echo ""
@@ -120,7 +116,7 @@ check_requirements() {
         exit 1
     fi
 
-    echo "✅ All requirements satisfied"
+    ok "All requirements satisfied"
 }
 
 # =============================================================================
@@ -130,22 +126,30 @@ check_requirements() {
 install_claude_cli() {
     print_header "Claude CLI"
 
+    # Ensure ~/.local/bin is in PATH before installer runs
+    export PATH="$HOME/.local/bin:$PATH"
+
     if has_command claude; then
-        echo "✅ Claude CLI already installed: $(claude --version 2>/dev/null | head -1)"
+        ok "Claude CLI already installed: $(claude --version 2>/dev/null | head -1)"
         return 0
+    fi
+
+    # Persist PATH in shell profile so installer doesn't warn
+    local shell_rc="$HOME/.zshrc"
+    [[ -f "$shell_rc" ]] || shell_rc="$HOME/.bashrc"
+    if ! grep -q 'export PATH="\$HOME/.local/bin:\$PATH"' "$shell_rc" 2>/dev/null; then
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$shell_rc"
     fi
 
     echo "📥 Installing Claude CLI..."
     if curl -fsSL https://claude.ai/install.sh | bash; then
-        # Source updated PATH
-        export PATH="$HOME/.claude/bin:$PATH"
         if has_command claude; then
-            echo "✅ Claude CLI installed successfully"
+            ok "Claude CLI installed: $(claude --version 2>/dev/null | head -1)"
             return 0
         fi
     fi
 
-    echo "❌ Failed to install Claude CLI"
+    fail "Failed to install Claude CLI"
     echo "   Try manual installation: https://claude.ai/install"
     exit 1
 }
@@ -158,17 +162,17 @@ install_playwright() {
     print_header "Playwright + Chromium"
 
     if npm ls -g @playwright/cli &>/dev/null; then
-        echo "✅ @playwright/cli already installed"
+        ok "@playwright/cli already installed"
     else
         echo "📥 Installing @playwright/cli..."
         npm install -g @playwright/cli
-        echo "✅ @playwright/cli installed"
+        ok "@playwright/cli installed"
     fi
 
-    if npx playwright install chromium --with-deps; then
-        echo "✅ Chromium installed"
+    if npx -y playwright install chromium; then
+        ok "Chromium installed"
     else
-        echo "⚠️  Failed to install Chromium"
+        warn "Failed to install Chromium"
     fi
 }
 
@@ -176,11 +180,11 @@ install_agent_browser() {
     print_header "Agent Browser"
 
     if npm ls -g agent-browser &>/dev/null; then
-        echo "✅ agent-browser already installed"
+        ok "agent-browser already installed"
     else
         echo "📥 Installing agent-browser..."
         npm install -g agent-browser
-        echo "✅ agent-browser installed"
+        ok "agent-browser installed"
     fi
 }
 
@@ -201,7 +205,7 @@ setup_playwright_env() {
         fi
         export "$var"
     done
-    echo "✅ Playwright environment configured"
+    ok "Playwright environment configured"
 }
 
 # =============================================================================
@@ -227,10 +231,10 @@ apply_claude_settings() {
         local merged
         merged=$(jq -s '.[0] * .[1]' <(echo "$default_settings") "$CLAUDE_SETTINGS_FILE" 2>/dev/null)
         [[ -n "$merged" ]] && echo "$merged" > "$CLAUDE_SETTINGS_FILE"
-        echo "  ✅ Settings merged with existing"
+        ok "Settings merged with existing"
     else
         echo "$default_settings" | jq '.' > "$CLAUDE_SETTINGS_FILE"
-        echo "  ✅ Settings created"
+        ok "Settings created"
     fi
 }
 
@@ -238,32 +242,9 @@ copy_claude_memory() {
     local source_file="$DEVCONTAINER_DIR/configuration/CLAUDE.md.memory"
     if [[ -f "$source_file" ]]; then
         cp "$source_file" "$CLAUDE_DIR/CLAUDE.md"
-        echo "  ✅ CLAUDE.md synced"
+        ok "CLAUDE.md synced"
     else
-        echo "  ⚠️  CLAUDE.md.memory not found"
-    fi
-}
-
-sync_claude_files() {
-    local source_dir="$DEVCONTAINER_DIR/$1"
-    local target_dir="$CLAUDE_DIR/$1"
-    local extension="${2:-.md}"
-
-    [[ -d "$source_dir" ]] || return 0
-
-    # Remove files that no longer exist in source
-    if [[ -d "$target_dir" ]]; then
-        for file in "$target_dir"/*"$extension"; do
-            [[ -f "$file" ]] || continue
-            [[ -f "$source_dir/$(basename "$file")" ]] || rm -f "$file"
-        done 2>/dev/null
-    fi
-
-    # Copy all source files
-    local files=("$source_dir"/*"$extension")
-    if [[ -e "${files[0]}" ]]; then
-        cp "$source_dir"/*"$extension" "$target_dir/"
-        echo "  ✅ Synced ${#files[@]} $1"
+        warn "CLAUDE.md.memory not found"
     fi
 }
 
@@ -282,7 +263,7 @@ sync_claude_scripts() {
     done
 
     if [[ $count -gt 0 ]]; then
-        echo "  ✅ Synced $count scripts to ~/.claude/scripts/"
+        ok "Synced $count scripts to ~/.claude/scripts/"
     fi
 }
 
@@ -313,25 +294,11 @@ install_plugin() {
     fi
 
     if claude plugin install "$plugin" --scope user < /dev/null 2>/dev/null; then
-        echo "  ✅ Installed: $display_name"
+        ok "Installed: $display_name"
         return 0
     fi
-    echo "  ⚠️  Failed: $display_name"
+    warn "Failed: $display_name"
     return 2
-}
-
-# Update counters based on install_plugin return code
-update_plugin_counters() {
-    local rc="$1"
-    local -n _installed="$2"
-    local -n _skipped="$3"
-    local -n _failed="$4"
-
-    case $rc in
-        0) ((_installed++)) || true ;;
-        1) ((_skipped++)) || true ;;
-        2) ((_failed++)) || true ;;
-    esac
 }
 
 ensure_marketplace() {
@@ -343,10 +310,10 @@ ensure_marketplace() {
     fi
 
     if claude plugin marketplace add "$source" 2>/dev/null; then
-        echo "  ✅ Added marketplace: $name"
+        ok "Added marketplace: $name"
         return 0
     fi
-    echo "  ⚠️  Failed to add marketplace: $name"
+    warn "Failed to add marketplace: $name"
     return 1
 }
 
@@ -363,10 +330,10 @@ install_vercel_skill() {
     ensure_directory "$CLAUDE_DIR/skills"
 
     if npx -y skills add -g -y "$repo" -a claude-code -s "$name" < /dev/null 2>/dev/null; then
-        echo "  ✅ Installed skill: $name"
+        ok "Installed skill: $name"
         return 0
     fi
-    echo "  ⚠️  Failed to install skill: $name"
+    warn "Failed to install skill: $name"
     return 1
 }
 
@@ -386,10 +353,10 @@ install_github_skill() {
     local url="https://raw.githubusercontent.com/${owner}/${repo}/main/${file_path}"
 
     if curl -fsSL -o "$skill_dir/SKILL.md" "$url" < /dev/null 2>/dev/null; then
-        echo "  ✅ Installed skill: $name"
+        ok "Installed skill: $name"
         return 0
     fi
-    echo "  ⚠️  Failed to install skill: $name"
+    warn "Failed to install skill: $name"
     return 1
 }
 
@@ -402,17 +369,17 @@ install_all_plugins_and_skills() {
 
     local plugins_file="$DEVCONTAINER_DIR/$CLAUDE_PLUGINS_FILE"
 
-    [[ -f "$plugins_file" ]] || { echo "  ⚠️  $plugins_file not found"; return 0; }
+    [[ -f "$plugins_file" ]] || { warn "$plugins_file not found"; return 0; }
 
     if ! ensure_marketplace "$OFFICIAL_MARKETPLACE_NAME" "$OFFICIAL_MARKETPLACE_REPO"; then
-        echo "  ⚠️  Skipping official marketplace plugins"
+        warn "Skipping official marketplace plugins"
         return 0
     fi
     claude plugin marketplace update "$OFFICIAL_MARKETPLACE_NAME" 2>/dev/null || true
 
     local plugins_installed=0 plugins_skipped=0 plugins_failed=0
     local skills_installed=0 skills_failed=0
-    declare -A external_marketplaces
+    local _seen_marketplaces=""
 
     while IFS= read -r line || [[ -n "$line" ]]; do
         [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
@@ -427,13 +394,17 @@ install_all_plugins_and_skills() {
 
             case "$type" in
                 *-marketplace)
-                    if [[ -z "${external_marketplaces[$type]}" ]]; then
+                    if [[ "$_seen_marketplaces" != *"|$type|"* ]]; then
                         ensure_marketplace "$type" "$source" || continue
                         claude plugin marketplace update "$type" 2>/dev/null || true
-                        external_marketplaces[$type]=1
+                        _seen_marketplaces="${_seen_marketplaces}|$type|"
                     fi
                     local rc=0; install_plugin "${name}@${type}" "$name" || rc=$?
-                    update_plugin_counters $rc plugins_installed plugins_skipped plugins_failed
+                    case $rc in
+                        0) plugins_installed=$((plugins_installed + 1)) ;;
+                        1) plugins_skipped=$((plugins_skipped + 1)) ;;
+                        2) plugins_failed=$((plugins_failed + 1)) ;;
+                    esac
                     ;;
                 vercel-skills)
                     install_vercel_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
@@ -442,12 +413,16 @@ install_all_plugins_and_skills() {
                     install_github_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
                     ;;
                 *)
-                    echo "  ⚠️  Unknown source type: $type for $name"
+                    warn "Unknown source type: $type for $name"
                     ;;
             esac
         else
             local rc=0; install_plugin "${line}@${OFFICIAL_MARKETPLACE_NAME}" "$line" || rc=$?
-            update_plugin_counters $rc plugins_installed plugins_skipped plugins_failed
+            case $rc in
+                0) plugins_installed=$((plugins_installed + 1)) ;;
+                1) plugins_skipped=$((plugins_skipped + 1)) ;;
+                2) plugins_failed=$((plugins_failed + 1)) ;;
+            esac
         fi
     done < "$plugins_file"
 

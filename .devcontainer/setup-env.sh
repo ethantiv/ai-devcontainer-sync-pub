@@ -37,12 +37,16 @@ has_command() {
     command -v "$1" &>/dev/null
 }
 
+ok()   { echo -e "  \033[32m✔︎\033[0m $1"; }
+warn() { echo -e "  \033[33m⚠️\033[0m  $1"; }
+fail() { echo -e "  \033[31m❌\033[0m $1"; }
+
 setup_file_lock() {
     exec 200>"$LOCK_FILE"
     if ! flock -n 200; then
-        echo "⚠️  Another setup instance running, waiting..."
+        warn "Another setup instance running, waiting..."
         if ! flock -w "$LOCK_TIMEOUT" 200; then
-            echo "❌ Timeout waiting for lock. Remove $LOCK_FILE to force continue."
+            fail "Timeout waiting for lock. Remove $LOCK_FILE to force continue."
             exit 1
         fi
     fi
@@ -60,7 +64,7 @@ load_env_file() {
     local env_file="$WORKSPACE_FOLDER/.devcontainer/.env"
     if [[ -f "$env_file" ]]; then
         set -a && source "$env_file" && set +a
-        echo "✅ Loaded .devcontainer/.env"
+        ok "Loaded .devcontainer/.env"
     fi
 }
 
@@ -72,13 +76,13 @@ setup_ssh_github_integration() {
     if [[ ! -f "$SSH_KNOWN_HOSTS_FILE" ]] || ! grep -q "github.com" "$SSH_KNOWN_HOSTS_FILE" 2>/dev/null; then
         ssh-keyscan github.com >> "$SSH_KNOWN_HOSTS_FILE" 2>/dev/null
         chmod 644 "$SSH_KNOWN_HOSTS_FILE"
-        echo "✅ GitHub added to known_hosts"
+        ok "GitHub added to known_hosts"
     fi
 
     if ssh -T git@github.com -o ConnectTimeout=10 -o StrictHostKeyChecking=yes 2>&1 | grep -q "successfully authenticated"; then
-        echo "✅ SSH connection to GitHub successful"
+        ok "SSH connection to GitHub successful"
     else
-        echo "⚠️  SSH key configured but connection test failed (key may not be in GitHub account)"
+        warn "SSH key configured but connection test failed (key may not be in GitHub account)"
     fi
 }
 
@@ -95,15 +99,15 @@ setup_ssh_authentication() {
     if [[ -n "${SSH_PRIVATE_KEY}" ]]; then
         if echo "${SSH_PRIVATE_KEY}" | base64 --decode > "$SSH_KEY_FILE" 2>/dev/null; then
             chmod 600 "$SSH_KEY_FILE"
-            echo "✅ SSH key configured from SSH_PRIVATE_KEY"
+            ok "SSH key configured from SSH_PRIVATE_KEY"
             setup_ssh_github_integration
         else
-            echo "❌ Failed to decode SSH_PRIVATE_KEY (invalid base64). Encode with: base64 -w 0 ~/.ssh/id_rsa"
+            fail "Failed to decode SSH_PRIVATE_KEY (invalid base64). Encode with: base64 -w 0 ~/.ssh/id_rsa"
         fi
         return
     fi
 
-    echo "⚠️  No SSH key found. Set SSH_PRIVATE_KEY secret (base64-encoded) to enable SSH auth."
+    warn "No SSH key found. Set SSH_PRIVATE_KEY secret (base64-encoded) to enable SSH auth."
 }
 
 setup_github_token() {
@@ -112,11 +116,11 @@ setup_github_token() {
     fi
 
     if [[ -z "${GH_TOKEN}" ]]; then
-        echo "❌ No GitHub token found (GH_TOKEN or GITHUB_TOKEN)"
+        fail "No GitHub token found (GH_TOKEN or GITHUB_TOKEN)"
         exit 1
     fi
 
-    echo "✅ GitHub token configured"
+    ok "GitHub token configured"
     echo "export GH_TOKEN='${GH_TOKEN}'" >> ~/.bashrc
     echo "alias cc='clear && claude'" >> ~/.bashrc
     echo "alias ccc='clear && claude -c'" >> ~/.bashrc
@@ -152,7 +156,7 @@ apply_claude_settings() {
         }
     }'
 
-    has_command jq || { echo "  ⚠️  jq not found - cannot manage settings"; return 0; }
+    has_command jq || { warn "jq not found - cannot manage settings"; return 0; }
 
     if [[ -f "$CLAUDE_SETTINGS_FILE" ]]; then
         local merged
@@ -161,12 +165,12 @@ apply_claude_settings() {
     else
         echo "$default_settings" | jq '.' > "$CLAUDE_SETTINGS_FILE"
     fi
-    echo "  ✅ Settings configured"
+    ok "Settings configured"
 }
 
 copy_claude_memory() {
     local source_file="$1/.devcontainer/configuration/CLAUDE.md.memory"
-    [[ -f "$source_file" ]] && cp "$source_file" "$CLAUDE_DIR/CLAUDE.md" && echo "  ✅ CLAUDE.md synced"
+    [[ -f "$source_file" ]] && cp "$source_file" "$CLAUDE_DIR/CLAUDE.md" && ok "CLAUDE.md synced"
 }
 
 sync_claude_files() {
@@ -187,7 +191,7 @@ sync_claude_files() {
     local files=("$source_dir"/*.md)
     if [[ -e "${files[0]}" ]]; then
         cp "$source_dir"/*.md "$target_dir/"
-        echo "  ✅ Synced ${#files[@]} $2"
+        ok "Synced ${#files[@]} $2"
     fi
 }
 
@@ -202,7 +206,7 @@ sync_claude_scripts() {
         cp "$script" "$CLAUDE_SCRIPTS_DIR/"
         chmod +x "$CLAUDE_SCRIPTS_DIR/$(basename "$script")"
     done
-    echo "  ✅ Synced scripts to ~/.claude/scripts/"
+    ok "Synced scripts to ~/.claude/scripts/"
 }
 
 setup_claude_configuration() {
@@ -232,10 +236,10 @@ install_plugin() {
     fi
 
     if claude plugin install "$plugin" --scope user < /dev/null 2>/dev/null; then
-        echo "  ✅ Installed: $display_name"
+        ok "Installed: $display_name"
         return 0
     fi
-    echo "  ⚠️  Failed: $display_name"
+    warn "Failed: $display_name"
     return 2
 }
 
@@ -263,10 +267,10 @@ ensure_marketplace() {
     fi
 
     if claude plugin marketplace add "$source" 2>/dev/null; then
-        echo "  ✅ Added marketplace: $name"
+        ok "Added marketplace: $name"
         return 0
     fi
-    echo "  ⚠️  Failed to add marketplace: $name"
+    warn "Failed to add marketplace: $name"
     return 1
 }
 
@@ -277,12 +281,12 @@ install_all_plugins_and_skills() {
 
     echo "📦 Installing plugins and skills..."
 
-    has_command claude || { echo "  ⚠️  Claude CLI not found"; return 0; }
-    has_command jq || { echo "  ⚠️  jq not found"; return 0; }
-    [[ -f "$plugins_file" ]] || { echo "  ⚠️  $plugins_file not found"; return 0; }
+    has_command claude || { warn "Claude CLI not found"; return 0; }
+    has_command jq || { warn "jq not found"; return 0; }
+    [[ -f "$plugins_file" ]] || { warn "$plugins_file not found"; return 0; }
 
     if ! ensure_marketplace "$OFFICIAL_MARKETPLACE_NAME" "$OFFICIAL_MARKETPLACE_REPO"; then
-        echo "  ⚠️  Skipping official marketplace plugins"
+        warn "Skipping official marketplace plugins"
         return 0
     fi
     claude plugin marketplace update "$OFFICIAL_MARKETPLACE_NAME" 2>/dev/null || true
@@ -337,9 +341,9 @@ install_local_marketplace_plugins() {
 
     has_command claude || return 0
     has_command jq || return 0
-    [[ -f "$manifest" ]] || { echo "  ⚠️  Local marketplace not found"; return 0; }
+    [[ -f "$manifest" ]] || { warn "Local marketplace not found"; return 0; }
     if ! ensure_marketplace "$LOCAL_MARKETPLACE_NAME" "$marketplace_dir"; then
-        echo "  ⚠️  Skipping local marketplace plugins"
+        warn "Skipping local marketplace plugins"
         return 0
     fi
 
@@ -363,14 +367,14 @@ add_mcp_server() {
     local config="$2"
 
     if claude mcp list 2>/dev/null | grep -q "$name"; then
-        echo "  ✅ $name already configured"
+        ok "$name already configured"
         return
     fi
 
     if claude mcp add-json "$name" "$config" --scope user 2>/dev/null; then
-        echo "  ✅ Added: $name"
+        ok "Added: $name"
     else
-        echo "  ⚠️  Failed to add $name"
+        warn "Failed to add $name"
     fi
 }
 
@@ -422,10 +426,10 @@ install_vercel_skill() {
 
     # Note: < /dev/null prevents npx from consuming stdin (which would break the while-read loop)
     if npx -y skills add -g -y "$repo" -a claude-code -s "$name" < /dev/null 2>/dev/null; then
-        echo "  ✅ Installed skill: $name"
+        ok "Installed skill: $name"
         return 0
     fi
-    echo "  ⚠️  Failed to install skill: $name"
+    warn "Failed to install skill: $name"
     return 1
 }
 
@@ -446,10 +450,10 @@ install_github_skill() {
     local url="https://raw.githubusercontent.com/${owner}/${repo}/main/${file_path}"
 
     if curl -fsSL -o "$skill_dir/SKILL.md" "$url" < /dev/null 2>/dev/null; then
-        echo "  ✅ Installed skill: $name"
+        ok "Installed skill: $name"
         return 0
     fi
-    echo "  ⚠️  Failed to install skill: $name"
+    warn "Failed to install skill: $name"
     return 1
 }
 
@@ -514,15 +518,15 @@ uninstall_plugin() {
         echo "  🗑️  Uninstalled: $display_name"
         return 0
     fi
-    echo "  ⚠️  Failed to uninstall: $display_name"
+    warn "Failed to uninstall: $display_name"
     return 1
 }
 
 # Sync: remove plugins not in expected list
 sync_plugins() {
     echo "🔄 Synchronizing plugins..."
-    has_command claude || { echo "  ⚠️  Claude CLI not found"; return 0; }
-    has_command jq || { echo "  ⚠️  jq not found"; return 0; }
+    has_command claude || { warn "Claude CLI not found"; return 0; }
+    has_command jq || { warn "jq not found"; return 0; }
 
     build_expected_plugins_list
     get_installed_plugins
@@ -534,7 +538,7 @@ sync_plugins() {
         fi
     done
 
-    ((removed > 0 || failed > 0)) && echo "  📊 Sync: $removed removed, $failed failed" || echo "  ✅ All plugins in sync"
+    ((removed > 0 || failed > 0)) && echo "  📊 Sync: $removed removed, $failed failed" || ok "All plugins in sync"
 }
 
 # =============================================================================
@@ -561,7 +565,7 @@ main() {
     install_local_marketplace_plugins
     setup_mcp_servers
 
-    echo "✅ Setup complete!"
+    ok "Setup complete!"
 }
 
 [[ "${BASH_SOURCE[0]}" == "${0}" ]] && main "$@"

@@ -95,3 +95,6 @@ Container start → `setup-env.sh` → SSH/GH auth → Claude config → sync pl
 
 - `~/.claude` is a named Docker volume (ext4), `/tmp` is tmpfs — `rename()` fails cross-device (EXDEV). Setup scripts export `TMPDIR="$CLAUDE_DIR/tmp"` to keep all temp ops on the same filesystem.
 - `claude-plugins.txt` external format: `name@type=owner/repo` — `type` matching: `vercel-skills` and `github` are special-cased, everything else is treated as external marketplace name.
+- **Gotcha**: `setup-env.sh` accepts any `type` as marketplace (fallthrough `*)`), but `setup-local.sh` requires `type` to match `*-marketplace` glob. Always name external marketplace types with `-marketplace` suffix to work in both scripts.
+- Playwright: `@playwright/cli` (MCP server binary) ≠ `playwright` (full package for browser install). Use `npx -y playwright install chromium` to install browsers — never call `playwright` directly as a global command.
+- Shell scripts use `ok()`, `warn()`, `fail()` helpers for status output (colored ANSI with ✔︎/⚠️/❌). Use these instead of raw emoji in `setup-local.sh`, `setup-env.sh`, and `docker/setup-claude.sh`. Section headers with informational emoji (📄, 📦, 🔧, 🔄, 🔐, 🚀, 🌍) remain as plain `echo`.

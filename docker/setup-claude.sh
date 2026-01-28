@@ -21,6 +21,10 @@ has_command() {
     command -v "$1" &>/dev/null
 }
 
+ok()   { echo -e "  \033[32m✔︎\033[0m $1"; }
+warn() { echo -e "  \033[33m⚠️\033[0m  $1"; }
+fail() { echo -e "  \033[31m❌\033[0m $1"; }
+
 # Install a Claude plugin (returns: 0=installed, 1=already present, 2=failed)
 install_plugin() {
     local plugin="$1"
@@ -31,10 +35,10 @@ install_plugin() {
     fi
 
     if claude plugin install "$plugin" --scope user < /dev/null 2>/dev/null; then
-        echo "  ✅ Installed: $display_name"
+        ok "Installed: $display_name"
         return 0
     fi
-    echo "  ⚠️  Failed: $display_name"
+    warn "Failed: $display_name"
     return 2
 }
 
@@ -47,10 +51,10 @@ ensure_marketplace() {
     fi
 
     if claude plugin marketplace add "$source" 2>/dev/null; then
-        echo "  ✅ Added marketplace: $name"
+        ok "Added marketplace: $name"
         return 0
     fi
-    echo "  ⚠️  Failed to add marketplace: $name"
+    warn "Failed to add marketplace: $name"
     return 1
 }
 
@@ -84,7 +88,7 @@ apply_claude_settings() {
     else
         echo "$default_settings" | jq '.' > "$CLAUDE_SETTINGS_FILE"
     fi
-    echo "  ✅ Settings configured"
+    ok "Settings configured"
 }
 
 # =============================================================================
@@ -134,10 +138,10 @@ install_vercel_skill() {
     ensure_directory "$CLAUDE_DIR/skills"
 
     if npx -y skills add -g -y "$repo" -a claude-code -s "$name" < /dev/null 2>/dev/null; then
-        echo "  ✅ Installed skill: $name"
+        ok "Installed skill: $name"
         return 0
     fi
-    echo "  ⚠️  Failed to install skill: $name"
+    warn "Failed to install skill: $name"
     return 1
 }
 
@@ -149,10 +153,10 @@ install_github_skill() {
     ensure_directory "$skill_dir"
 
     if curl -fsSL -o "$skill_dir/SKILL.md" "$url" < /dev/null 2>/dev/null; then
-        echo "  ✅ Installed skill: $name"
+        ok "Installed skill: $name"
         return 0
     fi
-    echo "  ⚠️  Failed to install skill: $name"
+    warn "Failed to install skill: $name"
     return 1
 }
 
@@ -189,14 +193,14 @@ add_mcp_server() {
     local config="$2"
 
     if claude mcp list 2>/dev/null | grep -q "$name"; then
-        echo "  ✅ $name already configured"
+        ok "$name already configured"
         return
     fi
 
     if claude mcp add-json "$name" "$config" --scope user 2>/dev/null; then
-        echo "  ✅ Added: $name"
+        ok "Added: $name"
     else
-        echo "  ⚠️  Failed to add $name"
+        warn "Failed to add $name"
     fi
 }
 
@@ -239,8 +243,8 @@ setup_mcp_servers() {
 main() {
     echo "🚀 Setting up Claude Code..."
 
-    has_command claude || { echo "❌ Claude CLI not found"; exit 1; }
-    has_command jq || { echo "❌ jq not found"; exit 1; }
+    has_command claude || { fail "Claude CLI not found"; exit 1; }
+    has_command jq || { fail "jq not found"; exit 1; }
 
     ensure_directory "$CLAUDE_DIR/tmp"
     export TMPDIR="$CLAUDE_DIR/tmp"
@@ -251,7 +255,7 @@ main() {
     setup_mcp_servers
 
     echo ""
-    echo "✅ Claude Code setup complete!"
+    ok "Claude Code setup complete!"
     echo ""
     echo "Verify with:"
     echo "  claude mcp list"
