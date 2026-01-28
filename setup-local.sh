@@ -489,9 +489,6 @@ print_final_report() {
     echo "   claude plugin marketplace list     # Check marketplaces"
     echo "   ls ~/.claude/skills/               # List installed skills"
     echo ""
-    echo "💡 Note: MCP servers are NOT installed by this script."
-    echo "   Configure them manually via: claude mcp add-json <name> '<config>'"
-    echo ""
 }
 
 # =============================================================================

@@ -45,6 +45,8 @@ Codespaces: add as repository secrets. Local: create `.devcontainer/.env`.
 - `terraform` - Terraform/Terragrunt execution, AWS provider docs
 - `context7` - Context7 documentation search (requires `CONTEXT7_API_KEY`)
 
+MCP servers require `uvx` (from `uv`). Installed via Dockerfile in DevContainer/Docker paths. Not available in `setup-local.sh` (macOS manual install).
+
 ### Adding New Global npm Tools
 
 Requires changes in 5 files:
@@ -76,7 +78,7 @@ Register in `plugins/dev-marketplace/.claude-plugin/marketplace.json`.
 
 Changes to setup/sync logic must be applied in parallel across:
 - `.devcontainer/setup-env.sh` — DevContainer/Codespaces setup
-- `setup-local.sh` — macOS local setup
+- `setup-local.sh` — macOS local setup (no MCP servers — plugins and skills only)
 - `docker/Dockerfile` + `docker/entrypoint.sh` + `docker/setup-claude.sh` — Docker image build and runtime
 
 ### Setup Flow
@@ -98,3 +100,4 @@ Container start → `setup-env.sh` → SSH/GH auth → Claude config → sync pl
 - **Gotcha**: `setup-env.sh` accepts any `type` as marketplace (fallthrough `*)`), but `setup-local.sh` requires `type` to match `*-marketplace` glob. Always name external marketplace types with `-marketplace` suffix to work in both scripts.
 - Playwright: `@playwright/cli` (MCP server binary) ≠ `playwright` (full package for browser install). Use `npx -y playwright install chromium` to install browsers — never call `playwright` directly as a global command.
 - Shell scripts use `ok()`, `warn()`, `fail()` helpers for status output (colored ANSI with ✔︎/⚠️/❌). Use these instead of raw emoji in `setup-local.sh`, `setup-env.sh`, and `docker/setup-claude.sh`. Section headers with informational emoji (📄, 📦, 🔧, 🔄, 🔐, 🚀, 🌍) remain as plain `echo`.
+- `uv`/`uvx`: installed via `pip3 install --break-system-packages uv` in Dockerfiles (builder stage → COPY to runtime). MCP servers `aws-documentation` and `terraform` depend on `uvx`. Ad-hoc install without rebuild: `pip3 install --break-system-packages uv`.
