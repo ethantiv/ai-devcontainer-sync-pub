@@ -67,16 +67,14 @@ fi
 # =============================================================================
 
 echo ""
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║                   AI Code DevContainer                       ║"
-echo "╠══════════════════════════════════════════════════════════════╣"
-echo "║  claude --version    : $(claude --version 2>/dev/null || echo 'not available')                         ║"
-echo "║  gemini --version    : $(gemini --version 2>/dev/null || echo 'not available')                         ║"
-echo "║  playwright-cli      : $(playwright-cli --version 2>/dev/null || echo 'not available')                         ║"
-echo "╠══════════════════════════════════════════════════════════════╣"
-echo "║  Working directory   : $(pwd)                    ║"
-echo "║  Config initialized  : $([ -f "$CONFIGURED_MARKER" ] && echo 'Yes' || echo 'No')                                ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
+echo "AI Code DevContainer"
+echo ""
+echo "  claude --version    : $(claude --version 2>/dev/null || echo 'not available')"
+echo "  gemini --version    : $(gemini --version 2>/dev/null || echo 'not available')"
+echo "  playwright-cli      : $(playwright-cli --version 2>/dev/null || echo 'not available')"
+echo ""
+echo "  Working directory   : $(pwd)"
+echo "  Config initialized  : $([ -f "$CONFIGURED_MARKER" ] && echo 'Yes' || echo 'No')"
 echo ""
 
 # Execute command (default: bash)
