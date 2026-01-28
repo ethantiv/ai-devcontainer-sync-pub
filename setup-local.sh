@@ -101,6 +101,13 @@ check_requirements() {
         ok "npx available"
     fi
 
+    if ! has_command brew; then
+        missing+=("brew")
+        fail "brew not found"
+    else
+        ok "brew $(brew --version 2>/dev/null | head -1)"
+    fi
+
     if [[ ${#missing[@]} -gt 0 ]]; then
         echo ""
         warn "Missing dependencies. Install them with:"
@@ -109,6 +116,7 @@ check_requirements() {
             case "$dep" in
                 jq) echo "  brew install jq" ;;
                 node|npm|npx) echo "  brew install node" ;;
+                brew) echo "  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"" ;;
             esac
         done
         echo ""
@@ -126,32 +134,14 @@ check_requirements() {
 install_claude_cli() {
     print_header "Claude CLI"
 
-    # Ensure ~/.local/bin is in PATH before installer runs
-    export PATH="$HOME/.local/bin:$PATH"
-
     if has_command claude; then
-        ok "Claude CLI already installed: $(claude --version 2>/dev/null | head -1)"
-        return 0
-    fi
-
-    # Persist PATH in shell profile so installer doesn't warn
-    local shell_rc="$HOME/.zshrc"
-    [[ -f "$shell_rc" ]] || shell_rc="$HOME/.bashrc"
-    if ! grep -q 'export PATH="\$HOME/.local/bin:\$PATH"' "$shell_rc" 2>/dev/null; then
-        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$shell_rc"
+        ok "Claude CLI already installed"
+        return
     fi
 
     echo "📥 Installing Claude CLI..."
-    if curl -fsSL https://claude.ai/install.sh | bash; then
-        if has_command claude; then
-            ok "Claude CLI installed: $(claude --version 2>/dev/null | head -1)"
-            return 0
-        fi
-    fi
-
-    fail "Failed to install Claude CLI"
-    echo "   Try manual installation: https://claude.ai/install"
-    exit 1
+    brew install --cask claude-code
+    ok "Claude CLI installed"
 }
 
 # =============================================================================
@@ -169,11 +159,8 @@ install_playwright() {
         ok "@playwright/cli installed"
     fi
 
-    if npx -y playwright install chromium; then
-        ok "Chromium installed"
-    else
-        warn "Failed to install Chromium"
-    fi
+    npx -y playwright install chromium 2>/dev/null
+    ok "Chromium installed"
 }
 
 install_agent_browser() {
@@ -329,7 +316,7 @@ install_vercel_skill() {
     has_command npx || return 1
     ensure_directory "$CLAUDE_DIR/skills"
 
-    if npx -y skills add -g -y "$repo" -a claude-code -s "$name" < /dev/null 2>/dev/null; then
+    if npx -y skills add "https://github.com/$repo" --skill "$name" < /dev/null 2>/dev/null; then
         ok "Installed skill: $name"
         return 0
     fi
