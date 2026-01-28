@@ -225,16 +225,6 @@ apply_claude_settings() {
     fi
 }
 
-copy_claude_memory() {
-    local source_file="$DEVCONTAINER_DIR/configuration/CLAUDE.md.memory"
-    if [[ -f "$source_file" ]]; then
-        cp "$source_file" "$CLAUDE_DIR/CLAUDE.md"
-        ok "CLAUDE.md synced"
-    else
-        warn "CLAUDE.md.memory not found"
-    fi
-}
-
 sync_claude_scripts() {
     local source_dir="$DEVCONTAINER_DIR/scripts"
     [[ -d "$source_dir" ]] || return 0
@@ -263,7 +253,6 @@ setup_claude_configuration() {
     ensure_directory "$CLAUDE_DIR/skills"
 
     apply_claude_settings
-    copy_claude_memory
     sync_claude_scripts
 }
 
@@ -316,7 +305,7 @@ install_skill() {
     has_command npx || return 1
     ensure_directory "$CLAUDE_DIR/skills"
 
-    if npx -y skills add "https://github.com/$repo" --skill "$name" < /dev/null 2>/dev/null; then
+    if npx -y skills add "https://github.com/$repo" --skill "$name" -g -y < /dev/null 2>/dev/null; then
         ok "Installed skill: $name"
         return 0
     fi
