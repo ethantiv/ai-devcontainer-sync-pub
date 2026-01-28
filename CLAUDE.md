@@ -24,6 +24,8 @@ Available as local marketplace plugins (`dev-marketplace`):
 - `/code-review` - parallel code review with multiple agents
 - `/design-system` - generate HTML design system templates
 - `/roadmap` - manage ROADMAP.json with features and proposals
+- `/git-worktree:create <name>` - create worktree with naming convention `{project}-{name}`
+- `/git-worktree:delete <name>` - delete worktree and its branch
 
 ## Operational Notes
 
@@ -44,8 +46,13 @@ Codespaces: add as repository secrets. Local: create `.devcontainer/.env`.
 - `aws-documentation` - AWS docs search and reading
 - `terraform` - Terraform/Terragrunt execution, AWS provider docs
 - `context7` - Context7 documentation search (requires `CONTEXT7_API_KEY`)
+- `playwright` - browser automation via `@playwright/cli` (requires browser install)
 
 MCP servers require `uvx` (from `uv`). Installed via Dockerfile in DevContainer/Docker paths. Not available in `setup-local.sh` (macOS manual install).
+
+### Gemini CLI
+
+Pre-installed alongside Claude Code. Reset config with `RESET_GEMINI_CONFIG=true`.
 
 ### Adding New Global npm Tools
 
@@ -54,7 +61,7 @@ Requires changes in 5 files:
 2. `docker/Dockerfile` — `npm install -g` + symlink after COPY
 3. `setup-local.sh` — dedicated `install_<tool>()` function + call in `main()`
 4. `.devcontainer/configuration/claude-plugins.txt` — if it has a skill/plugin
-5. `docker/setup-claude.sh` — hardcoded skill entry in `install_skills()` if applicable
+5. `docker/setup-claude.sh` and `.devcontainer/setup-env.sh` — hardcoded skill entry if applicable
 
 ### Adding New Plugins/Skills/Commands
 

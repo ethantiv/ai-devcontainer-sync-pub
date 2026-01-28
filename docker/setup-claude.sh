@@ -1,13 +1,16 @@
 #!/bin/bash
-# Claude Code setup script for RPi5 container
+# Claude Code setup script for Docker container
 # Installs plugins, skills, and MCP servers
 
 set -e
 
 readonly CLAUDE_DIR="$HOME/.claude"
 readonly CLAUDE_SETTINGS_FILE="$CLAUDE_DIR/settings.json"
-readonly OFFICIAL_MARKETPLACE="claude-plugins-official"
+readonly CLAUDE_PLUGINS_FILE="$CLAUDE_DIR/claude-plugins.txt"
+readonly OFFICIAL_MARKETPLACE_NAME="claude-plugins-official"
 readonly OFFICIAL_MARKETPLACE_REPO="anthropics/claude-plugins-official"
+readonly LOCAL_MARKETPLACE_NAME="dev-marketplace"
+readonly LOCAL_MARKETPLACE_DIR="$CLAUDE_DIR/plugins/$LOCAL_MARKETPLACE_NAME"
 
 # =============================================================================
 # UTILITY FUNCTIONS
@@ -28,11 +31,15 @@ fail() { echo -e "  \033[31m❌\033[0m $1"; }
 setup_github_token() {
     if [[ -n "${GH_TOKEN}" ]]; then
         echo "export GH_TOKEN='${GH_TOKEN}'" >> ~/.bashrc
+        echo "alias cc='clear && claude'" >> ~/.bashrc
+        echo "alias ccc='clear && claude -c'" >> ~/.bashrc
+        echo "alias ccr='clear && claude -r'" >> ~/.bashrc
         ok "GitHub token exported to ~/.bashrc"
     fi
 }
 
 # Install a Claude plugin (returns: 0=installed, 1=already present, 2=failed)
+# Note: < /dev/null prevents claude CLI from consuming stdin (breaks while-read loops)
 install_plugin() {
     local plugin="$1"
     local display_name="${2:-$plugin}"
@@ -47,6 +54,20 @@ install_plugin() {
     fi
     warn "Failed: $display_name"
     return 2
+}
+
+# Update counters based on install_plugin return code
+update_plugin_counters() {
+    local rc="$1"
+    local -n _installed="$2"
+    local -n _skipped="$3"
+    local -n _failed="$4"
+
+    case $rc in
+        0) ((_installed++)) || true ;;
+        1) ((_skipped++)) || true ;;
+        2) ((_failed++)) || true ;;
+    esac
 }
 
 ensure_marketplace() {
@@ -99,49 +120,15 @@ apply_claude_settings() {
 }
 
 # =============================================================================
-# PLUGINS INSTALLATION
+# SKILL INSTALLATION HELPERS
 # =============================================================================
 
-install_official_plugins() {
-    echo "📦 Installing official plugins..."
-
-    ensure_marketplace "$OFFICIAL_MARKETPLACE" "$OFFICIAL_MARKETPLACE_REPO" || return
-    claude plugin marketplace update "$OFFICIAL_MARKETPLACE" 2>/dev/null || true
-
-    local plugins=(
-        "agent-sdk-dev"
-        "claude-code-setup"
-        "code-simplifier"
-        "commit-commands"
-        "feature-dev"
-        "frontend-design"
-        "pyright-lsp"
-        "typescript-lsp"
-    )
-
-    local installed=0 skipped=0 failed=0
-
-    for plugin in "${plugins[@]}"; do
-        local rc=0
-        install_plugin "${plugin}@${OFFICIAL_MARKETPLACE}" "$plugin" || rc=$?
-        case $rc in
-            0) ((installed++)) || true ;;
-            1) ((skipped++)) || true ;;
-            2) ((failed++)) || true ;;
-        esac
-    done
-
-    echo "  📊 Official: $installed installed, $skipped present, $failed failed"
-}
-
-# =============================================================================
-# SKILLS INSTALLATION
-# =============================================================================
-
+# Install skill using skills CLI (npx skills add)
 install_skill() {
     local name="$1"
     local repo="$2"
 
+    has_command npx || return 1
     ensure_directory "$CLAUDE_DIR/skills"
 
     if npx -y skills add "https://github.com/$repo" --skill "$name" -g -y < /dev/null 2>/dev/null; then
@@ -152,12 +139,20 @@ install_skill() {
     return 1
 }
 
+# Install skill from direct GitHub path
 install_github_skill() {
     local name="$1"
-    local url="$2"
+    local path="$2"
 
     local skill_dir="$CLAUDE_DIR/skills/$name"
     ensure_directory "$skill_dir"
+
+    # Reconstruct URL: owner/repo/path -> raw.githubusercontent.com/owner/repo/main/path
+    local owner="${path%%/*}"
+    local rest="${path#*/}"
+    local repo="${rest%%/*}"
+    local file_path="${rest#*/}"
+    local url="https://raw.githubusercontent.com/${owner}/${repo}/main/${file_path}"
 
     if curl -fsSL -o "$skill_dir/SKILL.md" "$url" < /dev/null 2>/dev/null; then
         ok "Installed skill: $name"
@@ -167,22 +162,169 @@ install_github_skill() {
     return 1
 }
 
-install_skills() {
-    echo "📦 Installing skills..."
+# =============================================================================
+# PLUGINS AND SKILLS INSTALLATION
+# =============================================================================
 
+# Parse plugins and skills from configuration file
+install_all_plugins_and_skills() {
+    echo "📦 Installing plugins and skills..."
+
+    has_command claude || { warn "Claude CLI not found"; return 0; }
+    has_command jq || { warn "jq not found"; return 0; }
+    [[ -f "$CLAUDE_PLUGINS_FILE" ]] || { warn "$CLAUDE_PLUGINS_FILE not found"; return 0; }
+
+    if ! ensure_marketplace "$OFFICIAL_MARKETPLACE_NAME" "$OFFICIAL_MARKETPLACE_REPO"; then
+        warn "Skipping official marketplace plugins"
+        return 0
+    fi
+    claude plugin marketplace update "$OFFICIAL_MARKETPLACE_NAME" 2>/dev/null || true
+
+    local plugins_installed=0 plugins_skipped=0 plugins_failed=0
     local skills_installed=0 skills_failed=0
+    declare -A external_marketplaces
 
-    local vercel_repo="vercel-labs/agent-skills"
-    for skill in "vercel-react-best-practices" "web-design-guidelines"; do
-        install_skill "$skill" "$vercel_repo" && ((skills_installed++)) || ((skills_failed++))
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+        line=$(echo "$line" | xargs)
+        [[ -z "$line" ]] && continue
+
+        if [[ "$line" =~ @ ]]; then
+            local name="${line%%@*}"
+            local rest="${line#*@}"
+            local type="${rest%%=*}"
+            local source="${rest#*=}"
+
+            case "$type" in
+                skills)
+                    install_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
+                    ;;
+                github)
+                    install_github_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
+                    ;;
+                *)
+                    if [[ -z "${external_marketplaces[$type]}" ]]; then
+                        ensure_marketplace "$type" "$source" || continue
+                        claude plugin marketplace update "$type" 2>/dev/null || true
+                        external_marketplaces[$type]=1
+                    fi
+                    local rc=0; install_plugin "${name}@${type}" "$name" || rc=$?
+                    update_plugin_counters $rc plugins_installed plugins_skipped plugins_failed
+                    ;;
+            esac
+        else
+            local rc=0; install_plugin "${line}@${OFFICIAL_MARKETPLACE_NAME}" "$line" || rc=$?
+            update_plugin_counters $rc plugins_installed plugins_skipped plugins_failed
+        fi
+    done < "$CLAUDE_PLUGINS_FILE"
+
+    echo "  📊 Plugins: $plugins_installed installed, $plugins_skipped present, $plugins_failed failed"
+    echo "  📊 Skills: $skills_installed installed, $skills_failed failed"
+}
+
+install_local_marketplace_plugins() {
+    local manifest="$LOCAL_MARKETPLACE_DIR/.claude-plugin/marketplace.json"
+
+    echo "📦 Installing local plugins..."
+
+    has_command claude || return 0
+    has_command jq || return 0
+    [[ -f "$manifest" ]] || { warn "Local marketplace not found"; return 0; }
+    if ! ensure_marketplace "$LOCAL_MARKETPLACE_NAME" "$LOCAL_MARKETPLACE_DIR"; then
+        warn "Skipping local marketplace plugins"
+        return 0
+    fi
+
+    local installed=0 skipped=0 failed=0
+
+    while IFS= read -r plugin; do
+        [[ -z "$plugin" ]] && continue
+        local rc=0; install_plugin "${plugin}@${LOCAL_MARKETPLACE_NAME}" "$plugin" || rc=$?
+        update_plugin_counters $rc installed skipped failed
+    done < <(jq -r '.plugins[].name' "$manifest" 2>/dev/null)
+
+    echo "  📊 Local: $installed installed, $skipped present, $failed failed"
+}
+
+# =============================================================================
+# PLUGIN SYNCHRONIZATION
+# =============================================================================
+
+# Build list of expected plugins from configuration
+build_expected_plugins_list() {
+    local local_manifest="$LOCAL_MARKETPLACE_DIR/.claude-plugin/marketplace.json"
+
+    declare -gA expected_plugins
+    expected_plugins=()
+
+    # Parse claude-plugins.txt (only plugins, skip skills)
+    if [[ -f "$CLAUDE_PLUGINS_FILE" ]]; then
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+            line=$(echo "$line" | xargs)
+            [[ -z "$line" ]] && continue
+
+            if [[ "$line" =~ @ ]]; then
+                local name="${line%%@*}"
+                local rest="${line#*@}"
+                local type="${rest%%=*}"
+                case "$type" in
+                    skills|github) ;; # skills - not in settings.json
+                    *) expected_plugins["${name}@${type}"]=1 ;;
+                esac
+            else
+                expected_plugins["${line}@${OFFICIAL_MARKETPLACE_NAME}"]=1
+            fi
+        done < "$CLAUDE_PLUGINS_FILE"
+    fi
+
+    # Parse local marketplace
+    if [[ -f "$local_manifest" ]]; then
+        while IFS= read -r plugin; do
+            [[ -n "$plugin" ]] && expected_plugins["${plugin}@${LOCAL_MARKETPLACE_NAME}"]=1
+        done < <(jq -r '.plugins[].name // empty' "$local_manifest" 2>/dev/null)
+    fi
+}
+
+# Get installed plugins from settings.json
+get_installed_plugins() {
+    declare -gA installed_plugins
+    installed_plugins=()
+    [[ -f "$CLAUDE_SETTINGS_FILE" ]] || return 0
+    while IFS= read -r plugin; do
+        [[ -n "$plugin" ]] && installed_plugins["$plugin"]=1
+    done < <(jq -r '.enabledPlugins | keys[]' "$CLAUDE_SETTINGS_FILE" 2>/dev/null)
+}
+
+# Uninstall plugin
+uninstall_plugin() {
+    local plugin="$1"
+    local display_name="${plugin%%@*}"
+    if claude plugin uninstall "$plugin" --scope user < /dev/null 2>/dev/null; then
+        echo "  🗑️  Uninstalled: $display_name"
+        return 0
+    fi
+    warn "Failed to uninstall: $display_name"
+    return 1
+}
+
+# Sync: remove plugins not in expected list
+sync_plugins() {
+    echo "🔄 Synchronizing plugins..."
+    has_command claude || { warn "Claude CLI not found"; return 0; }
+    has_command jq || { warn "jq not found"; return 0; }
+
+    build_expected_plugins_list
+    get_installed_plugins
+
+    local removed=0 failed=0
+    for plugin in "${!installed_plugins[@]}"; do
+        if [[ -z "${expected_plugins[$plugin]}" ]]; then
+            uninstall_plugin "$plugin" && { ((removed++)) || true; } || { ((failed++)) || true; }
+        fi
     done
 
-    install_skill "agent-browser" "vercel-labs/agent-browser" && ((skills_installed++)) || ((skills_failed++))
-
-    # Playwright CLI
-    install_skill "playwright-cli" "microsoft/playwright" && ((skills_installed++)) || ((skills_failed++))
-
-    echo "  📊 Skills: $skills_installed installed, $skills_failed failed"
+    ((removed > 0 || failed > 0)) && echo "  📊 Sync: $removed removed, $failed failed" || ok "All plugins in sync"
 }
 
 # =============================================================================
@@ -207,25 +349,6 @@ add_mcp_server() {
 
 setup_mcp_servers() {
     echo "🔧 Setting up MCP servers..."
-
-    add_mcp_server "aws-documentation" '{
-        "type": "stdio",
-        "command": "uvx",
-        "args": ["awslabs.aws-documentation-mcp-server@latest"],
-        "env": {
-            "FASTMCP_LOG_LEVEL": "ERROR",
-            "AWS_DOCUMENTATION_PARTITION": "aws"
-        }
-    }'
-
-    add_mcp_server "terraform" '{
-        "type": "stdio",
-        "command": "uvx",
-        "args": ["awslabs.terraform-mcp-server@latest"],
-        "env": {
-            "FASTMCP_LOG_LEVEL": "ERROR"
-        }
-    }'
 
     add_mcp_server "context7" '{
         "type": "stdio",
@@ -252,8 +375,9 @@ main() {
 
     setup_github_token
     apply_claude_settings
-    install_official_plugins
-    install_skills
+    sync_plugins
+    install_all_plugins_and_skills
+    install_local_marketplace_plugins
     setup_mcp_servers
 
     echo ""

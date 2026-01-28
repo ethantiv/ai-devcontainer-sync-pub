@@ -14,7 +14,7 @@ readonly CONFIG_SOURCE="/opt/claude-config"
 
 sync_config_files() {
     # Ensure directories exist
-    mkdir -p "$CLAUDE_DIR/scripts" "$CLAUDE_DIR/skills"
+    mkdir -p "$CLAUDE_DIR/scripts" "$CLAUDE_DIR/skills" "$CLAUDE_DIR/plugins"
 
     # Sync CLAUDE.md (global user instructions)
     if [[ -f "$CONFIG_SOURCE/CLAUDE.md" ]]; then
@@ -31,6 +31,16 @@ sync_config_files() {
         # Copy all source scripts and make executable
         cp "$CONFIG_SOURCE/scripts"/*.sh "$CLAUDE_DIR/scripts/" 2>/dev/null || true
         chmod +x "$CLAUDE_DIR/scripts"/*.sh 2>/dev/null || true
+    fi
+
+    # Sync local marketplace plugins
+    if [[ -d "$CONFIG_SOURCE/plugins/dev-marketplace" ]]; then
+        cp -r "$CONFIG_SOURCE/plugins/dev-marketplace" "$CLAUDE_DIR/plugins/"
+    fi
+
+    # Sync plugin configuration file
+    if [[ -f "$CONFIG_SOURCE/claude-plugins.txt" ]]; then
+        cp "$CONFIG_SOURCE/claude-plugins.txt" "$CLAUDE_DIR/claude-plugins.txt"
     fi
 }
 
@@ -67,8 +77,6 @@ echo "║                   AI Code DevContainer                       ║"
 echo "╠══════════════════════════════════════════════════════════════╣"
 echo "║  claude --version    : $(claude --version 2>/dev/null || echo 'not available')                         ║"
 echo "║  gemini --version    : $(gemini --version 2>/dev/null || echo 'not available')                         ║"
-echo "║  terraform version   : $(terraform version -json 2>/dev/null | jq -r '.terraform_version' || echo 'n/a')                              ║"
-echo "║  aws --version       : $(aws --version 2>/dev/null | cut -d' ' -f1 | cut -d'/' -f2 || echo 'n/a')                              ║"
 echo "║  playwright-cli      : $(playwright-cli --version 2>/dev/null || echo 'not available')                         ║"
 echo "╠══════════════════════════════════════════════════════════════╣"
 echo "║  Working directory   : $(pwd)                    ║"

@@ -6,8 +6,7 @@
 # =============================================================================
 FROM debian:bookworm-slim AS builder
 
-ARG TERRAFORM_VERSION=1.12.2
-ARG NODE_VERSION=20
+ARG NODE_VERSION=24
 
 # Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
@@ -25,21 +24,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 20 LTS
+# Install Node.js 24
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Terraform (ARM64)
-RUN curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_arm64.zip" -o /tmp/terraform.zip \
-    && unzip /tmp/terraform.zip -d /usr/local/bin/ \
-    && rm /tmp/terraform.zip \
-    && chmod +x /usr/local/bin/terraform
-
-# Install npm global packages
-# Note: Claude Code must be installed via npm (not curl script) due to ARM64 bug #3569
+# Install npm global packages (Claude Code installed via curl in runtime stage)
 RUN npm install -g \
-    @anthropic-ai/claude-code \
     @google/gemini-cli \
     @playwright/cli \
     agent-browser
@@ -95,10 +86,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libatspi2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js runtime
-COPY --from=builder /usr/bin/node /usr/bin/node
-COPY --from=builder /usr/bin/npm /usr/bin/npm
-COPY --from=builder /usr/bin/npx /usr/bin/npx
+# Install Node.js 24 (full installation needed for Claude Code curl installer)
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy npm global packages from builder
 COPY --from=builder /usr/lib/node_modules /usr/lib/node_modules
 
 # Install GitHub CLI (arm64)
@@ -109,19 +102,9 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
     && apt-get install -y gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Install AWS CLI v2 (ARM64)
-RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o /tmp/awscliv2.zip \
-    && unzip -q /tmp/awscliv2.zip -d /tmp \
-    && /tmp/aws/install \
-    && rm -rf /tmp/aws /tmp/awscliv2.zip
-
-# Copy Terraform from builder
-COPY --from=builder /usr/local/bin/terraform /usr/local/bin/terraform
-
 # Create symlinks for npm global packages (they're in /usr/lib/node_modules)
-# Note: bin paths vary by package, using the actual entry points
-RUN ln -sf ../lib/node_modules/@anthropic-ai/claude-code/cli.js /usr/bin/claude \
-    && ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini \
+# Note: Claude Code is installed via curl installer as user, not here
+RUN ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini \
     && ln -sf ../lib/node_modules/@playwright/cli/playwright-cli.js /usr/bin/playwright-cli \
     && ln -sf ../lib/node_modules/agent-browser/bin/agent-browser.js /usr/bin/agent-browser
 
@@ -146,13 +129,20 @@ RUN mkdir -p ${HOME}/.cache \
 
 # Copy configuration files to /opt (for runtime sync to volume)
 COPY .devcontainer/configuration/CLAUDE.md.memory /opt/claude-config/CLAUDE.md
+COPY .devcontainer/configuration/claude-plugins.txt /opt/claude-config/claude-plugins.txt
 COPY .devcontainer/scripts/*.sh /opt/claude-config/scripts/
+COPY .devcontainer/plugins/dev-marketplace /opt/claude-config/plugins/dev-marketplace
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY docker/setup-claude.sh /usr/local/bin/setup-claude.sh
 
 # Set permissions
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/setup-claude.sh \
     && chown -R ${USERNAME}:${USERNAME} ${HOME}/.claude /opt/claude-config
+
+# Install Claude Code via curl installer (as non-root user)
+USER ${USERNAME}
+RUN curl -fsSL https://claude.ai/install.sh | bash
+USER root
 
 # Create Playwright output directory
 RUN mkdir -p /tmp/playwright-output && chown ${USERNAME}:${USERNAME} /tmp/playwright-output
