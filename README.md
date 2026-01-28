@@ -31,8 +31,14 @@ Ready-to-use development environment with Claude Code, Gemini CLI, and pre-confi
 
 ### Option 3: Docker Image
 
+Build the image:
 ```bash
-docker run -it -e GH_TOKEN=ghp_your_token ghcr.io/your-org/ai-devcontainer
+docker build -t claude-terminal:latest -f docker/Dockerfile .
+```
+
+Run the container:
+```bash
+docker run -it -e GH_TOKEN=ghp_your_token claude-terminal:latest
 ```
 
 ## Quick Reference
