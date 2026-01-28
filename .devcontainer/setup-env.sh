@@ -275,7 +275,7 @@ ensure_marketplace() {
 }
 
 # Parse plugins and skills from configuration file
-# Handles: official marketplace, external marketplaces, vercel skills, github skills
+# Handles: official marketplace, external marketplaces, skills, github skills
 install_all_plugins_and_skills() {
     local plugins_file="$WORKSPACE_FOLDER/.devcontainer/$CLAUDE_PLUGINS_FILE"
 
@@ -307,8 +307,8 @@ install_all_plugins_and_skills() {
             local source="${rest#*=}"
 
             case "$type" in
-                vercel-skills)
-                    install_vercel_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
+                skills)
+                    install_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
                     ;;
                 github)
                     install_github_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
@@ -415,9 +415,9 @@ setup_mcp_servers() {
 # SKILL INSTALLATION HELPERS
 # =============================================================================
 
-# Install skill from Vercel skills repo using skills CLI
+# Install skill using skills CLI (npx skills add)
 # Args: skill_name, repo (e.g., vercel-labs/agent-skills)
-install_vercel_skill() {
+install_skill() {
     local name="$1"
     local repo="$2"
 
@@ -482,7 +482,7 @@ build_expected_plugins_list() {
                 local rest="${line#*@}"
                 local type="${rest%%=*}"
                 case "$type" in
-                    vercel-skills|github) ;; # skills - not in settings.json
+                    skills|github) ;; # skills - not in settings.json
                     *) expected_plugins["${name}@${type}"]=1 ;;
                 esac
             else

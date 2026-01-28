@@ -131,7 +131,7 @@ install_official_plugins() {
 # SKILLS INSTALLATION
 # =============================================================================
 
-install_vercel_skill() {
+install_skill() {
     local name="$1"
     local repo="$2"
 
@@ -165,21 +165,15 @@ install_skills() {
 
     local skills_installed=0 skills_failed=0
 
-    # Vercel skills
     local vercel_repo="vercel-labs/agent-skills"
     for skill in "vercel-react-best-practices" "web-design-guidelines"; do
-        install_vercel_skill "$skill" "$vercel_repo" && ((skills_installed++)) || ((skills_failed++))
+        install_skill "$skill" "$vercel_repo" && ((skills_installed++)) || ((skills_failed++))
     done
 
-    # Agent Browser skill
-    install_vercel_skill "agent-browser" "vercel-labs/agent-browser" && ((skills_installed++)) || ((skills_failed++))
+    install_skill "agent-browser" "vercel-labs/agent-browser" && ((skills_installed++)) || ((skills_failed++))
 
-    # Playwright CLI (external marketplace plugin)
-    if ensure_marketplace "playwright-cli" "microsoft/playwright-cli"; then
-        install_plugin "playwright-cli@playwright-cli" "playwright-cli" && ((skills_installed++)) || ((skills_failed++))
-    else
-        ((skills_failed++))
-    fi
+    # Playwright CLI
+    install_skill "playwright-cli" "microsoft/playwright" && ((skills_installed++)) || ((skills_failed++))
 
     echo "  📊 Skills: $skills_installed installed, $skills_failed failed"
 }

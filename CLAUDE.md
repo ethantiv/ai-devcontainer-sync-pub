@@ -74,6 +74,16 @@ plugins/dev-marketplace/<plugin-name>/
 
 Register in `plugins/dev-marketplace/.claude-plugin/marketplace.json`.
 
+Command `.md` files use YAML frontmatter:
+```yaml
+---
+allowed-tools: Bash(git worktree:*), Bash(git branch:*)
+description: Short description of the command
+argument-hint: <name>
+---
+```
+`allowed-tools` restricts which tools the command can use (glob patterns supported).
+
 ### Key Files for Config Changes
 
 Changes to setup/sync logic must be applied in parallel across:
@@ -83,7 +93,9 @@ Changes to setup/sync logic must be applied in parallel across:
 
 ### Setup Flow
 
-Container start → `setup-env.sh` → SSH/GH auth → Claude config → sync plugins → add MCP servers
+**DevContainer/Codespaces**: Container start → `setup-env.sh` → SSH/GH auth → Claude config → sync plugins → add MCP servers
+
+**Docker image**: Container start → `entrypoint.sh` → sync config from `/opt/claude-config` to `~/.claude` → first-run setup (`.configured` marker) → `setup-claude.sh` for plugins/MCP
 
 ### File Sync Mapping
 
@@ -96,9 +108,9 @@ Container start → `setup-env.sh` → SSH/GH auth → Claude config → sync pl
 ### Codebase Patterns
 
 - `~/.claude` is a named Docker volume (ext4), `/tmp` is tmpfs — `rename()` fails cross-device (EXDEV). Setup scripts export `TMPDIR="$CLAUDE_DIR/tmp"` to keep all temp ops on the same filesystem.
-- `claude-plugins.txt` external format: `name@type=owner/repo` — `type` matching: `vercel-skills` and `github` are special-cased, everything else is treated as external marketplace name.
+- `claude-plugins.txt` external format: `name@type=owner/repo` — `type` matching: `skills` and `github` are special-cased, everything else is treated as external marketplace name.
 - **Gotcha**: `setup-env.sh` accepts any `type` as marketplace (fallthrough `*)`), but `setup-local.sh` requires `type` to match `*-marketplace` glob. Always name external marketplace types with `-marketplace` suffix to work in both scripts.
-- Playwright: `@playwright/cli` (MCP server binary) ≠ `playwright` (full package for browser install). Use `npx -y playwright install chromium` to install browsers — never call `playwright` directly as a global command.
+- Playwright: `@playwright/cli` (MCP server binary) ≠ `playwright` (full package for browser install). Use `npx -y playwright install chromium` to install browsers — never call `playwright` directly as a global command. DevContainer sets `PLAYWRIGHT_MCP_BROWSER=chromium`, `PLAYWRIGHT_MCP_VIEWPORT_SIZE=1920x1080`, and `--shm-size=256m`.
 - Shell scripts use `ok()`, `warn()`, `fail()` helpers for status output (colored ANSI with ✔︎/⚠️/❌). Use these instead of raw emoji in `setup-local.sh`, `setup-env.sh`, and `docker/setup-claude.sh`. Section headers with informational emoji (📄, 📦, 🔧, 🔄, 🔐, 🚀, 🌍) remain as plain `echo`.
 - `uv`/`uvx`: installed via `pip3 install --break-system-packages uv` in Dockerfiles (builder stage → COPY to runtime). MCP servers `aws-documentation` and `terraform` depend on `uvx`. Ad-hoc install without rebuild: `pip3 install --break-system-packages uv`.
-- Vercel skills install syntax: `npx -y skills add "https://github.com/$repo" --skill "$name"`. The old flags (`-g -y -a claude-code -s`) are deprecated.
+- Skills install syntax: `npx -y skills add "https://github.com/$repo" --skill "$name"`. The old flags (`-g -y -a claude-code -s`) are deprecated.

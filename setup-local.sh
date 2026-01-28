@@ -308,8 +308,8 @@ ensure_marketplace() {
 # SKILL INSTALLATION HELPERS
 # =============================================================================
 
-# Install skill from Vercel skills repo using skills CLI
-install_vercel_skill() {
+# Install skill using skills CLI (npx skills add)
+install_skill() {
     local name="$1"
     local repo="$2"
 
@@ -393,8 +393,8 @@ install_all_plugins_and_skills() {
                         2) plugins_failed=$((plugins_failed + 1)) ;;
                     esac
                     ;;
-                vercel-skills)
-                    install_vercel_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
+                skills)
+                    install_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
                     ;;
                 github)
                     install_github_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
@@ -419,66 +419,6 @@ install_all_plugins_and_skills() {
 }
 
 # =============================================================================
-# FINAL REPORT
-# =============================================================================
-
-print_final_report() {
-    print_header "Setup complete!"
-
-    echo ""
-    echo "Installed configuration:"
-    echo ""
-
-    echo "📁 Files:"
-    echo "   ~/.claude/settings.json"
-    echo "   ~/.claude/CLAUDE.md"
-
-    if [[ -d "$CLAUDE_DIR/scripts" ]]; then
-        local script_count=$(find "$CLAUDE_DIR/scripts" -name "*.sh" 2>/dev/null | wc -l | xargs)
-        echo "   ~/.claude/scripts/ ($script_count scripts)"
-    fi
-
-    if [[ -d "$CLAUDE_DIR/skills" ]]; then
-        local skill_count=$(find "$CLAUDE_DIR/skills" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | xargs)
-        echo "   ~/.claude/skills/ ($skill_count skills)"
-    fi
-
-    if [[ -f "$CLAUDE_SETTINGS_FILE" ]]; then
-        local plugin_count
-        plugin_count=$(jq -r '.enabledPlugins // {} | keys | length' "$CLAUDE_SETTINGS_FILE" 2>/dev/null || echo "0")
-        if [[ "$plugin_count" -gt 0 ]]; then
-            echo ""
-            echo "🔌 Plugins: $plugin_count installed (official marketplace)"
-        fi
-    fi
-
-    if [[ -d "$CLAUDE_DIR/skills" ]]; then
-        local skill_dirs=("$CLAUDE_DIR/skills"/*/)
-        if [[ -d "${skill_dirs[0]}" ]]; then
-            echo ""
-            echo "🎯 Skills:"
-            for skill_dir in "${skill_dirs[@]}"; do
-                [[ -d "$skill_dir" ]] || continue
-                echo "   $(basename "$skill_dir")"
-            done
-        fi
-    fi
-
-    echo ""
-    echo "🎭 Browser tools:"
-    echo "   @playwright/cli (global npm package)"
-    echo "   agent-browser (global npm package)"
-    echo "   Chromium browser"
-
-    echo ""
-    echo "🔍 Verification commands:"
-    echo "   claude mcp list                    # Check MCP servers"
-    echo "   claude plugin marketplace list     # Check marketplaces"
-    echo "   ls ~/.claude/skills/               # List installed skills"
-    echo ""
-}
-
-# =============================================================================
 # MAIN
 # =============================================================================
 
@@ -494,7 +434,6 @@ main() {
     setup_playwright_env
     setup_claude_configuration
     install_all_plugins_and_skills
-    print_final_report
 }
 
 main "$@"
