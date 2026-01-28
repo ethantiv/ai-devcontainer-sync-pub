@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 # Install npm global packages with cache
 RUN --mount=type=cache,target=/root/.npm \
-    npm install -g @playwright/cli
+    npm install -g @playwright/cli agent-browser
 
 # Install Playwright Chromium
 RUN npx -y playwright install chromium --with-deps
@@ -66,7 +66,8 @@ RUN if grep -q '^# pl_PL.UTF-8' /etc/locale.gen 2>/dev/null; then \
 COPY --from=builder /usr/lib/node_modules /usr/lib/node_modules
 
 # Create symlinks for npm global packages (COPY doesn't include /usr/bin links)
-RUN ln -sf /usr/lib/node_modules/@playwright/cli/playwright-cli.js /usr/bin/playwright-cli
+RUN ln -sf /usr/lib/node_modules/@playwright/cli/playwright-cli.js /usr/bin/playwright-cli \
+    && ln -sf /usr/lib/node_modules/agent-browser/bin/agent-browser.js /usr/bin/agent-browser
 
 # Copy Playwright browsers
 COPY --chown=vscode:vscode --from=builder /root/.cache/ms-playwright /home/vscode/.cache/ms-playwright

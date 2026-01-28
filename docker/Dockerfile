@@ -41,7 +41,8 @@ RUN curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/te
 RUN npm install -g \
     @anthropic-ai/claude-code \
     @google/gemini-cli \
-    @playwright/cli
+    @playwright/cli \
+    agent-browser
 
 # Install uv (Python package manager)
 RUN pip3 install --break-system-packages uv
@@ -121,7 +122,8 @@ COPY --from=builder /usr/local/bin/terraform /usr/local/bin/terraform
 # Note: bin paths vary by package, using the actual entry points
 RUN ln -sf ../lib/node_modules/@anthropic-ai/claude-code/cli.js /usr/bin/claude \
     && ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini \
-    && ln -sf ../lib/node_modules/@playwright/cli/playwright-cli.js /usr/bin/playwright-cli
+    && ln -sf ../lib/node_modules/@playwright/cli/playwright-cli.js /usr/bin/playwright-cli \
+    && ln -sf ../lib/node_modules/agent-browser/bin/agent-browser.js /usr/bin/agent-browser
 
 # Copy uv and tools from builder
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv

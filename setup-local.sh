@@ -170,7 +170,21 @@ install_playwright() {
     else
         echo "⚠️  Failed to install Chromium"
     fi
+}
 
+install_agent_browser() {
+    print_header "Agent Browser"
+
+    if npm ls -g agent-browser &>/dev/null; then
+        echo "✅ agent-browser already installed"
+    else
+        echo "📥 Installing agent-browser..."
+        npm install -g agent-browser
+        echo "✅ agent-browser installed"
+    fi
+}
+
+setup_playwright_env() {
     # Set Playwright environment variables
     local shell_rc="$HOME/.zshrc"
     [[ -f "$shell_rc" ]] || shell_rc="$HOME/.bashrc"
@@ -489,8 +503,9 @@ print_final_report() {
     fi
 
     echo ""
-    echo "🎭 Playwright:"
+    echo "🎭 Browser tools:"
     echo "   @playwright/cli (global npm package)"
+    echo "   agent-browser (global npm package)"
     echo "   Chromium browser"
 
     echo ""
@@ -516,6 +531,8 @@ main() {
     check_requirements
     install_claude_cli
     install_playwright
+    install_agent_browser
+    setup_playwright_env
     setup_claude_configuration
     install_all_plugins_and_skills
     print_final_report

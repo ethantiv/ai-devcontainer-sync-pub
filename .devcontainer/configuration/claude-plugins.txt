@@ -32,6 +32,7 @@ typescript-lsp
 # Vercel skills (format: name@vercel-skills=repo)
 vercel-react-best-practices@vercel-skills=vercel-labs/agent-skills
 web-design-guidelines@vercel-skills=vercel-labs/agent-skills
+agent-browser@vercel-skills=vercel-labs/agent-browser
 
 # External marketplaces (format: name@marketplace-name=repo)
 playwright-cli@playwright-cli=microsoft/playwright-cli

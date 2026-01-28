@@ -167,6 +167,9 @@ install_skills() {
         install_vercel_skill "$skill" "$vercel_repo" && ((skills_installed++)) || ((skills_failed++))
     done
 
+    # Agent Browser skill
+    install_vercel_skill "agent-browser" "vercel-labs/agent-browser" && ((skills_installed++)) || ((skills_failed++))
+
     # Playwright CLI (external marketplace plugin)
     if ensure_marketplace "playwright-cli" "microsoft/playwright-cli"; then
         install_plugin "playwright-cli@playwright-cli" "playwright-cli" && ((skills_installed++)) || ((skills_failed++))

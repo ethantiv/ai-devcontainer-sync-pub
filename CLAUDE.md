@@ -45,6 +45,15 @@ Codespaces: add as repository secrets. Local: create `.devcontainer/.env`.
 - `terraform` - Terraform/Terragrunt execution, AWS provider docs
 - `context7` - Context7 documentation search (requires `CONTEXT7_API_KEY`)
 
+### Adding New Global npm Tools
+
+Requires changes in 5 files:
+1. `.devcontainer/Dockerfile` — `npm install -g` + symlink in runtime stage
+2. `docker/Dockerfile` — `npm install -g` + symlink after COPY
+3. `setup-local.sh` — dedicated `install_<tool>()` function + call in `main()`
+4. `.devcontainer/configuration/claude-plugins.txt` — if it has a skill/plugin
+5. `docker/setup-claude.sh` — hardcoded skill entry in `install_skills()` if applicable
+
 ### Adding New Plugins/Skills/Commands
 
 1. **Plugins**: Edit `.devcontainer/configuration/claude-plugins.txt` (see file for format examples)
