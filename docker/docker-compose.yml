@@ -16,6 +16,7 @@ services:
       - projects:/home/developer/projects
     stdin_open: true
     tty: true
+    restart: unless-stopped
     working_dir: /home/developer/projects
     healthcheck:
       test: ["CMD", "node", "--version"]
