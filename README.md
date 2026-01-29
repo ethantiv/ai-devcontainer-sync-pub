@@ -4,11 +4,11 @@ Ready-to-use development environment with Claude Code, Gemini CLI, and pre-confi
 
 ## Features
 
-- **Claude Code** — fully configured with plugins, skills, and MCP servers
-- **Gemini CLI** — Google's AI assistant ready to use
-- **Custom Slash Commands** — `/code-review`, `/design-system`, `/roadmap`, `/git-worktree`
-- **MCP Servers** — AWS documentation, Terraform, Context7, Playwright
-- **Skills** — React/Next.js best practices, UI/UX guidelines, browser automation
+- **Claude Code** 
+- **Gemini CLI** 
+- **Custom Slash Commands** 
+- **MCP Servers**
+- **Skills**
 
 ## Getting Started
 
@@ -24,47 +24,54 @@ Ready-to-use development environment with Claude Code, Gemini CLI, and pre-confi
 1. Install [Docker](https://www.docker.com/) and [VS Code](https://code.visualstudio.com/) with [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 2. Clone this repository
 3. Create `.devcontainer/.env` with your token:
+
    ```bash
    GH_TOKEN=ghp_your_token_here
    ```
+   
 4. Open in VS Code and click **Reopen in Container**
 
-### Option 3: Docker Image
+### Option 3: Docker (Raspberry Pi / Standalone)
 
-Build the image:
-```bash
-docker build -t claude-terminal:latest -f docker/Dockerfile .
-```
-
-Run the container:
-```bash
-docker run -it -e GH_TOKEN=ghp_your_token claude-terminal:latest
-```
-
-## Quick Reference
-
-### Verify Setup
+Optimized for ARM64 (Raspberry Pi 5, Apple Silicon) but works on x86_64.
 
 ```bash
-claude mcp list                    # Check MCP servers
-claude plugin marketplace list     # Check installed plugins
+cd docker
+
+# Copy and configure environment
+cp .env.example .env
+# Edit .env with your GH_TOKEN
+
+# Build and run
+docker compose up -d
+
+# Attach to container
+docker compose exec claude bash
 ```
 
-### Re-sync Configuration
+The container auto-restarts after reboot (`restart: unless-stopped`).
+
+#### Docker Volumes
+
+| Volume | Mount Point | Purpose |
+|--------|-------------|---------|
+| `claude-config` | `~/.claude` | Claude configuration and plugins |
+| `gemini-config` | `~/.gemini` | Gemini CLI configuration |
+| `projects` | `~/projects` | Persistent project storage |
+
+#### Manual Docker Build
 
 ```bash
-./.devcontainer/setup-env.sh
+# Build
+docker build -t claude-code:latest -f docker/Dockerfile .
+
+# Run interactively
+docker run -it --rm \
+    -e GH_TOKEN="ghp_..." \
+    -v projects:/home/developer/projects \
+    -v claude-config:/home/developer/.claude \
+    claude-code:latest
 ```
-
-### Available Slash Commands
-
-| Command | Description |
-|---------|-------------|
-| `/code-review` | Review git staged changes with multiple agents |
-| `/design-system` | Generate HTML design system templates |
-| `/roadmap` | Manage ROADMAP.json with features and proposals |
-| `/git-worktree:create <name>` | Create git worktree with naming convention |
-| `/git-worktree:delete <name>` | Delete git worktree and its branch |
 
 ## Environment Variables
 
@@ -85,7 +92,3 @@ Add your own commands, plugins, or scripts in `.devcontainer/` directories:
 - **Scripts** — add `.sh` files to `scripts/`
 
 After changes, run `./.devcontainer/setup-env.sh` or rebuild the container.
-
-## Documentation
-
-See [CLAUDE.md](CLAUDE.md) for technical details, architecture, and contribution guidelines.

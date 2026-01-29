@@ -97,6 +97,7 @@ Changes to setup/sync logic must be applied in parallel across:
 - `.devcontainer/setup-env.sh` — DevContainer/Codespaces setup
 - `setup-local.sh` — macOS local setup (no MCP servers — plugins and skills only)
 - `docker/Dockerfile` + `docker/entrypoint.sh` + `docker/setup-claude.sh` — Docker image build and runtime
+- `README.md` — single documentation file for all deployment options (Codespaces, DevContainer, Docker)
 
 ### Setup Flow
 
