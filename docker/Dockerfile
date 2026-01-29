@@ -53,7 +53,7 @@ ARG USER_GID=1000
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DO_NOT_TRACK=1
 ENV HOME=/home/${USERNAME}
-ENV PATH="${HOME}/.local/bin:${HOME}/.uv/bin:/usr/local/bin:${PATH}"
+ENV PATH="${HOME}/.claude/bin:${HOME}/.local/bin:${HOME}/.uv/bin:/usr/local/bin:${PATH}"
 ENV NODE_OPTIONS="--max-old-space-size=512"
 
 # Install runtime dependencies
@@ -138,11 +138,6 @@ COPY docker/setup-claude.sh /usr/local/bin/setup-claude.sh
 # Set permissions
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/setup-claude.sh \
     && chown -R ${USERNAME}:${USERNAME} ${HOME}/.claude /opt/claude-config
-
-# Install Claude Code via curl installer (as non-root user)
-USER ${USERNAME}
-RUN curl -fsSL https://claude.ai/install.sh | bash
-USER root
 
 # Create Playwright output directory
 RUN mkdir -p /tmp/playwright-output && chown ${USERNAME}:${USERNAME} /tmp/playwright-output

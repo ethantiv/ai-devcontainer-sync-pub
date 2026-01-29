@@ -367,8 +367,15 @@ setup_mcp_servers() {
 main() {
     echo "🚀 Setting up Claude Code..."
 
-    has_command claude || { fail "Claude CLI not found"; exit 1; }
+    # Find claude binary (prefer volume location)
+    CLAUDE_CMD="${CLAUDE_DIR}/bin/claude"
+    [[ -x "$CLAUDE_CMD" ]] || CLAUDE_CMD="$(command -v claude 2>/dev/null || true)"
+    [[ -x "$CLAUDE_CMD" ]] || { fail "Claude CLI not found"; exit 1; }
     has_command jq || { fail "jq not found"; exit 1; }
+
+    # Define claude function to use correct binary
+    claude() { "$CLAUDE_CMD" "$@"; }
+    export -f claude
 
     ensure_directory "$CLAUDE_DIR/tmp"
     export TMPDIR="$CLAUDE_DIR/tmp"

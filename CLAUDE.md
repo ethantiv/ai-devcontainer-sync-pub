@@ -105,6 +105,8 @@ Changes to setup/sync logic must be applied in parallel across:
 
 **Docker image**: Container start → `entrypoint.sh` → sync config from `/opt/claude-config` to `~/.claude` → first-run setup (`.configured` marker) → `setup-claude.sh` for plugins/MCP
 
+**Docker Claude persistence**: Claude installed to `~/.claude/bin/` (volume) at first container start, not during image build. This preserves updates across `docker compose down && up`. The `CLAUDE_INSTALL_DIR` env var controls install location; fallback moves binary from `~/.local/bin/` if installer ignores it.
+
 ### File Sync Mapping
 
 | Source | Destination |
@@ -122,3 +124,4 @@ Changes to setup/sync logic must be applied in parallel across:
 - Shell scripts use `ok()`, `warn()`, `fail()` helpers for status output (colored ANSI with ✔︎/⚠️/❌). Use these instead of raw emoji in `setup-local.sh`, `setup-env.sh`, and `docker/setup-claude.sh`. Section headers with informational emoji (📄, 📦, 🔧, 🔄, 🔐, 🚀, 🌍) remain as plain `echo`.
 - `uv`/`uvx`: installed via `pip3 install --break-system-packages uv` in Dockerfiles (builder stage → COPY to runtime). MCP servers `aws-documentation` and `terraform` depend on `uvx`. Ad-hoc install without rebuild: `pip3 install --break-system-packages uv`.
 - Skills install syntax: `npx -y skills add "https://github.com/$repo" --skill "$name" -g -y`. The `-g` flag installs globally to `~/.agents/skills/` with symlinks to `~/.claude/skills/`. The `-y` flag skips interactive confirmation prompts.
+- **Claude binary in Docker**: Lives at `~/.claude/bin/claude` (volume). Scripts should define wrapper: `CLAUDE_CMD="${CLAUDE_DIR}/bin/claude"; claude() { "$CLAUDE_CMD" "$@"; }` to ensure correct binary is used regardless of PATH.

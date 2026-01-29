@@ -7,6 +7,48 @@ set -e
 readonly CLAUDE_DIR="$HOME/.claude"
 readonly CONFIGURED_MARKER="$CLAUDE_DIR/.configured"
 readonly CONFIG_SOURCE="/opt/claude-config"
+readonly CLAUDE_BIN="$CLAUDE_DIR/bin/claude"
+
+# =============================================================================
+# CLAUDE INSTALLATION (installs to volume on first run)
+# =============================================================================
+
+install_claude() {
+    if [[ -x "$CLAUDE_BIN" ]]; then
+        echo "  ✔︎ Claude Code already installed in volume"
+        return 0
+    fi
+
+    echo "🔧 Installing Claude Code to volume..."
+
+    # Create bin directory in volume
+    mkdir -p "$CLAUDE_DIR/bin"
+
+    # Set TMPDIR to avoid cross-device rename errors (volume is ext4, /tmp is tmpfs)
+    export TMPDIR="$CLAUDE_DIR/tmp"
+    mkdir -p "$TMPDIR"
+
+    # Download and install Claude with custom install directory
+    if CLAUDE_INSTALL_DIR="$CLAUDE_DIR" curl -fsSL https://claude.ai/install.sh | bash; then
+        # The installer puts claude in $CLAUDE_INSTALL_DIR/bin/claude
+        if [[ -x "$CLAUDE_BIN" ]]; then
+            echo "  ✔︎ Claude Code installed to $CLAUDE_DIR/bin/"
+        elif [[ -x "$HOME/.local/bin/claude" ]]; then
+            # Fallback: move from default location if installer ignored CLAUDE_INSTALL_DIR
+            mv "$HOME/.local/bin/claude" "$CLAUDE_BIN"
+            echo "  ✔︎ Claude Code installed to $CLAUDE_DIR/bin/"
+        else
+            echo "  ❌ Claude installation succeeded but binary not found"
+            return 1
+        fi
+    else
+        echo "  ❌ Failed to install Claude Code"
+        return 1
+    fi
+}
+
+# Install Claude to volume (persists across container recreates)
+install_claude
 
 # =============================================================================
 # CONFIGURATION SYNC (runs every startup)
@@ -66,10 +108,19 @@ fi
 # STARTUP INFO
 # =============================================================================
 
+# Use claude from volume
+claude_version() {
+    if [[ -x "$CLAUDE_BIN" ]]; then
+        "$CLAUDE_BIN" --version 2>/dev/null || echo 'not available'
+    else
+        echo 'not installed'
+    fi
+}
+
 echo ""
 echo "AI Code DevContainer"
 echo ""
-echo "  claude --version    : $(claude --version 2>/dev/null || echo 'not available')"
+echo "  claude --version    : $(claude_version)"
 echo "  gemini --version    : $(gemini --version 2>/dev/null || echo 'not available')"
 echo "  playwright-cli      : $(playwright-cli --version 2>/dev/null || echo 'not available')"
 echo ""
