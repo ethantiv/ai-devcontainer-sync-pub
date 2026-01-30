@@ -115,6 +115,7 @@ setup_gh_auth() {
                 echo "  ✔︎ GitHub CLI authenticated" || \
                 echo "  ⚠️  GitHub CLI auth failed"
         fi
+        gh auth setup-git 2>/dev/null
     fi
 }
 
