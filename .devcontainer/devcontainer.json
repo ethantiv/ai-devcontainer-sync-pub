@@ -46,6 +46,7 @@
     "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
     "PLAYWRIGHT_MCP_BROWSER": "chromium",
     "PLAYWRIGHT_MCP_VIEWPORT_SIZE": "1920x1080",
+    "PLAYWRIGHT_MCP_NO_SANDBOX": "true",
     "TZ": "Europe/Warsaw",
     "LC_TIME": "pl_PL.UTF-8"
   },

@@ -29,6 +29,7 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PLAYWRIGHT_BROWSERS_PATH=/home/vscode/.cache/ms-playwright
+ENV PLAYWRIGHT_MCP_NO_SANDBOX=true
 ENV NODE_ENV=production
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \

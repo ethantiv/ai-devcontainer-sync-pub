@@ -105,6 +105,8 @@ Changes to setup/sync logic must be applied in parallel across:
 
 **Docker image**: Container start → `entrypoint.sh` → sync config from `/opt/claude-config` to `~/.claude` → first-run setup (`.configured` marker) → `setup-claude.sh` for plugins/MCP
 
+**Docker GitHub auth**: `entrypoint.sh` automatically runs `gh auth login --with-token` using `GH_TOKEN` env var at every container start. No manual login required.
+
 **Docker Claude persistence**: Claude installed to `~/.claude/bin/` (volume) at first container start, not during image build. This preserves updates across `docker compose down && up`. The `CLAUDE_INSTALL_DIR` env var controls install location; fallback moves binary from `~/.local/bin/` if installer ignores it.
 
 ### File Sync Mapping
@@ -125,3 +127,4 @@ Changes to setup/sync logic must be applied in parallel across:
 - `uv`/`uvx`: installed via `pip3 install --break-system-packages uv` in Dockerfiles (builder stage → COPY to runtime). MCP servers `aws-documentation` and `terraform` depend on `uvx`. Ad-hoc install without rebuild: `pip3 install --break-system-packages uv`.
 - Skills install syntax: `npx -y skills add "https://github.com/$repo" --skill "$name" -g -y`. The `-g` flag installs globally to `~/.agents/skills/` with symlinks to `~/.claude/skills/`. The `-y` flag skips interactive confirmation prompts.
 - **Claude binary in Docker**: Lives at `~/.claude/bin/claude` (volume). Scripts should define wrapper: `CLAUDE_CMD="${CLAUDE_DIR}/bin/claude"; claude() { "$CLAUDE_CMD" "$@"; }` to ensure correct binary is used regardless of PATH.
+- **Testing Docker on remote host**: SSH to host, `cd ~/Downloads/ai-devcontainer-sync/docker`, `sudo docker compose down && sudo docker compose up -d`. Verify with `sudo docker exec claude-dev gh auth status`.

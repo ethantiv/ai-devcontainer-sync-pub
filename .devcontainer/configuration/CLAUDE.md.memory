@@ -7,6 +7,7 @@ Wait for explicit user permission before executing Git or GitHub commands (git a
 Write all documentation in English, including code comments, docstrings, README files, commit messages, PR descriptions, and API documentation. This ensures consistency across the project.
 When operating in plan mode, generate plan content in Polish (Polski).
 Use Mermaid for diagrams and schemas instead of ASCII art. Mermaid renders properly in GitHub, VS Code, and documentation tools.
+Mermaid diagrams: avoid Polish diacritics and quotes in node labels (causes parse errors).
 
 ## Simplicity and Focus
 
