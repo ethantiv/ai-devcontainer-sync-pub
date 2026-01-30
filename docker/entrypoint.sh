@@ -90,6 +90,41 @@ sync_config_files() {
 sync_config_files
 
 # =============================================================================
+# OAUTH TOKEN PERSISTENCE WORKAROUND
+# =============================================================================
+# Claude Code on Linux has a known bug where OAuth auth doesn't persist properly
+# across container restarts. This exports the token as env var as workaround.
+# See: https://github.com/anthropics/claude-code/issues/5767
+
+setup_oauth_token() {
+    local CREDS="$CLAUDE_DIR/.credentials.json"
+
+    # Skip if token already provided via env var
+    if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
+        echo "  ✔︎ OAuth token provided via env var"
+        return 0
+    fi
+
+    # Export token from credentials if file exists
+    if [[ -f "$CREDS" ]]; then
+        local token
+        token=$(jq -r '.claudeAiOauth.accessToken // empty' "$CREDS" 2>/dev/null)
+
+        if [[ -n "$token" ]]; then
+            export CLAUDE_CODE_OAUTH_TOKEN="$token"
+            # Add to .bashrc for interactive sessions
+            if ! grep -q "CLAUDE_CODE_OAUTH_TOKEN" ~/.bashrc 2>/dev/null; then
+                echo "export CLAUDE_CODE_OAUTH_TOKEN='$token'" >> ~/.bashrc
+            fi
+            echo "  ✔︎ OAuth token exported from credentials"
+        fi
+    fi
+}
+
+# Export OAuth token before running Claude (workaround for auth persistence bug)
+setup_oauth_token
+
+# =============================================================================
 # FIRST-RUN SETUP (MCP servers, settings, plugins)
 # =============================================================================
 
