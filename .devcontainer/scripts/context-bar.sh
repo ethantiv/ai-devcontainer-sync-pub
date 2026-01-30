@@ -8,6 +8,8 @@ COLOR="blue"
 C_RESET='\033[0m'
 C_GRAY='\033[38;5;245m'  # explicit gray for default text
 C_BAR_EMPTY='\033[38;5;238m'
+C_WARNING='\033[38;5;208m'
+C_DANGER='\033[38;5;196m'
 case "$COLOR" in
     orange)   C_ACCENT='\033[38;5;173m' ;;
     blue)     C_ACCENT='\033[38;5;74m' ;;
@@ -131,14 +133,22 @@ if [[ -n "$transcript_path" && -f "$transcript_path" ]]; then
 
     [[ $pct -gt 100 ]] && pct=100
 
+    if [[ $pct -ge 80 ]]; then
+        bar_color="$C_DANGER"
+    elif [[ $pct -ge 60 ]]; then
+        bar_color="$C_WARNING"
+    else
+        bar_color="$C_ACCENT"
+    fi
+
     bar=""
     for ((i=0; i<bar_width; i++)); do
         bar_start=$((i * 10))
         progress=$((pct - bar_start))
         if [[ $progress -ge 8 ]]; then
-            bar+="${C_ACCENT}█${C_RESET}"
+            bar+="${bar_color}█${C_RESET}"
         elif [[ $progress -ge 3 ]]; then
-            bar+="${C_ACCENT}▓${C_RESET}"
+            bar+="${bar_color}▓${C_RESET}"
         else
             bar+="${C_BAR_EMPTY}░${C_RESET}"
         fi
@@ -152,14 +162,22 @@ else
     pct=$((baseline * 100 / max_context))
     [[ $pct -gt 100 ]] && pct=100
 
+    if [[ $pct -ge 80 ]]; then
+        bar_color="$C_DANGER"
+    elif [[ $pct -ge 60 ]]; then
+        bar_color="$C_WARNING"
+    else
+        bar_color="$C_ACCENT"
+    fi
+
     bar=""
     for ((i=0; i<bar_width; i++)); do
         bar_start=$((i * 10))
         progress=$((pct - bar_start))
         if [[ $progress -ge 8 ]]; then
-            bar+="${C_ACCENT}█${C_RESET}"
+            bar+="${bar_color}█${C_RESET}"
         elif [[ $progress -ge 3 ]]; then
-            bar+="${C_ACCENT}▓${C_RESET}"
+            bar+="${bar_color}▓${C_RESET}"
         else
             bar+="${C_BAR_EMPTY}░${C_RESET}"
         fi

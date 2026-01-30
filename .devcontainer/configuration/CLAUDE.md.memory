@@ -2,12 +2,11 @@
 
 Wait for explicit user permission before executing Git or GitHub commands (git add, commit, push, pull, merge, rebase, gh pr create/merge). Execute Git commands only when user explicitly requests it in their message or user invokes a slash command (e.g., /commit)
 
-## Documentation
+## Language
 
-Write all documentation in English, including code comments, docstrings, README files, commit messages, PR descriptions, and API documentation. This ensures consistency across the project.
-When operating in plan mode, generate plan content in Polish (Polski).
-Use Mermaid for diagrams and schemas instead of ASCII art. Mermaid renders properly in GitHub, VS Code, and documentation tools.
-Mermaid diagrams: avoid Polish diacritics and quotes in node labels (causes parse errors).
+Use English for all code, comments, documentation, commit messages, and PR descriptions.
+Use Polish (Polski) only for chat conversations with the user.
+Use Mermaid for diagrams (avoid Polish diacritics and quotes in node labels).
 
 ## Simplicity and Focus
 
