@@ -24,18 +24,11 @@ Run them after implementation to get immediate feedback:
 - Tests: `[test command]`
 - Typecheck: `[typecheck command]`
 - Lint: `[lint command]`
-- Browser Test: use skill `playwright-cli` to manually view and verify UI changes in actual browser
+- Browser Test: use skill `agent-browser` to manually view and verify UI changes in actual browser
 
 ## Skills
 
-Always load these skills at the start of relevant tasks:
-
-| Skill | When to use |
-|-------|--------------|
-| `/frontend-design` | Building new UI components, pages, or applications |
-| `/web-design-guidelines` | Reviewing UI for accessibility, forms, dark mode, i18n |
-| `/vercel-react-best-practices` | Writing or optimizing React/Next.js code |
-| `/playwright-cli` | Testing UI changes in actual browser |
+Always load the correct skills at the beginning of the relevant tasks.
 
 ### CLAUDE.md Template
 
