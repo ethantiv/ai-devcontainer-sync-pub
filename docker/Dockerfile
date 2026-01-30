@@ -142,6 +142,9 @@ RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/setup-claude.sh \
 # Create Playwright output directory
 RUN mkdir -p /tmp/playwright-output && chown ${USERNAME}:${USERNAME} /tmp/playwright-output
 
+# Declare volumes for persistence
+VOLUME ["${HOME}/.claude", "${HOME}/.gemini", "${HOME}/projects"]
+
 # Switch to non-root user
 USER ${USERNAME}
 WORKDIR ${HOME}/projects
