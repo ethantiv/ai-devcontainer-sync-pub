@@ -84,6 +84,11 @@ sync_config_files() {
     if [[ -f "$CONFIG_SOURCE/claude-plugins.txt" ]]; then
         cp "$CONFIG_SOURCE/claude-plugins.txt" "$CLAUDE_DIR/claude-plugins.txt"
     fi
+
+    # Sync Playwright CLI config (to projects volume for sandbox-free operation)
+    if [[ -f "$CONFIG_SOURCE/playwright-cli.json" ]]; then
+        cp "$CONFIG_SOURCE/playwright-cli.json" "$HOME/projects/playwright-cli.json"
+    fi
 }
 
 # Always sync config files (from image to volume)
