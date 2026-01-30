@@ -18,14 +18,6 @@ services:
     tty: true
     restart: unless-stopped
     working_dir: /home/developer/projects
-    deploy:
-      resources:
-        limits:
-          cpus: '3.0'
-          memory: 6G
-          pids: 500
-        reservations:
-          cpus: '1.0'
     healthcheck:
       test: ["CMD", "node", "--version"]
       interval: 30s
