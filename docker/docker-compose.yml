@@ -26,7 +26,6 @@ services:
           pids: 500
         reservations:
           cpus: '1.0'
-          memory: 2G
     healthcheck:
       test: ["CMD", "node", "--version"]
       interval: 30s
