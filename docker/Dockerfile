@@ -129,7 +129,7 @@ RUN mkdir -p ${HOME}/.cache \
 
 # Copy configuration files to /opt (for runtime sync to volume)
 COPY .devcontainer/configuration/CLAUDE.md.memory /opt/claude-config/CLAUDE.md
-COPY .devcontainer/configuration/claude-plugins.txt /opt/claude-config/claude-plugins.txt
+COPY .devcontainer/configuration/skills-plugins.txt /opt/claude-config/skills-plugins.txt
 COPY .devcontainer/scripts/*.sh /opt/claude-config/scripts/
 COPY .devcontainer/plugins/dev-marketplace /opt/claude-config/plugins/dev-marketplace
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh

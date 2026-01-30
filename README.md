@@ -87,7 +87,7 @@ docker run -it --rm \
 
 Add your own commands, plugins, or scripts in `.devcontainer/` directories:
 
-- **Plugins** — edit `configuration/claude-plugins.txt`
+- **Plugins** — edit `configuration/skills-plugins.txt`
 - **Local commands** — add to `plugins/dev-marketplace/`
 - **Scripts** — add `.sh` files to `scripts/`
 

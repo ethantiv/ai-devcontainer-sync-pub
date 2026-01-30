@@ -29,10 +29,10 @@ typescript-lsp
 # EXTERNAL SOURCES
 # =============================================================================
 
-# Skills (format: name@skills=repo — installed via: npx skills add <repo>)
-vercel-react-best-practices@skills=vercel-labs/agent-skills
-web-design-guidelines@skills=vercel-labs/agent-skills
-agent-browser@skills=vercel-labs/agent-browser
-playwright-cli@skills=microsoft/playwright
-ui-ux-pro-max@skills=nextlevelbuilder/ui-ux-pro-max-skill
-brainstorming@skills=obra/superpowers
+# Skills (format: - <url> --skill <name>)
+- https://github.com/vercel-labs/agent-skills --skill vercel-react-best-practices
+- https://github.com/vercel-labs/agent-skills --skill web-design-guidelines
+- https://github.com/vercel-labs/agent-browser --skill agent-browser
+- https://github.com/microsoft/playwright --skill playwright-cli
+- https://github.com/nextlevelbuilder/ui-ux-pro-max-skill --skill ui-ux-pro-max
+- https://github.com/obra/superpowers --skill brainstorming

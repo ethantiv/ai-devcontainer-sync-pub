@@ -13,7 +13,7 @@ readonly CLAUDE_DIR="$HOME/.claude"
 readonly CLAUDE_SETTINGS_FILE="$CLAUDE_DIR/settings.json"
 readonly CLAUDE_SCRIPTS_DIR="$CLAUDE_DIR/scripts"
 
-readonly CLAUDE_PLUGINS_FILE="configuration/claude-plugins.txt"
+readonly CLAUDE_PLUGINS_FILE="configuration/skills-plugins.txt"
 readonly OFFICIAL_MARKETPLACE_NAME="claude-plugins-official"
 readonly OFFICIAL_MARKETPLACE_REPO="anthropics/claude-plugins-official"
 
@@ -298,14 +298,15 @@ ensure_marketplace() {
 # =============================================================================
 
 # Install skill using skills CLI (npx skills add)
+# Args: skill_name, url (e.g., https://github.com/vercel-labs/agent-skills)
 install_skill() {
     local name="$1"
-    local repo="$2"
+    local url="$2"
 
     has_command npx || return 1
     ensure_directory "$CLAUDE_DIR/skills"
 
-    if npx -y skills add "https://github.com/$repo" --skill "$name" -g -y < /dev/null 2>/dev/null; then
+    if npx -y skills add "$url" --skill "$name" --agent claude-code gemini-cli -g -y < /dev/null 2>/dev/null; then
         ok "Installed skill: $name"
         return 0
     fi
@@ -361,6 +362,14 @@ install_all_plugins_and_skills() {
         [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
         line=$(echo "$line" | xargs)
         [[ -z "$line" ]] && continue
+
+        # New format: - <url> --skill <name>
+        if [[ "$line" =~ ^-[[:space:]]+(https://[^[:space:]]+)[[:space:]]+--skill[[:space:]]+([^[:space:]]+) ]]; then
+            local url="${BASH_REMATCH[1]}"
+            local name="${BASH_REMATCH[2]}"
+            install_skill "$name" "$url" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
+            continue
+        fi
 
         if [[ "$line" =~ @ ]]; then
             local name="${line%%@*}"

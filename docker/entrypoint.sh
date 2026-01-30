@@ -81,8 +81,8 @@ sync_config_files() {
     fi
 
     # Sync plugin configuration file
-    if [[ -f "$CONFIG_SOURCE/claude-plugins.txt" ]]; then
-        cp "$CONFIG_SOURCE/claude-plugins.txt" "$CLAUDE_DIR/claude-plugins.txt"
+    if [[ -f "$CONFIG_SOURCE/skills-plugins.txt" ]]; then
+        cp "$CONFIG_SOURCE/skills-plugins.txt" "$CLAUDE_DIR/skills-plugins.txt"
     fi
 }
 

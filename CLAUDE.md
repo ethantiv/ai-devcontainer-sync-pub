@@ -60,12 +60,12 @@ Requires changes in 5 files:
 1. `.devcontainer/Dockerfile` — `npm install -g` + symlink in runtime stage
 2. `docker/Dockerfile` — `npm install -g` + symlink after COPY
 3. `setup-local.sh` — dedicated `install_<tool>()` function + call in `main()`
-4. `.devcontainer/configuration/claude-plugins.txt` — if it has a skill/plugin
+4. `.devcontainer/configuration/skills-plugins.txt` — if it has a skill/plugin
 5. `docker/setup-claude.sh` and `.devcontainer/setup-env.sh` — hardcoded skill entry if applicable
 
 ### Adding New Plugins/Skills/Commands
 
-1. **Plugins**: Edit `.devcontainer/configuration/claude-plugins.txt` (see file for format examples)
+1. **Plugins**: Edit `.devcontainer/configuration/skills-plugins.txt` (see file for format examples)
 2. **Local plugins**: Add to `.devcontainer/plugins/dev-marketplace/` and register in `marketplace.json`
 3. **Scripts**: Add `.sh` files to `.devcontainer/scripts/`
 4. **Run** `./.devcontainer/setup-env.sh` to sync changes
@@ -120,11 +120,15 @@ Changes to setup/sync logic must be applied in parallel across:
 ### Codebase Patterns
 
 - `~/.claude` is a named Docker volume (ext4), `/tmp` is tmpfs — `rename()` fails cross-device (EXDEV). Setup scripts export `TMPDIR="$CLAUDE_DIR/tmp"` to keep all temp ops on the same filesystem.
-- `claude-plugins.txt` external format: `name@type=owner/repo` — `type` matching: `skills` and `github` are special-cased, everything else is treated as external marketplace name.
+- `skills-plugins.txt` formats:
+  - Skills (new): `- https://github.com/owner/repo --skill skill-name` — installed with `--agent claude gemini`
+  - Skills (legacy): `name@skills=owner/repo` — still supported for backward compatibility
+  - GitHub skills: `name@github=owner/repo/path-to-SKILL.md`
+  - External plugins: `name@type=owner/repo` — `type` is treated as marketplace name
 - **Gotcha**: `setup-env.sh` accepts any `type` as marketplace (fallthrough `*)`), but `setup-local.sh` requires `type` to match `*-marketplace` glob. Always name external marketplace types with `-marketplace` suffix to work in both scripts.
 - Playwright: `@playwright/cli` (MCP server binary) ≠ `playwright` (full package for browser install). Use `npx -y playwright install chromium` to install browsers — never call `playwright` directly as a global command. DevContainer sets `PLAYWRIGHT_MCP_BROWSER=chromium`, `PLAYWRIGHT_MCP_VIEWPORT_SIZE=1920x1080`, and `--shm-size=256m`. Docker uses `PLAYWRIGHT_MCP_NO_SANDBOX=true` env var to disable sandbox globally (preferred over `playwright-cli.json` which only works in working directory).
 - Shell scripts use `ok()`, `warn()`, `fail()` helpers for status output (colored ANSI with ✔︎/⚠️/❌). Use these instead of raw emoji in `setup-local.sh`, `setup-env.sh`, and `docker/setup-claude.sh`. Section headers with informational emoji (📄, 📦, 🔧, 🔄, 🔐, 🚀, 🌍) remain as plain `echo`.
 - `uv`/`uvx`: installed via `pip3 install --break-system-packages uv` in Dockerfiles (builder stage → COPY to runtime). MCP servers `aws-documentation` and `terraform` depend on `uvx`. Ad-hoc install without rebuild: `pip3 install --break-system-packages uv`.
-- Skills install syntax: `npx -y skills add "https://github.com/$repo" --skill "$name" -g -y`. The `-g` flag installs globally to `~/.agents/skills/` with symlinks to `~/.claude/skills/`. The `-y` flag skips interactive confirmation prompts.
+- Skills install syntax: `npx -y skills add "$url" --skill "$name" --agent claude-code gemini-cli -g -y`. The `-g` flag installs globally to `~/.agents/skills/` with symlinks to `~/.claude/skills/`. The `-y` flag skips interactive confirmation prompts. The `--agent claude-code gemini-cli` flag limits installation to Claude Code and Gemini CLI agents only.
 - **Claude binary in Docker**: Lives at `~/.claude/bin/claude` (volume). Scripts should define wrapper: `CLAUDE_CMD="${CLAUDE_DIR}/bin/claude"; claude() { "$CLAUDE_CMD" "$@"; }` to ensure correct binary is used regardless of PATH.
 - **Testing Docker on Raspberry Pi**: `ssh mirek@raspberrypi.local`, then `cd ~/Downloads/ai-devcontainer-sync/docker && git pull && sudo docker compose down && sudo docker compose build --no-cache && sudo docker compose up -d`. Verify with `sudo docker exec claude-dev bash -c 'echo $VAR_NAME'`.
