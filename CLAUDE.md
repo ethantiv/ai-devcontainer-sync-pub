@@ -38,7 +38,6 @@ Available as local marketplace plugins (`dev-marketplace`):
 | `RESET_CLAUDE_CONFIG` | No | Clear `~/.claude/` on startup |
 | `RESET_GEMINI_CONFIG` | No | Clear `~/.gemini/` on startup |
 | `CONTEXT7_API_KEY` | No | API key for Context7 MCP server |
-| `CLAUDE_CODE_OAUTH_TOKEN` | No | OAuth token for Claude auth (auto-exported in Docker) |
 
 Codespaces: add as repository secrets. Local: create `.devcontainer/.env`.
 
@@ -104,7 +103,7 @@ Changes to setup/sync logic must be applied in parallel across:
 
 **DevContainer/Codespaces**: Container start → `setup-env.sh` → SSH/GH auth → Claude config → sync plugins → add MCP servers
 
-**Docker image**: Container start → `entrypoint.sh` → sync config from `/opt/claude-config` to `~/.claude` → export OAuth token → first-run setup (`.configured` marker) → `setup-claude.sh` for plugins/MCP
+**Docker image**: Container start → `entrypoint.sh` → sync config from `/opt/claude-config` to `~/.claude` → first-run setup (`.configured` marker) → `setup-claude.sh` for plugins/MCP
 
 **Docker GitHub auth**: `entrypoint.sh` automatically runs `gh auth login --with-token` using `GH_TOKEN` env var at every container start. No manual login required.
 
@@ -129,4 +128,3 @@ Changes to setup/sync logic must be applied in parallel across:
 - Skills install syntax: `npx -y skills add "https://github.com/$repo" --skill "$name" -g -y`. The `-g` flag installs globally to `~/.agents/skills/` with symlinks to `~/.claude/skills/`. The `-y` flag skips interactive confirmation prompts.
 - **Claude binary in Docker**: Lives at `~/.claude/bin/claude` (volume). Scripts should define wrapper: `CLAUDE_CMD="${CLAUDE_DIR}/bin/claude"; claude() { "$CLAUDE_CMD" "$@"; }` to ensure correct binary is used regardless of PATH.
 - **Testing Docker on Raspberry Pi**: `ssh mirek@raspberrypi.local`, then `cd ~/Downloads/ai-devcontainer-sync/docker && git pull && sudo docker compose down && sudo docker compose build --no-cache && sudo docker compose up -d`. Verify with `sudo docker exec claude-dev bash -c 'echo $VAR_NAME'`.
-- **Docker OAuth persistence**: Claude Code on Linux has a known bug ([#5767](https://github.com/anthropics/claude-code/issues/5767)) where OAuth auth doesn't persist across container restarts. Workaround: `entrypoint.sh` exports `CLAUDE_CODE_OAUTH_TOKEN` from `~/.claude/.credentials.json` at every startup and adds it to `~/.bashrc` for interactive sessions.
