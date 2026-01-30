@@ -152,7 +152,9 @@ WORKDIR ${HOME}/projects
 # Environment for Playwright
 ENV PLAYWRIGHT_BROWSERS_PATH=${HOME}/.cache/ms-playwright
 ENV PLAYWRIGHT_MCP_BROWSER=chromium
-ENV PLAYWRIGHT_MCP_NO_SANDBOX=true
+
+# Copy Playwright CLI config (disables sandbox for Docker)
+COPY --chown=${USERNAME}:${USERNAME} docker/playwright-cli.json ${HOME}/projects/playwright-cli.json
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["bash"]
