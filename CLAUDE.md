@@ -123,7 +123,7 @@ Changes to setup/sync logic must be applied in parallel across:
 
 - `~/.claude` is a named Docker volume (ext4), `/tmp` is tmpfs — `rename()` fails cross-device (EXDEV). Setup scripts export `TMPDIR="$CLAUDE_DIR/tmp"` to keep all temp ops on the same filesystem.
 - `skills-plugins.txt` formats:
-  - Skills (new): `- https://github.com/owner/repo --skill skill-name` — installed with `--agent claude gemini`
+  - Skills (new): `- https://github.com/owner/repo --skill skill-name` — installed with `--agent claude-code gemini-cli`
   - Skills (legacy): `name@skills=owner/repo` — still supported for backward compatibility
   - GitHub skills: `name@github=owner/repo/path-to-SKILL.md`
   - External plugins: `name@type=owner/repo` — `type` is treated as marketplace name

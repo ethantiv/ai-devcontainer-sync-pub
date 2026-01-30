@@ -132,7 +132,7 @@ install_skill() {
     has_command npx || return 1
     ensure_directory "$CLAUDE_DIR/skills"
 
-    if npx -y skills add "$url" --skill "$name" --agent claude gemini -g -y < /dev/null 2>/dev/null; then
+    if npx -y skills add "$url" --skill "$name" --agent claude-code gemini-cli -g -y < /dev/null 2>/dev/null; then
         ok "Installed skill: $name"
         return 0
     fi
