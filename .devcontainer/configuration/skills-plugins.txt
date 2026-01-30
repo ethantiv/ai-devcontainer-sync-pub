@@ -20,6 +20,7 @@ code-simplifier
 commit-commands
 feature-dev
 frontend-design
+playground
 
 # Language Server Protocol (LSP) plugins
 pyright-lsp
