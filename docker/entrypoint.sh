@@ -105,6 +105,23 @@ if [[ ! -f "$CONFIGURED_MARKER" ]]; then
 fi
 
 # =============================================================================
+# GITHUB CLI AUTHENTICATION
+# =============================================================================
+
+setup_gh_auth() {
+    if [[ -n "${GH_TOKEN}" ]] && command -v gh &>/dev/null; then
+        if ! gh auth status &>/dev/null; then
+            echo "$GH_TOKEN" | gh auth login --with-token 2>/dev/null && \
+                echo "  ✔︎ GitHub CLI authenticated" || \
+                echo "  ⚠️  GitHub CLI auth failed"
+        fi
+    fi
+}
+
+# Authenticate GitHub CLI if token is available
+setup_gh_auth
+
+# =============================================================================
 # STARTUP INFO
 # =============================================================================
 
