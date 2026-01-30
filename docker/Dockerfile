@@ -151,6 +151,7 @@ WORKDIR ${HOME}/projects
 
 # Environment for Playwright
 ENV PLAYWRIGHT_BROWSERS_PATH=${HOME}/.cache/ms-playwright
+ENV PLAYWRIGHT_MCP_BROWSER=chromium
 ENV PLAYWRIGHT_MCP_NO_SANDBOX=true
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
