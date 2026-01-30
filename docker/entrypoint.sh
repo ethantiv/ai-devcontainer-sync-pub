@@ -93,28 +93,6 @@ sync_config_files
 # FIRST-RUN SETUP (MCP servers, settings, plugins)
 # =============================================================================
 
-# Check if skills need reinstallation (broken symlinks after rebuild)
-skills_need_reinstall() {
-    local agents_skills="$HOME/.agents/skills"
-    local claude_skills="$CLAUDE_DIR/skills"
-
-    # If .agents/skills doesn't exist but symlinks do - need reinstall
-    if [[ ! -d "$agents_skills" ]] && [[ -d "$claude_skills" ]]; then
-        local has_symlinks=false
-        for link in "$claude_skills"/*; do
-            [[ -L "$link" ]] && has_symlinks=true && break
-        done
-        [[ "$has_symlinks" == "true" ]] && return 0
-    fi
-    return 1
-}
-
-# Reset marker if skills are broken (container rebuilt but volume persisted)
-if skills_need_reinstall; then
-    echo "🔄 Skills directory missing - triggering reinstall..."
-    rm -f "$CONFIGURED_MARKER"
-fi
-
 # Run full setup on first start (no token required)
 if [[ ! -f "$CONFIGURED_MARKER" ]]; then
     echo "🚀 First run detected - configuring Claude Code..."

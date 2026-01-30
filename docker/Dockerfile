@@ -1,48 +1,31 @@
-# Lightweight Claude Code & Gemini CLI Docker image for ARM64
-# Multi-stage build optimized for terminal-only development
+# Claude Code & Gemini CLI Docker image for ARM64
+# Multi-stage build for terminal-only AI development
 
 # =============================================================================
-# STAGE 1: BUILDER
+# BUILDER STAGE
 # =============================================================================
 FROM debian:bookworm-slim AS builder
 
 ARG NODE_VERSION=24
-
-# Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    gnupg \
-    git \
-    unzip \
-    xz-utils \
-    python3 \
-    python3-pip \
-    python3-venv \
+    curl ca-certificates gnupg git unzip xz-utils \
+    python3 python3-pip python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 24
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install npm global packages (Claude Code installed via curl in runtime stage)
-RUN npm install -g \
-    @google/gemini-cli \
-    @playwright/cli \
-    agent-browser
+RUN npm install -g @google/gemini-cli @playwright/cli agent-browser
 
-# Install uv (Python package manager)
 RUN pip3 install --break-system-packages uv
 
-# Install Playwright with Chromium for playwright-cli
 RUN npx -y playwright install chromium --with-deps
 
 # =============================================================================
-# STAGE 2: RUNTIME
+# RUNTIME STAGE
 # =============================================================================
 FROM debian:bookworm-slim AS runtime
 
@@ -50,109 +33,68 @@ ARG USERNAME=developer
 ARG USER_UID=1000
 ARG USER_GID=1000
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV DO_NOT_TRACK=1
-ENV HOME=/home/${USERNAME}
-ENV PATH="${HOME}/.claude/bin:${HOME}/.local/bin:${HOME}/.uv/bin:/usr/local/bin:${PATH}"
-ENV NODE_OPTIONS="--max-old-space-size=512"
+ENV DEBIAN_FRONTEND=noninteractive \
+    DO_NOT_TRACK=1 \
+    HOME=/home/${USERNAME} \
+    PATH="/home/${USERNAME}/.claude/bin:/home/${USERNAME}/.local/bin:/home/${USERNAME}/.uv/bin:/usr/local/bin:${PATH}" \
+    NODE_OPTIONS="--max-old-space-size=512"
 
-# Install runtime dependencies
+# Core packages and Playwright Chromium dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    gnupg \
-    git \
-    jq \
-    unzip \
-    openssh-client \
-    python3 \
-    python3-pip \
-    # Chromium dependencies for Playwright
-    libnss3 \
-    libnspr4 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxrandr2 \
-    libgbm1 \
-    libasound2 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libatspi2.0-0 \
+    curl ca-certificates gnupg git jq unzip openssh-client python3 python3-pip \
+    libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+    libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 \
+    libasound2 libpango-1.0-0 libcairo2 libatspi2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 24 (full installation needed for Claude Code curl installer)
+# Node.js and GitHub CLI
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
-    && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy npm global packages from builder
-COPY --from=builder /usr/lib/node_modules /usr/lib/node_modules
-
-# Install GitHub CLI (arm64)
-RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+        | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
     && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+        | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
     && apt-get update \
-    && apt-get install -y gh \
+    && apt-get install -y nodejs gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Create symlinks for npm global packages (they're in /usr/lib/node_modules)
-# Note: Claude Code is installed via curl installer as user, not here
+# Copy from builder: npm packages, uv tools, Playwright browsers
+COPY --from=builder /usr/lib/node_modules /usr/lib/node_modules
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uvx /usr/local/bin/
+COPY --from=builder /root/.cache/ms-playwright /opt/playwright
+
+# Create symlinks for npm global packages (Claude Code installed via curl at runtime)
 RUN ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini \
     && ln -sf ../lib/node_modules/@playwright/cli/playwright-cli.js /usr/bin/playwright-cli \
     && ln -sf ../lib/node_modules/agent-browser/bin/agent-browser.js /usr/bin/agent-browser
 
-# Copy uv and tools from builder
-COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
-COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
-
-# Copy Playwright browsers
-COPY --from=builder /root/.cache/ms-playwright /opt/playwright
-
-# Create non-root user
+# Create non-root user with required directories
 RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME} \
-    && mkdir -p ${HOME}/.claude ${HOME}/.claude/scripts ${HOME}/.claude/skills ${HOME}/.gemini ${HOME}/projects \
-    && chown -R ${USERNAME}:${USERNAME} ${HOME} \
+    && mkdir -p ${HOME}/.claude/scripts ${HOME}/.claude/skills ${HOME}/.agents ${HOME}/.gemini ${HOME}/projects \
+    && mkdir -p ${HOME}/.cache/ms-playwright /tmp/playwright-output \
+    && cp -r /opt/playwright/* ${HOME}/.cache/ms-playwright/ \
+    && chown -R ${USERNAME}:${USERNAME} ${HOME} /tmp/playwright-output \
     && echo "alias cc='clear && claude'" >> ${HOME}/.bashrc
 
-# Setup Playwright for non-root user
-RUN mkdir -p ${HOME}/.cache \
-    && cp -r /opt/playwright ${HOME}/.cache/ms-playwright \
-    && chown -R ${USERNAME}:${USERNAME} ${HOME}/.cache
-
-# Copy configuration files to /opt (for runtime sync to volume)
+# Copy configuration files for runtime sync to volume
 COPY .devcontainer/configuration/CLAUDE.md.memory /opt/claude-config/CLAUDE.md
 COPY .devcontainer/configuration/skills-plugins.txt /opt/claude-config/skills-plugins.txt
 COPY .devcontainer/scripts/*.sh /opt/claude-config/scripts/
 COPY .devcontainer/plugins/dev-marketplace /opt/claude-config/plugins/dev-marketplace
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY docker/setup-claude.sh /usr/local/bin/setup-claude.sh
+COPY docker/entrypoint.sh docker/setup-claude.sh /usr/local/bin/
 
-# Set permissions
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/setup-claude.sh \
-    && chown -R ${USERNAME}:${USERNAME} ${HOME}/.claude /opt/claude-config
+    && chown -R ${USERNAME}:${USERNAME} /opt/claude-config
 
-# Create Playwright output directory
-RUN mkdir -p /tmp/playwright-output && chown ${USERNAME}:${USERNAME} /tmp/playwright-output
+VOLUME ["${HOME}/.claude", "${HOME}/.agents", "${HOME}/.gemini", "${HOME}/projects"]
 
-# Declare volumes for persistence
-VOLUME ["${HOME}/.claude", "${HOME}/.gemini", "${HOME}/projects"]
-
-# Switch to non-root user
 USER ${USERNAME}
 WORKDIR ${HOME}/projects
 
-# Environment for Playwright
-ENV PLAYWRIGHT_BROWSERS_PATH=${HOME}/.cache/ms-playwright
-ENV PLAYWRIGHT_MCP_BROWSER=chromium
-ENV PLAYWRIGHT_MCP_NO_SANDBOX=true
+ENV PLAYWRIGHT_BROWSERS_PATH=${HOME}/.cache/ms-playwright \
+    PLAYWRIGHT_MCP_BROWSER=chromium \
+    PLAYWRIGHT_MCP_NO_SANDBOX=true
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["bash"]

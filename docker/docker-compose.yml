@@ -11,6 +11,7 @@ services:
     volumes:
       # Persistent configuration
       - claude-config:/home/developer/.claude
+      - agents-skills:/home/developer/.agents
       - gemini-config:/home/developer/.gemini
       # Projects directory
       - projects:/home/developer/projects
@@ -28,6 +29,8 @@ services:
 volumes:
   claude-config:
     name: claude-config
+  agents-skills:
+    name: agents-skills
   gemini-config:
     name: gemini-config
   projects:
