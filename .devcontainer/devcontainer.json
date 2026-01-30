@@ -44,6 +44,8 @@
   ],
   "containerEnv": {
     "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
+    "GIT_USER_NAME": "Mirosław Zaniewicz",
+    "GIT_USER_EMAIL": "mirek@example.com",
     "PLAYWRIGHT_MCP_BROWSER": "chromium",
     "PLAYWRIGHT_MCP_VIEWPORT_SIZE": "1920x1080",
     "PLAYWRIGHT_MCP_NO_SANDBOX": "true",

@@ -123,6 +123,25 @@ setup_gh_auth() {
 setup_gh_auth
 
 # =============================================================================
+# GIT CONFIGURATION
+# =============================================================================
+
+setup_git_config() {
+    if [[ -n "${GIT_USER_NAME}" ]]; then
+        git config --global user.name "$GIT_USER_NAME"
+    fi
+    if [[ -n "${GIT_USER_EMAIL}" ]]; then
+        git config --global user.email "$GIT_USER_EMAIL"
+    fi
+    if [[ -n "${GIT_USER_NAME}" ]] || [[ -n "${GIT_USER_EMAIL}" ]]; then
+        echo "  ✔︎ Git user configured"
+    fi
+}
+
+# Configure git user
+setup_git_config
+
+# =============================================================================
 # STARTUP INFO
 # =============================================================================
 

@@ -38,6 +38,8 @@ Available as local marketplace plugins (`dev-marketplace`):
 | `RESET_CLAUDE_CONFIG` | No | Clear `~/.claude/` on startup |
 | `RESET_GEMINI_CONFIG` | No | Clear `~/.gemini/` on startup |
 | `CONTEXT7_API_KEY` | No | API key for Context7 MCP server |
+| `GIT_USER_NAME` | No | Git global user.name |
+| `GIT_USER_EMAIL` | No | Git global user.email |
 
 Codespaces: add as repository secrets. Local: create `.devcontainer/.env`.
 
