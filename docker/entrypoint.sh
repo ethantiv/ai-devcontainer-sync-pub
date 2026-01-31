@@ -90,12 +90,29 @@ sync_config_files() {
 sync_config_files
 
 # =============================================================================
+# GITHUB CLI AUTHENTICATION
+# =============================================================================
+
+setup_gh_auth() {
+    if [[ -n "${GH_TOKEN}" ]] && command -v gh &>/dev/null; then
+        if ! gh auth status &>/dev/null; then
+            echo "$GH_TOKEN" | gh auth login --with-token 2>/dev/null && \
+                echo "  ✔︎ GitHub CLI authenticated" || \
+                echo "  ⚠️  GitHub CLI auth failed"
+        fi
+        gh auth setup-git 2>/dev/null
+    fi
+}
+
+# Authenticate GitHub CLI if token is available
+setup_gh_auth
+
+# =============================================================================
 # PLAYGROUND REPOSITORY (clones to projects volume on first run)
 # =============================================================================
 
 setup_playground() {
     local PLAYGROUND_DIR="$HOME/projects/playground"
-    local PLAYGROUND_REPO="https://github.com/ethantiv/playground.git"
 
     if [[ -d "$PLAYGROUND_DIR/.git" ]]; then
         echo "  ✔︎ Playground repository already cloned"
@@ -103,7 +120,7 @@ setup_playground() {
     fi
 
     echo "📦 Cloning playground repository..."
-    if git clone "$PLAYGROUND_REPO" "$PLAYGROUND_DIR" 2>/dev/null; then
+    if gh repo clone ethantiv/playground "$PLAYGROUND_DIR" 2>/dev/null; then
         chmod +x "$PLAYGROUND_DIR/loop"/*.sh 2>/dev/null || true
         echo "  ✔︎ Playground cloned to $PLAYGROUND_DIR"
     else
@@ -128,24 +145,6 @@ if [[ ! -f "$CONFIGURED_MARKER" ]]; then
         echo "⚠️  Setup encountered errors (will retry on next start)"
     fi
 fi
-
-# =============================================================================
-# GITHUB CLI AUTHENTICATION
-# =============================================================================
-
-setup_gh_auth() {
-    if [[ -n "${GH_TOKEN}" ]] && command -v gh &>/dev/null; then
-        if ! gh auth status &>/dev/null; then
-            echo "$GH_TOKEN" | gh auth login --with-token 2>/dev/null && \
-                echo "  ✔︎ GitHub CLI authenticated" || \
-                echo "  ⚠️  GitHub CLI auth failed"
-        fi
-        gh auth setup-git 2>/dev/null
-    fi
-}
-
-# Authenticate GitHub CLI if token is available
-setup_gh_auth
 
 # =============================================================================
 # GIT CONFIGURATION
