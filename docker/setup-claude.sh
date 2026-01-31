@@ -74,11 +74,11 @@ ensure_marketplace() {
     local name="$1"
     local source="$2"
 
-    if claude plugin marketplace list 2>/dev/null | grep -q "$name"; then
+    if claude plugin marketplace list < /dev/null 2>/dev/null | grep -q "$name"; then
         return 0
     fi
 
-    if claude plugin marketplace add "$source" 2>/dev/null; then
+    if claude plugin marketplace add "$source" < /dev/null 2>/dev/null; then
         ok "Added marketplace: $name"
         return 0
     fi
@@ -179,7 +179,7 @@ install_all_plugins_and_skills() {
         warn "Skipping official marketplace plugins"
         return 0
     fi
-    claude plugin marketplace update "$OFFICIAL_MARKETPLACE_NAME" 2>/dev/null || true
+    claude plugin marketplace update "$OFFICIAL_MARKETPLACE_NAME" < /dev/null 2>/dev/null || true
 
     local plugins_installed=0 plugins_skipped=0 plugins_failed=0
     local skills_installed=0 skills_failed=0
@@ -214,7 +214,7 @@ install_all_plugins_and_skills() {
                 *)
                     if [[ -z "${external_marketplaces[$type]}" ]]; then
                         ensure_marketplace "$type" "$source" || continue
-                        claude plugin marketplace update "$type" 2>/dev/null || true
+                        claude plugin marketplace update "$type" < /dev/null 2>/dev/null || true
                         external_marketplaces[$type]=1
                     fi
                     local rc=0; install_plugin "${name}@${type}" "$name" || rc=$?
@@ -344,12 +344,12 @@ add_mcp_server() {
     local name="$1"
     local config="$2"
 
-    if claude mcp list 2>/dev/null | grep -q "$name"; then
+    if claude mcp list < /dev/null 2>/dev/null | grep -q "$name"; then
         ok "$name already configured"
         return
     fi
 
-    if claude mcp add-json "$name" "$config" --scope user 2>/dev/null; then
+    if claude mcp add-json "$name" "$config" --scope user < /dev/null 2>/dev/null; then
         ok "Added: $name"
     else
         warn "Failed to add $name"
