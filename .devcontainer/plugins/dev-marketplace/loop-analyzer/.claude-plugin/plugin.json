@@ -1,0 +1,9 @@
+{
+  "name": "loop-analyzer",
+  "version": "0.1.0",
+  "description": "Analyze autonomous agent loop logs with 5 parallel subagents for performance, code quality, process efficiency, and tool usage insights",
+  "author": {
+    "name": "Mirek Zaniewicz"
+  },
+  "keywords": ["logs", "analysis", "agents", "performance", "loop"]
+}

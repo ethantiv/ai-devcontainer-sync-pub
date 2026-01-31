@@ -24,6 +24,11 @@
       "name": "roadmap",
       "description": "Generate or update ROADMAP.json with completed features and future proposals",
       "source": "./roadmap"
+    },
+    {
+      "name": "loop-analyzer",
+      "description": "Analyze autonomous agent loop logs with 5 parallel subagents for performance, code quality, process efficiency, and tool usage insights",
+      "source": "./loop-analyzer"
     }
   ]
 }

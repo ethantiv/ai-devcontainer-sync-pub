@@ -21,6 +21,7 @@ commit-commands
 feature-dev
 frontend-design
 playground
+plugin-dev
 
 # Language Server Protocol (LSP) plugins
 pyright-lsp
