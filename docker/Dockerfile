@@ -92,7 +92,8 @@ VOLUME ["${HOME}/.claude", "${HOME}/.agents", "${HOME}/.gemini", "${HOME}/projec
 USER ${USERNAME}
 WORKDIR ${HOME}/projects
 
-ENV PLAYWRIGHT_BROWSERS_PATH=${HOME}/.cache/ms-playwright \
+ENV CLAUDE_CONFIG_DIR=${HOME}/.claude \
+    PLAYWRIGHT_BROWSERS_PATH=${HOME}/.cache/ms-playwright \
     PLAYWRIGHT_MCP_BROWSER=chromium \
     PLAYWRIGHT_MCP_NO_SANDBOX=true
 

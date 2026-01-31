@@ -5,7 +5,7 @@ services:
       dockerfile: docker/Dockerfile
     image: claude-code:latest
     container_name: claude-code
-    hostname: cclaude-code
+    hostname: claude-code
     env_file:
       - .env
     volumes:

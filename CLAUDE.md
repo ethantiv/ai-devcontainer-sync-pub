@@ -125,6 +125,13 @@ Changes to setup/sync logic must be applied in parallel across:
 | `scripts/*.sh` | `~/.claude/scripts/` |
 | `plugins/dev-marketplace/` | local plugin marketplace |
 
+### Claude Config Persistence
+
+- `CLAUDE_CONFIG_DIR` env var controls where Claude stores `.claude.json` (main config with `installMethod`, `userID`, `oauthAccount`)
+- Without it: `~/.claude.json` (home dir, outside volume = lost on rebuild)
+- With `CLAUDE_CONFIG_DIR=~/.claude`: `~/.claude/.claude.json` (inside volume = persisted)
+- DevContainer sets this in `devcontainer.json`, Docker sets it in `Dockerfile`
+
 ### Codebase Patterns
 
 - `~/.claude` is a named Docker volume (ext4), `/tmp` is tmpfs — `rename()` fails cross-device (EXDEV). Setup scripts export `TMPDIR="$CLAUDE_DIR/tmp"` to keep all temp ops on the same filesystem.
