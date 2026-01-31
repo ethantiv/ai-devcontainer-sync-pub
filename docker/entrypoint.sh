@@ -90,6 +90,31 @@ sync_config_files() {
 sync_config_files
 
 # =============================================================================
+# PLAYGROUND REPOSITORY (clones to projects volume on first run)
+# =============================================================================
+
+setup_playground() {
+    local PLAYGROUND_DIR="$HOME/projects/playground"
+    local PLAYGROUND_REPO="https://github.com/ethantiv/playground.git"
+
+    if [[ -d "$PLAYGROUND_DIR/.git" ]]; then
+        echo "  ✔︎ Playground repository already cloned"
+        return 0
+    fi
+
+    echo "📦 Cloning playground repository..."
+    if git clone "$PLAYGROUND_REPO" "$PLAYGROUND_DIR" 2>/dev/null; then
+        chmod +x "$PLAYGROUND_DIR/loop"/*.sh 2>/dev/null || true
+        echo "  ✔︎ Playground cloned to $PLAYGROUND_DIR"
+    else
+        echo "  ⚠️  Failed to clone playground (will retry on next start)"
+    fi
+}
+
+# Clone playground repository (to projects volume)
+setup_playground
+
+# =============================================================================
 # FIRST-RUN SETUP (MCP servers, settings, plugins)
 # =============================================================================
 
@@ -163,6 +188,9 @@ echo "  playwright-cli      : $(playwright-cli --version 2>/dev/null || echo 'no
 echo ""
 echo "  Working directory   : $(pwd)"
 echo "  Config initialized  : $([ -f "$CONFIGURED_MARKER" ] && echo 'Yes' || echo 'No')"
+echo ""
+echo "  Loop available      : ~/projects/playground/loop/loop.sh"
+echo "  Update playground   : cd ~/projects/playground && git pull"
 echo ""
 
 # Execute command (default: bash)

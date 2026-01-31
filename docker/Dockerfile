@@ -75,7 +75,8 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && mkdir -p ${HOME}/.cache/ms-playwright /tmp/playwright-output \
     && cp -r /opt/playwright/* ${HOME}/.cache/ms-playwright/ \
     && chown -R ${USERNAME}:${USERNAME} ${HOME} /tmp/playwright-output \
-    && echo "alias cc='clear && claude'" >> ${HOME}/.bashrc
+    && echo "alias cc='clear && claude'" >> ${HOME}/.bashrc \
+    && echo "alias loop='~/projects/playground/loop/loop.sh'" >> ${HOME}/.bashrc
 
 # Copy configuration files for runtime sync to volume
 COPY .devcontainer/configuration/CLAUDE.md.memory /opt/claude-config/CLAUDE.md
