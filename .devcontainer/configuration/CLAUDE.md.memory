@@ -6,7 +6,7 @@ Wait for explicit user permission before executing Git or GitHub commands (git a
 
 Use English for all code, comments, documentation, commit messages, and PR descriptions.
 Use Polish (Polski) only for chat conversations with the user.
-Use Mermaid for diagrams (avoid Polish diacritics and quotes in node labels).
+Use Mermaid for diagrams (avoid Polish diacritics and quotes in node labels). Use `beautiful-mermaid` skill to generate Mermaid diagrams in documents.
 
 ## Simplicity and Focus
 
