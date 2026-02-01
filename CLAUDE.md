@@ -23,7 +23,7 @@ claude plugin marketplace list     # List installed plugins
 Available as local marketplace plugins (`dev-marketplace`):
 - `/code-review` - parallel code review with multiple agents
 - `/design-system` - generate HTML design system templates
-- `/roadmap` - manage ROADMAP.json with features and proposals
+- `/roadmap` - manage ROADMAP.md with features and proposals
 - `/git-worktree:create <name>` - create worktree with naming convention `{project}-{name}`
 - `/git-worktree:delete <name>` - delete worktree and its branch
 

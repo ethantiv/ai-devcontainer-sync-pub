@@ -1,15 +1,15 @@
 ---
-description: Generate or update ROADMAP.json with completed features and future proposals
+description: Generate or update ROADMAP.md with completed features and future proposals
 ---
 
-# ROADMAP.json Generator
+# ROADMAP.md Generator
 
 <context>
-You are managing a project roadmap file that tracks completed features and proposes future development directions. The ROADMAP.json file serves as a living document for project planning and progress visibility.
+You are managing a project roadmap file that tracks completed features and proposes future development directions. The ROADMAP.md file serves as a living document for project planning and progress visibility.
 
 This command operates in two modes:
-- **CREATE**: When ROADMAP.json doesn't exist, analyze the project and generate initial proposals
-- **UPDATE**: When ROADMAP.json exists, optionally add a completed feature and refresh proposals
+- **CREATE**: When ROADMAP.md doesn't exist, analyze the project and generate initial proposals
+- **UPDATE**: When ROADMAP.md exists, optionally add a completed feature and refresh proposals
 </context>
 
 <project_analysis>
@@ -62,10 +62,10 @@ The insights from exploration should directly inform the proposals - suggesting 
 </codebase_exploration>
 
 <flow_detection>
-First, check if ROADMAP.json exists in the current working directory:
+First, check if ROADMAP.md exists in the current working directory:
 
 ```bash
-test -f ROADMAP.json && echo "EXISTS" || echo "NOT_EXISTS"
+test -f ROADMAP.md && echo "EXISTS" || echo "NOT_EXISTS"
 ```
 
 - If **NOT_EXISTS** → Execute CREATE flow
@@ -73,36 +73,36 @@ test -f ROADMAP.json && echo "EXISTS" || echo "NOT_EXISTS"
 </flow_detection>
 
 <create_flow>
-When creating a new ROADMAP.json:
+When creating a new ROADMAP.md:
 
 1. Analyze the project using steps from `<project_analysis>`
-2. Generate 3-5 proposals across different time horizons
-3. Create ROADMAP.json with empty `completedFeatures` array
+2. Generate 3-5 proposals across different priorities
+3. Create ROADMAP.md with empty Completed Features section
 4. Display summary of generated proposals
 </create_flow>
 
 <update_flow>
-When updating an existing ROADMAP.json:
+When updating an existing ROADMAP.md:
 
-1. Read the current ROADMAP.json file
+1. Read the current ROADMAP.md file
 2. Ask the user: "Would you like to mark a feature as completed? If yes, describe the feature. If no, just press Enter."
 3. If user provides a feature description:
    - Generate a unique ID (increment from highest existing ID, or start at "001")
-   - Add to `completedFeatures` with current ISO timestamp
+   - Add to Completed Features with current date
    - Remove any related proposal if it matches the completed feature
 4. Re-analyze the project to refresh proposals based on current state
 5. Update proposals while preserving any that are still relevant
-6. Save updated ROADMAP.json
+6. Save updated ROADMAP.md
 </update_flow>
 
 <proposal_generation>
-Generate 3-5 proposals distributed across categories:
+Generate 3-5 proposals distributed across priorities:
 
-| Category | Timeframe | Characteristics |
-|----------|-----------|-----------------|
-| `short-term` | 1-2 weeks | Quick wins, bug fixes, small improvements |
-| `medium-term` | 1-2 months | New features, integrations, moderate effort |
-| `long-term` | 3-6 months | Major features, architecture changes, strategic initiatives |
+| Priority | Meaning | Characteristics |
+|----------|---------|-----------------|
+| `P1` | Critical | Blockers, critical bugs, security issues, must-have features |
+| `P2` | Important | Significant improvements, new features, performance gains |
+| `P3` | Nice to Have | Polish, minor improvements, ideas for future consideration |
 
 **Guidelines:**
 - Each proposal should be specific and actionable
@@ -113,61 +113,62 @@ Generate 3-5 proposals distributed across categories:
 </proposal_generation>
 
 <output_format>
-The ROADMAP.json must follow this exact structure:
+The ROADMAP.md must follow this exact structure:
 
-```json
-{
-  "completedFeatures": [
-    {
-      "id": "001",
-      "title": "Short descriptive title",
-      "description": "Detailed description of what was implemented",
-      "completedAt": "2024-01-15T10:30:00Z"
-    }
-  ],
-  "proposals": [
-    {
-      "category": "short-term",
-      "title": "Proposal title",
-      "description": "Clear description of what should be done and why"
-    },
-    {
-      "category": "medium-term",
-      "title": "Another proposal",
-      "description": "Description with context and expected benefits"
-    },
-    {
-      "category": "long-term",
-      "title": "Strategic initiative",
-      "description": "Long-term vision with rationale"
-    }
-  ]
-}
+```markdown
+# Roadmap
+
+## Completed Features
+
+### {id} - {title}
+> Completed: {YYYY-MM-DD}
+
+{description}
+
+---
+
+## Proposals
+
+### P1 - Critical
+
+#### {title}
+{description}
+
+### P2 - Important
+
+#### {title}
+{description}
+
+### P3 - Nice to Have
+
+#### {title}
+{description}
 ```
 
 **Validation rules:**
 - `id` must be zero-padded 3-digit string ("001", "002", etc.)
-- `category` must be exactly: "short-term", "medium-term", or "long-term"
-- `completedAt` must be ISO 8601 format with timezone
-- All fields are required, no empty strings
+- Date format: YYYY-MM-DD (ISO date without time)
+- Each completed feature ends with `---` separator
+- Proposals grouped by priority with H3 headers (P1, P2, P3)
+- Each proposal has H4 title followed by description paragraph
 </output_format>
 
 <execution>
 Execute in this order:
 
-1. **Detect mode**: Check if ROADMAP.json exists
+1. **Detect mode**: Check if ROADMAP.md exists
 2. **Basic analysis**: Gather context from package.json, README, git log, directory structure
 3. **Deep exploration**: Launch 2-3 Explore agents in parallel to analyze architecture, features, and tech stack
 4. **Synthesize findings**: Combine agent results into actionable insights
 5. **Execute appropriate flow**:
    - CREATE: Generate fresh proposals based on exploration, create file
    - UPDATE: Ask about completed feature, refresh proposals using exploration insights, update file
-6. **Write ROADMAP.json**: Use the Write tool to save the file
+6. **Write ROADMAP.md**: Use the Write tool to save the file
 7. **Display summary**: Show what was created/updated in a concise format
 
 After completion, display:
 - Mode executed (CREATE or UPDATE)
 - Number of completed features (total)
-- Number of proposals by category
-- File path where ROADMAP.json was saved
+- Number of proposals by priority
+- File path where ROADMAP.md was saved
 </execution>

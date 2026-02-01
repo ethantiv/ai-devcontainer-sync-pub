@@ -1,7 +1,7 @@
 {
   "name": "roadmap",
   "version": "0.1.0",
-  "description": "Generate or update ROADMAP.json with completed features and future proposals",
+  "description": "Generate or update ROADMAP.md with completed features and future proposals",
   "author": {
     "name": "Mirek Zaniewicz"
   }
