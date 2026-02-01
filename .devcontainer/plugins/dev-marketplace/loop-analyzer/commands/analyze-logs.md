@@ -40,7 +40,7 @@ Launch these 5 agents in PARALLEL using the Task tool:
    - Prompt: "Analyze code quality in JSONL logs at $1. Look for: code patterns in tool_use Write/Edit, error messages, TypeScript/lint failures, code complexity indicators, test quality (coverage, pass/fail ratio, test patterns). IMPORTANT: Calculate and return scores: first_attempt_success_rate (0-100%), error_fix_rate (0-100%), test_coverage_score (0-100%), and overall_code_quality_score (weighted average)."
 
 3. **best-practices-analyzer** - Check adherence to best practices
-   - Prompt: "Analyze best practices in JSONL logs at $1. Check: skill loading, parallel subagent usage, proper tool selection, CLAUDE.md adherence, anti-patterns, skills usage (frequency, appropriateness, missed opportunities), agent learning patterns (claude-md-improver usage, CLAUDE.md updates). IMPORTANT: Calculate and return scores: skill_usage_score (0-100%), agent_learning_score (0-100%), tool_selection_score (0-100%), and overall_best_practices_score (weighted average)."
+   - Prompt: "Analyze best practices in JSONL logs at $1. Check: skill loading, parallel subagent usage, proper tool selection, CLAUDE.md adherence, anti-patterns, skills usage (frequency, appropriateness, missed opportunities), agent learning patterns (auto-revise-claude-md usage, CLAUDE.md updates). IMPORTANT: Calculate and return scores: skill_usage_score (0-100%), agent_learning_score (0-100%), tool_selection_score (0-100%), and overall_best_practices_score (weighted average)."
 
 4. **process-analyzer** - Analyze process efficiency
    - Prompt: "Analyze process efficiency in JSONL logs at $1. Check: number of iterations, early exit triggers, task completion rate, blockers encountered, plan vs build ratio, hook execution and cleanup scripts. IMPORTANT: Calculate and return scores: task_completion_score (0-100%), hook_reliability_score (0-100%), and overall_process_score (weighted average)."
@@ -107,7 +107,7 @@ Write the final report with this structure:
 [Skills usage findings from best-practices-analyzer: frequency, appropriateness, missed opportunities]
 
 #### Agent Learning Analysis
-[Agent learning findings from best-practices-analyzer: claude-md-improver usage, CLAUDE.md updates, learning patterns]
+[Agent learning findings from best-practices-analyzer: auto-revise-claude-md usage, CLAUDE.md updates, learning patterns]
 
 ### Process Efficiency
 [Findings from process-analyzer]

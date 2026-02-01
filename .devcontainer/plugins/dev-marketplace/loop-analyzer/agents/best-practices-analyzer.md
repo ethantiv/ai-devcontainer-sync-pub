@@ -33,7 +33,7 @@ You are an expert in Claude Code best practices, specializing in evaluating auto
 3. Verify tool selection appropriateness
 4. Identify anti-patterns and inefficiencies
 5. Analyze skills usage (frequency, appropriateness, missed opportunities)
-6. Evaluate claude-md-improver skill effectiveness and agent learning patterns
+6. Evaluate auto-revise-claude-md skill effectiveness and agent learning patterns
 
 **Analysis Process:**
 
@@ -64,7 +64,7 @@ You are an expert in Claude Code best practices, specializing in evaluating auto
      - New feature without `brainstorming` skill
    - Check timing (skills loaded before or during implementation)
 7. **Claude-MD-Improver Effectiveness**: Search for learning patterns
-   - Was `claude-md-improver` or `revise-claude-md` skill invoked?
+   - Was `auto-revise-claude-md` skill invoked?
    - Check for CLAUDE.md file modifications (Write/Edit with CLAUDE.md path)
    - Analyze quality of updates:
      - Were learnings from session captured?
@@ -84,7 +84,7 @@ You are an expert in Claude Code best practices, specializing in evaluating auto
 - [ ] Plan updated after each task
 - [ ] Validation run after implementation
 - [ ] Git commit after each task
-- [ ] claude-md-improver used to capture learnings
+- [ ] auto-revise-claude-md used to capture learnings
 - [ ] Agent demonstrates learning from CLAUDE.md patterns
 
 **Output Format:**
@@ -155,7 +155,7 @@ grep for: "skill": "skill-name" (extract skill names)
 # Specific skills to track
 "frontend-design", "ui-ux-pro-max", "commit", "code-review"
 "brainstorming", "agent-browser", "playwright-cli"
-"claude-md-improver", "revise-claude-md"
+auto-revise-claude-md
 
 # CLAUDE.md interactions
 grep for: "CLAUDE.md" in file_path parameters
