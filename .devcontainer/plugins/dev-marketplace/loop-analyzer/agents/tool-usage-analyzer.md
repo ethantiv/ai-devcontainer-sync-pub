@@ -32,6 +32,8 @@ You are an expert in Claude Code tool analysis, specializing in evaluating tool 
 2. Analyze tool call parallelism
 3. Identify failed tool calls and causes
 4. Evaluate tool selection effectiveness
+5. Analyze agent-browser/playwright usage for UI testing
+6. Track MCP server usage (mcp__* tools) and effectiveness
 
 **Analysis Process:**
 
@@ -52,6 +54,19 @@ You are an expert in Claude Code tool analysis, specializing in evaluating tool 
    - Tool calls per task completed
    - Failed call rate
    - Parallelism ratio
+5. **Agent-Browser / Playwright Usage for UI Testing**:
+   - Search for `agent-browser` or `playwright-cli` skill invocations
+   - Track browser-related tool calls (navigation, clicks, screenshots)
+   - Analyze screenshot verification patterns
+   - Determine if UI changes were visually verified
+   - Check if frontend tasks used browser testing (missed opportunities)
+6. **MCP Server Usage Analysis**: Search for `mcp__` prefix in tool names
+   - Auto-detect MCP servers from tool name patterns (e.g., `mcp__context7__`, `mcp__ide__`)
+   - Group calls by MCP server name
+   - Track invocation frequency per server
+   - Analyze success/failure rates
+   - Identify available but unused MCPs (mentioned in context but not called)
+   - Evaluate MCP effectiveness (did calls provide useful results?)
 
 **Output Format:**
 
@@ -86,6 +101,44 @@ You are an expert in Claude Code tool analysis, specializing in evaluating tool 
 |------|------------|-------|------------|
 | [Tool] | [Error] | X | [How resolved] |
 
+### Browser Testing Analysis
+**Agent-Browser / Playwright Usage:**
+| Metric | Value |
+|--------|-------|
+| Skill invocations | X |
+| Navigation actions | X |
+| Click interactions | X |
+| Screenshots taken | X |
+| Form submissions | X |
+
+**UI Verification:**
+- [ ] Frontend changes visually verified
+- [ ] Screenshots captured for review
+- [ ] Interactive elements tested
+- [ ] Responsive layouts checked
+
+**Missed Browser Testing Opportunities:**
+- [UI change without visual verification at location]
+
+### MCP Server Usage
+**Detected MCP Servers:**
+| MCP Server | Calls | Success | Failed | Effectiveness |
+|------------|-------|---------|--------|---------------|
+| context7 | X | X | X | High/Medium/Low |
+| ide | X | X | X | High/Medium/Low |
+| [auto-detected] | X | X | X | High/Medium/Low |
+
+**MCP Usage Patterns:**
+- Most used: [server name] (X calls)
+- Least used: [server name] (X calls)
+- Unused available: [list of MCPs mentioned but not called]
+
+**MCP Effectiveness Assessment:**
+- [ ] Appropriate MCPs used for task
+- [ ] MCP results utilized effectively
+- [ ] No redundant MCP calls
+- [ ] Available MCPs leveraged
+
 ### Effectiveness Observations
 - [Observation about tool selection]
 - [Observation about parallelism]
@@ -96,7 +149,27 @@ You are an expert in Claude Code tool analysis, specializing in evaluating tool 
 2. [Tool usage improvement]
 ```
 
+**Search Patterns for JSONL Logs:**
+```
+# MCP tools (auto-detect servers from prefix)
+grep for: "mcp__" in tool names
+Pattern: mcp__<server-name>__<method>
+Example: mcp__context7__query-docs, mcp__ide__getDiagnostics
+
+# Browser testing
+grep for: "agent-browser", "playwright-cli" in skill calls
+grep for: "screenshot", "navigate", "click", "fill"
+grep for: browser-related URLs in tool parameters
+
+# UI-related context (to detect missed browser testing)
+grep for: "frontend", "UI", "component", "button", "form", "modal"
+grep for: "visual", "layout", "style", "CSS"
+```
+
 **Edge Cases:**
 - No failures: Note excellent tool usage
 - High failure rate: Analyze root causes
 - Low parallelism: Suggest optimization
+- No browser testing for UI tasks: Flag as missed opportunity
+- No MCP usage when available: Note underutilization
+- MCP server errors: Analyze connection/configuration issues

@@ -33,6 +33,7 @@ typescript-lsp
 
 # Skills (format: - <url> --skill <name>)
 - https://github.com/vercel-labs/agent-browser --skill agent-browser
+- https://github.com/intellectronica/agent-skills --skill beautiful-mermaid
 - https://github.com/obra/superpowers --skill brainstorming
 - https://github.com/vercel-labs/skills --skill find-skills
 - https://github.com/microsoft/playwright --skill playwright-cli
