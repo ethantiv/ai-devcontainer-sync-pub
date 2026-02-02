@@ -29,8 +29,7 @@ install_claude() {
     mkdir -p "$TMPDIR"
 
     # Download and install Claude with custom install directory
-    # TERM=dumb NO_COLOR=1 suppresses ANSI escape sequences in docker logs
-    if CLAUDE_INSTALL_DIR="$CLAUDE_DIR" TERM=dumb NO_COLOR=1 curl -fsSL https://claude.ai/install.sh | TERM=dumb NO_COLOR=1 bash; then
+    if CLAUDE_INSTALL_DIR="$CLAUDE_DIR" TERM=dumb NO_COLOR=1 curl -fsSL https://claude.ai/install.sh | TERM=dumb NO_COLOR=1 bash >/dev/null 2>&1; then
         # The installer puts claude in $CLAUDE_INSTALL_DIR/bin/claude
         if [[ -x "$CLAUDE_BIN" ]]; then
             echo "  ✔︎ Claude Code installed to $CLAUDE_DIR/bin/"
