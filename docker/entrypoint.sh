@@ -147,6 +147,34 @@ if [[ ! -f "$CONFIGURED_MARKER" ]]; then
 fi
 
 # =============================================================================
+# TELEGRAM BOT (optional, runs in background)
+# =============================================================================
+
+start_telegram_bot() {
+    if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]]; then
+        return 0
+    fi
+
+    local PLAYGROUND_DIR="$HOME/projects/playground"
+    local BOT_MODULE="$PLAYGROUND_DIR/loop/telegram_bot"
+
+    if [[ ! -d "$BOT_MODULE" ]]; then
+        echo "  ⚠️  Telegram bot module not found"
+        return 0
+    fi
+
+    echo "🤖 Starting Telegram bot..."
+
+    # Start bot in background
+    cd "$PLAYGROUND_DIR"
+    PROJECTS_ROOT="$HOME/projects" python -m loop.telegram_bot.run &
+    echo "  ✔︎ Telegram bot started (PID: $!)"
+}
+
+# Start Telegram bot if configured
+start_telegram_bot
+
+# =============================================================================
 # GIT CONFIGURATION
 # =============================================================================
 
@@ -189,6 +217,7 @@ echo "  Working directory   : $(pwd)"
 echo "  Config initialized  : $([ -f "$CONFIGURED_MARKER" ] && echo 'Yes' || echo 'No')"
 echo ""
 echo "  Loop available      : ~/projects/playground/loop/loop.sh"
+echo "  Telegram bot        : $([ -n "$TELEGRAM_BOT_TOKEN" ] && echo 'running' || echo 'not configured')"
 echo "  Update playground   : cd ~/projects/playground && git pull"
 echo ""
 

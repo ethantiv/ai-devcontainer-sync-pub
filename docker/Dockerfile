@@ -20,7 +20,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
 
 RUN npm install -g @google/gemini-cli @playwright/cli agent-browser
 
-RUN pip3 install --break-system-packages uv
+RUN pip3 install --break-system-packages uv python-telegram-bot
 
 RUN npx -y playwright install chromium --with-deps
 
