@@ -125,6 +125,7 @@ setup_github_token() {
     echo "alias cc='clear && claude'" >> ~/.bashrc
     echo "alias ccc='clear && claude -c'" >> ~/.bashrc
     echo "alias ccr='clear && claude -r'" >> ~/.bashrc
+    echo 'loop() { "$(git rev-parse --show-toplevel)/loop/loop.sh" "$@"; }' >> ~/.bashrc
 }
 
 # =============================================================================
