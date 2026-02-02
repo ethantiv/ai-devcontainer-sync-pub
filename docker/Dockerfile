@@ -35,6 +35,8 @@ ARG USER_GID=1000
 
 ENV DEBIAN_FRONTEND=noninteractive \
     DO_NOT_TRACK=1 \
+    LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8 \
     HOME=/home/${USERNAME} \
     PATH="/home/${USERNAME}/.claude/bin:/home/${USERNAME}/.local/bin:/home/${USERNAME}/.uv/bin:/usr/local/bin:${PATH}" \
     NODE_OPTIONS="--max-old-space-size=512"
@@ -42,11 +44,14 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Core packages and Playwright Chromium dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl ca-certificates gnupg git jq unzip openssh-client python3 python3-pip \
-    tmux \
+    tmux locales \
     libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
     libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 \
     libasound2 libpango-1.0-0 libcairo2 libatspi2.0-0 \
     && rm -rf /var/lib/apt/lists/*
+
+# Generate UTF-8 locale
+RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 
 # Node.js and GitHub CLI
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
