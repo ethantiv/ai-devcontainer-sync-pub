@@ -43,6 +43,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     python3-venv \
     pipx \
     jq \
+    tmux \
     libnss3 \
     libnspr4 \
     libatk1.0-0 \
