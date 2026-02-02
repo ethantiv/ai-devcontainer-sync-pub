@@ -42,6 +42,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Core packages and Playwright Chromium dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl ca-certificates gnupg git jq unzip openssh-client python3 python3-pip \
+    tmux \
     libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
     libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 \
     libasound2 libpango-1.0-0 libcairo2 libatspi2.0-0 \
@@ -76,7 +77,7 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && cp -r /opt/playwright/* ${HOME}/.cache/ms-playwright/ \
     && chown -R ${USERNAME}:${USERNAME} ${HOME} /tmp/playwright-output \
     && echo "alias cc='clear && claude'" >> ${HOME}/.bashrc \
-    && echo "loop() { \"\$(git rev-parse --show-toplevel)/loop/loop.sh\" \"\$@\"; }" >> ${HOME}/.bashrc
+    && echo 'loop() { local script="$(git rev-parse --show-toplevel)/loop/loop.sh"; local use_tmux=false; local args=(); for arg in "$@"; do if [[ "$arg" == "--tmux" ]]; then use_tmux=true; else args+=("$arg"); fi; done; if $use_tmux; then local session_name="$(basename "$PWD")"; if tmux has-session -t "$session_name" 2>/dev/null; then tmux attach -t "$session_name"; else tmux new-session -s "$session_name" -- "$script" "${args[@]}"; fi; else "$script" "${args[@]}"; fi; }' >> ${HOME}/.bashrc
 
 # Copy configuration files for runtime sync to volume
 COPY .devcontainer/configuration/CLAUDE.md.memory /opt/claude-config/CLAUDE.md
