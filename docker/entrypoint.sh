@@ -200,7 +200,7 @@ setup_git_config
 # Use claude from volume
 claude_version() {
     if [[ -x "$CLAUDE_BIN" ]]; then
-        "$CLAUDE_BIN" --version 2>/dev/null || echo 'not available'
+        TERM=dumb NO_COLOR=1 "$CLAUDE_BIN" --version 2>/dev/null || echo 'not available'
     else
         echo 'not installed'
     fi
@@ -210,8 +210,8 @@ echo ""
 echo "AI Code DevContainer"
 echo ""
 echo "  claude --version    : $(claude_version)"
-echo "  gemini --version    : $(gemini --version 2>/dev/null || echo 'not available')"
-echo "  playwright-cli      : $(playwright-cli --version 2>/dev/null || echo 'not available')"
+echo "  gemini --version    : $(TERM=dumb NO_COLOR=1 gemini --version 2>/dev/null || echo 'not available')"
+echo "  playwright-cli      : $(TERM=dumb NO_COLOR=1 playwright-cli --version 2>/dev/null || echo 'not available')"
 echo ""
 echo "  Working directory   : $(pwd)"
 echo "  Config initialized  : $([ -f "$CONFIGURED_MARKER" ] && echo 'Yes' || echo 'No')"
