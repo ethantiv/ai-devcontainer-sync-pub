@@ -3,6 +3,7 @@
 # Syncs configuration files and runs setup on first start
 
 set -e
+export TERM=dumb  # Suppress ANSI escape sequences during startup
 
 readonly CLAUDE_DIR="$HOME/.claude"
 readonly CONFIGURED_MARKER="$CLAUDE_DIR/.configured"
@@ -29,7 +30,7 @@ install_claude() {
     mkdir -p "$TMPDIR"
 
     # Download and install Claude with custom install directory
-    if CLAUDE_INSTALL_DIR="$CLAUDE_DIR" TERM=dumb NO_COLOR=1 curl -fsSL https://claude.ai/install.sh | TERM=dumb NO_COLOR=1 bash >/dev/null 2>&1; then
+    if CLAUDE_INSTALL_DIR="$CLAUDE_DIR" NO_COLOR=1 curl -fsSL https://claude.ai/install.sh | NO_COLOR=1 bash >/dev/null 2>&1; then
         # The installer puts claude in $CLAUDE_INSTALL_DIR/bin/claude
         if [[ -x "$CLAUDE_BIN" ]]; then
             echo "  ✔︎ Claude Code installed to $CLAUDE_DIR/bin/"
@@ -198,7 +199,7 @@ setup_git_config
 # Use claude from volume
 claude_version() {
     if [[ -x "$CLAUDE_BIN" ]]; then
-        TERM=dumb NO_COLOR=1 "$CLAUDE_BIN" --version 2>/dev/null || echo 'not available'
+        NO_COLOR=1 "$CLAUDE_BIN" --version 2>/dev/null || echo 'not available'
     else
         echo 'not installed'
     fi
@@ -208,8 +209,8 @@ echo ""
 echo "AI Code DevContainer"
 echo ""
 echo "  claude --version    : $(claude_version)"
-echo "  gemini --version    : $(TERM=dumb NO_COLOR=1 gemini --version 2>/dev/null || echo 'not available')"
-echo "  playwright-cli      : $(TERM=dumb NO_COLOR=1 playwright-cli --version 2>/dev/null || echo 'not available')"
+echo "  gemini --version    : $(NO_COLOR=1 gemini --version 2>/dev/null || echo 'not available')"
+echo "  playwright-cli      : $(NO_COLOR=1 playwright-cli --version 2>/dev/null || echo 'not available')"
 echo ""
 echo "  Working directory   : $(pwd)"
 echo "  Config initialized  : $([ -f "$CONFIGURED_MARKER" ] && echo 'Yes' || echo 'No')"
