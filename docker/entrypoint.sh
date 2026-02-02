@@ -29,7 +29,8 @@ install_claude() {
     mkdir -p "$TMPDIR"
 
     # Download and install Claude with custom install directory
-    if CLAUDE_INSTALL_DIR="$CLAUDE_DIR" curl -fsSL https://claude.ai/install.sh | bash; then
+    # TERM=dumb NO_COLOR=1 suppresses ANSI escape sequences in docker logs
+    if CLAUDE_INSTALL_DIR="$CLAUDE_DIR" TERM=dumb NO_COLOR=1 curl -fsSL https://claude.ai/install.sh | TERM=dumb NO_COLOR=1 bash; then
         # The installer puts claude in $CLAUDE_INSTALL_DIR/bin/claude
         if [[ -x "$CLAUDE_BIN" ]]; then
             echo "  ✔︎ Claude Code installed to $CLAUDE_DIR/bin/"
@@ -163,11 +164,9 @@ start_telegram_bot() {
         return 0
     fi
 
-    echo "🤖 Starting Telegram bot..."
-
     # Start bot in background
     cd "$PLAYGROUND_DIR"
-    PROJECTS_ROOT="$HOME/projects" python -m loop.telegram_bot.run &
+    PROJECTS_ROOT="$HOME/projects" python3 -m loop.telegram_bot.run &
     echo "  ✔︎ Telegram bot started (PID: $!)"
 }
 
