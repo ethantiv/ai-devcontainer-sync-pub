@@ -38,7 +38,6 @@ typescript-lsp
 - https://github.com/vercel-labs/skills --skill find-skills
 - https://github.com/softaworks/agent-toolkit --skill humanizer
 - https://github.com/softaworks/agent-toolkit --skill mermaid-diagrams
-- https://github.com/othmanadi/planning-with-files --skill planning-with-files
 - https://github.com/nextlevelbuilder/ui-ux-pro-max-skill --skill ui-ux-pro-max
 - https://github.com/vercel-labs/agent-skills --skill vercel-react-best-practices
 - https://github.com/vercel-labs/agent-skills --skill web-design-guidelines
