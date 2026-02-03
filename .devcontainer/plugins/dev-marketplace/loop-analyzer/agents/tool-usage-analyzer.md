@@ -54,8 +54,8 @@ You are an expert in Claude Code tool analysis, specializing in evaluating tool 
    - Tool calls per task completed
    - Failed call rate
    - Parallelism ratio
-5. **Agent-Browser / Playwright Usage for UI Testing**:
-   - Search for `agent-browser` or `playwright-cli` skill invocations
+5. **Agent-Browser Usage for UI Testing**:
+   - Search for `agent-browser` skill invocations
    - Track browser-related tool calls (navigation, clicks, screenshots)
    - Analyze screenshot verification patterns
    - Determine if UI changes were visually verified
@@ -102,7 +102,7 @@ You are an expert in Claude Code tool analysis, specializing in evaluating tool 
 | [Tool] | [Error] | X | [How resolved] |
 
 ### Browser Testing Analysis
-**Agent-Browser / Playwright Usage:**
+**Agent-Browser Usage:**
 | Metric | Value |
 |--------|-------|
 | Skill invocations | X |
@@ -157,7 +157,7 @@ Pattern: mcp__<server-name>__<method>
 Example: mcp__context7__query-docs, mcp__ide__getDiagnostics
 
 # Browser testing
-grep for: "agent-browser", "playwright-cli" in skill calls
+grep for: "agent-browser" in skill calls
 grep for: "screenshot", "navigate", "click", "fill"
 grep for: browser-related URLs in tool parameters
 

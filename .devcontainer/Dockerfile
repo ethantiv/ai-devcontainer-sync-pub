@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 # Install npm global packages with cache
 RUN --mount=type=cache,target=/root/.npm \
-    npm install -g @playwright/cli agent-browser
+    npm install -g agent-browser
 
 # Install uv (Python package manager for MCP servers)
 RUN pip3 install --break-system-packages uv
@@ -29,7 +29,6 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PLAYWRIGHT_BROWSERS_PATH=/home/vscode/.cache/ms-playwright
-ENV PLAYWRIGHT_MCP_NO_SANDBOX=true
 ENV NODE_ENV=production
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -71,8 +70,7 @@ RUN if grep -q '^# pl_PL.UTF-8' /etc/locale.gen 2>/dev/null; then \
 COPY --from=builder /usr/lib/node_modules /usr/lib/node_modules
 
 # Create symlinks for npm global packages (COPY doesn't include /usr/bin links)
-RUN ln -sf /usr/lib/node_modules/@playwright/cli/playwright-cli.js /usr/bin/playwright-cli \
-    && ln -sf /usr/lib/node_modules/agent-browser/bin/agent-browser.js /usr/bin/agent-browser
+RUN ln -sf /usr/lib/node_modules/agent-browser/bin/agent-browser.js /usr/bin/agent-browser
 
 # Copy uv from builder (needed by MCP servers using uvx)
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv

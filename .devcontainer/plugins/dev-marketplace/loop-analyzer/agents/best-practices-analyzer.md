@@ -60,7 +60,7 @@ You are an expert in Claude Code best practices, specializing in evaluating auto
      - Frontend/UI task without `frontend-design` or `ui-ux-pro-max` skill
      - Commit request without `/commit` skill
      - Code review without `code-review` skill
-     - Browser testing needed without `agent-browser` or `playwright-cli`
+     - Browser testing needed without `agent-browser`
      - New feature without `brainstorming` skill
    - Check timing (skills loaded before or during implementation)
 7. **Claude-MD-Improver Effectiveness**: Search for learning patterns
@@ -154,7 +154,7 @@ grep for: "skill": "skill-name" (extract skill names)
 
 # Specific skills to track
 "frontend-design", "ui-ux-pro-max", "commit", "code-review"
-"brainstorming", "agent-browser", "playwright-cli"
+"brainstorming", "agent-browser"
 auto-revise-claude-md
 
 # CLAUDE.md interactions

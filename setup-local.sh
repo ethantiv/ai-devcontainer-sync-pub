@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # macOS local setup: Install Claude Code configuration for local development
-# Installs CLI, Playwright, plugins, skills, scripts, and settings on macOS
+# Installs CLI, agent-browser, plugins, skills, scripts, and settings on macOS
 
 set -e
 
@@ -145,23 +145,8 @@ install_claude_cli() {
 }
 
 # =============================================================================
-# PLAYWRIGHT INSTALLATION
+# AGENT BROWSER INSTALLATION
 # =============================================================================
-
-install_playwright() {
-    print_header "Playwright + Chromium"
-
-    if npm ls -g @playwright/cli &>/dev/null; then
-        ok "@playwright/cli already installed"
-    else
-        echo "📥 Installing @playwright/cli..."
-        npm install -g @playwright/cli
-        ok "@playwright/cli installed"
-    fi
-
-    npx -y playwright install chromium 2>/dev/null
-    ok "Chromium installed"
-}
 
 install_agent_browser() {
     print_header "Agent Browser"
@@ -173,26 +158,10 @@ install_agent_browser() {
         npm install -g agent-browser
         ok "agent-browser installed"
     fi
-}
 
-setup_playwright_env() {
-    # Set Playwright environment variables
-    local shell_rc="$HOME/.zshrc"
-    [[ -f "$shell_rc" ]] || shell_rc="$HOME/.bashrc"
-
-    local env_vars=(
-        "PLAYWRIGHT_MCP_BROWSER=chromium"
-        "PLAYWRIGHT_MCP_VIEWPORT_SIZE=1920x1080"
-    )
-
-    for var in "${env_vars[@]}"; do
-        local key="${var%%=*}"
-        if ! grep -q "export $key=" "$shell_rc" 2>/dev/null; then
-            echo "export $var" >> "$shell_rc"
-        fi
-        export "$var"
-    done
-    ok "Playwright environment configured"
+    # Install Chromium browser (required by agent-browser)
+    npx -y playwright install chromium 2>/dev/null
+    ok "Chromium installed"
 }
 
 # =============================================================================
@@ -427,9 +396,7 @@ main() {
 
     check_requirements
     install_claude_cli
-    install_playwright
     install_agent_browser
-    setup_playwright_env
     setup_claude_configuration
     install_all_plugins_and_skills
 }

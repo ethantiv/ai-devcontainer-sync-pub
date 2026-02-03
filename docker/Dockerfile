@@ -18,7 +18,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g @google/gemini-cli @playwright/cli agent-browser
+RUN npm install -g @google/gemini-cli agent-browser
 
 RUN pip3 install --break-system-packages uv python-telegram-bot
 
@@ -74,7 +74,6 @@ COPY --from=builder /root/.cache/ms-playwright /opt/playwright
 
 # Create symlinks for npm global packages (Claude Code installed via curl at runtime)
 RUN ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini \
-    && ln -sf ../lib/node_modules/@playwright/cli/playwright-cli.js /usr/bin/playwright-cli \
     && ln -sf ../lib/node_modules/agent-browser/bin/agent-browser.js /usr/bin/agent-browser
 
 # Create non-root user with required directories
@@ -103,9 +102,7 @@ USER ${USERNAME}
 WORKDIR ${HOME}/projects
 
 ENV CLAUDE_CONFIG_DIR=${HOME}/.claude \
-    PLAYWRIGHT_BROWSERS_PATH=${HOME}/.cache/ms-playwright \
-    PLAYWRIGHT_MCP_BROWSER=chromium \
-    PLAYWRIGHT_MCP_NO_SANDBOX=true
+    PLAYWRIGHT_BROWSERS_PATH=${HOME}/.cache/ms-playwright
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["bash"]

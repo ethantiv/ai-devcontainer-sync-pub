@@ -48,7 +48,6 @@ Codespaces: add as repository secrets. Local: create `.devcontainer/.env`.
 - `aws-documentation` - AWS docs search and reading
 - `terraform` - Terraform/Terragrunt execution, AWS provider docs
 - `context7` - Context7 documentation search (requires `CONTEXT7_API_KEY`)
-- `playwright` - browser automation via `@playwright/cli` (requires browser install)
 
 MCP servers require `uvx` (from `uv`). Installed via Dockerfile in DevContainer/Docker paths. Not available in `setup-local.sh` (macOS manual install).
 
@@ -153,7 +152,6 @@ Changes to setup/sync logic must be applied in parallel across:
   - GitHub skills: `name@github=owner/repo/path-to-SKILL.md`
   - External plugins: `name@type=owner/repo` — `type` is treated as marketplace name
 - **Gotcha**: `setup-env.sh` accepts any `type` as marketplace (fallthrough `*)`), but `setup-local.sh` requires `type` to match `*-marketplace` glob. Always name external marketplace types with `-marketplace` suffix to work in both scripts.
-- Playwright: `@playwright/cli` (MCP server binary) ≠ `playwright` (full package for browser install). Use `npx -y playwright install chromium` to install browsers — never call `playwright` directly as a global command. DevContainer sets `PLAYWRIGHT_MCP_BROWSER=chromium`, `PLAYWRIGHT_MCP_VIEWPORT_SIZE=1920x1080`, and `--shm-size=256m`. Docker uses `PLAYWRIGHT_MCP_NO_SANDBOX=true` env var to disable sandbox globally (preferred over `playwright-cli.json` which only works in working directory).
 - Shell scripts use `ok()`, `warn()`, `fail()` helpers for status output (colored ANSI with ✔︎/⚠️/❌). Use these instead of raw emoji in `setup-local.sh`, `setup-env.sh`, and `docker/setup-claude.sh`. Section headers with informational emoji (📄, 📦, 🔧, 🔄, 🔐, 🚀, 🌍) remain as plain `echo`.
 - `uv`/`uvx`: installed via `pip3 install --break-system-packages uv` in Dockerfiles (builder stage → COPY to runtime). MCP servers `aws-documentation` and `terraform` depend on `uvx`. Ad-hoc install without rebuild: `pip3 install --break-system-packages uv`.
 - Skills install syntax: `npx -y skills add "$url" --skill "$name" --agent claude-code gemini-cli -g -y`. The `-g` flag installs globally to `~/.agents/skills/` with symlinks to `~/.claude/skills/`. The `-y` flag skips interactive confirmation prompts. The `--agent claude-code gemini-cli` flag limits installation to Claude Code and Gemini CLI agents only.
