@@ -37,13 +37,11 @@ When generating the CLAUDE.md file with project guidelines, use the following st
 ```markdown
 ## Build & Run
 
-Succinct rules for how to BUILD the project:
-
-...
+<!-- Succinct rules for how to BUILD the project -->
 
 ## Validation
 
-Run these after implementing to get immediate feedback:
+<!-- Run these after implementing to get immediate feedback -->
 
 - Tests: `[test command]`
 - Typecheck: `[typecheck command]`
@@ -51,11 +49,9 @@ Run these after implementing to get immediate feedback:
 
 ## Operational Notes
 
-Succinct learnings about how to RUN the project:
-
-...
+<!-- Succinct learnings about how to RUN the project -->
 
 ### Codebase Patterns
 
-...
+<!-- Document recurring patterns, conventions, and architectural decisions -->
 ```
