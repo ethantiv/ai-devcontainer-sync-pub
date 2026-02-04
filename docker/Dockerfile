@@ -50,8 +50,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2 libpango-1.0-0 libcairo2 libatspi2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Python packages for Telegram bot
-RUN pip3 install --break-system-packages python-telegram-bot
+# Python packages for Telegram bot (job-queue extra includes APScheduler)
+RUN pip3 install --break-system-packages 'python-telegram-bot[job-queue]'
 
 # Generate UTF-8 locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
