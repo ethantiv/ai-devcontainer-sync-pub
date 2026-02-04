@@ -116,7 +116,13 @@ setup_playground() {
     local PLAYGROUND_DIR="$HOME/projects/playground"
 
     if [[ -d "$PLAYGROUND_DIR/.git" ]]; then
-        echo "  ✔︎ Playground repository already cloned"
+        # Update existing repository
+        if git -C "$PLAYGROUND_DIR" pull --ff-only 2>/dev/null; then
+            echo "  ✔︎ Playground updated (git pull)"
+        else
+            echo "  ⚠️  Playground git pull failed (local changes?)"
+        fi
+        chmod +x "$PLAYGROUND_DIR/loop"/*.sh 2>/dev/null || true
         return 0
     fi
 
