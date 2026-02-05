@@ -30,11 +30,13 @@ fail() { echo -e "  \033[31m❌\033[0m $1"; }
 
 setup_github_token() {
     if [[ -n "${GH_TOKEN}" ]]; then
-        echo "export GH_TOKEN='${GH_TOKEN}'" >> ~/.bashrc
-        echo "alias cc='clear && claude'" >> ~/.bashrc
-        echo "alias ccc='clear && claude -c'" >> ~/.bashrc
-        echo "alias ccr='clear && claude -r'" >> ~/.bashrc
-        ok "GitHub token exported to ~/.bashrc"
+        {
+            echo "export GH_TOKEN='${GH_TOKEN}'"
+            echo "alias cc='clear && claude'"
+            echo "alias ccc='clear && claude -c'"
+            echo "alias ccr='clear && claude -r'"
+        } >> ~/.bashrc 2>/dev/null && ok "GitHub token exported to ~/.bashrc" \
+            || warn "Could not write to ~/.bashrc (GH_TOKEN available from env)"
     fi
 }
 
