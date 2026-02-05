@@ -1,6 +1,6 @@
 ## Git Operations
 
-Wait for explicit user permission before executing Git or GitHub commands (git add, commit, push, pull, merge, rebase, gh pr create/merge). Execute Git commands only when user explicitly requests it in their message or user invokes a slash command (e.g., /commit)
+Wait for explicit user permission before executing Git or GitHub commands (git add, commit, push, pull, merge, rebase, gh pr create/merge). Execute Git commands only when user explicitly requests it in their message or user invokes a slash command (e.g., /commit).
 
 ## Language
 
