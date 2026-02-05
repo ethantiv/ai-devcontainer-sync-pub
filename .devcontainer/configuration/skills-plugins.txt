@@ -13,7 +13,6 @@
 # =============================================================================
 
 # Development tools
-agent-sdk-dev
 claude-code-setup
 claude-md-management
 code-simplifier
