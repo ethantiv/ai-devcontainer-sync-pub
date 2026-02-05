@@ -38,6 +38,8 @@ Available as local marketplace plugins (`dev-marketplace`):
 | `RESET_CLAUDE_CONFIG` | No | Clear `~/.claude/` on startup |
 | `RESET_GEMINI_CONFIG` | No | Clear `~/.gemini/` on startup |
 | `CONTEXT7_API_KEY` | No | API key for Context7 MCP server |
+| `COOLIFY_BASE_URL` | No | URL of Coolify instance |
+| `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |
 | `GIT_USER_NAME` | No | Git global user.name |
 | `GIT_USER_EMAIL` | No | Git global user.email |
 
@@ -48,6 +50,7 @@ Codespaces: add as repository secrets. Local: create `.devcontainer/.env`.
 - `aws-documentation` - AWS docs search and reading
 - `terraform` - Terraform/Terragrunt execution, AWS provider docs
 - `context7` - Context7 documentation search (requires `CONTEXT7_API_KEY`)
+- `coolify` - Coolify deployment platform management (requires `COOLIFY_BASE_URL`, `COOLIFY_ACCESS_TOKEN`)
 
 MCP servers require `uvx` (from `uv`). Installed via Dockerfile in DevContainer/Docker paths. Not available in `setup-local.sh` (macOS manual install).
 

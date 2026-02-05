@@ -418,6 +418,16 @@ setup_mcp_servers() {
             "CONTEXT7_API_KEY": "'"${CONTEXT7_API_KEY:-}"'"
         }
     }'
+
+    add_mcp_server "coolify" '{
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@masonator/coolify-mcp@latest"],
+        "env": {
+            "COOLIFY_BASE_URL": "'"${COOLIFY_BASE_URL:-}"'",
+            "COOLIFY_ACCESS_TOKEN": "'"${COOLIFY_ACCESS_TOKEN:-}"'"
+        }
+    }'
 }
 
 # =============================================================================
