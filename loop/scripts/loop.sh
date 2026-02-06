@@ -43,12 +43,22 @@ IDEA=""
 # Help function
 usage() {
     echo "Usage: $0 [-p] [-a] [-i iterations] [-e] [-I idea]"
-    echo "  -p              Plan mode (default: build mode)"
+    echo ""
+    echo "Options:"
+    echo "  -p              Plan mode (default: build)"
     echo "  -a              Autonomous mode (default: interactive)"
-    echo "  -i iterations   Number of iterations in autonomous mode (default: 5 build, 3 plan)"
+    echo "  -i iterations   Number of iterations (default: 5 build, 3 plan)"
     echo "  -e              Disable early exit (run all iterations)"
-    echo "  -I, --idea      Write idea to docs/IDEA.md"
-    echo "  -h              Show help"
+    echo "  -I text         Seed idea written to docs/IDEA.md"
+    echo "  -h              Show this help"
+    echo ""
+    echo "Note: When called via 'loop run', autonomous mode (-a) is the default."
+    echo ""
+    echo "Examples:"
+    echo "  $0 -a              Build, 5 autonomous iterations"
+    echo "  $0 -p -a           Plan, 3 autonomous iterations"
+    echo "  $0 -p -a -i 1     Single planning iteration"
+    echo "  $0 -a -e           Build, all iterations (no early exit)"
     exit 0
 }
 
