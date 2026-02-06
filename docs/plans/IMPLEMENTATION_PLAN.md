@@ -2,6 +2,7 @@
 
 **Status:** IN_PROGRESS
 **Progress:** 0/18 (0%)
+**Last verified:** 2026-02-06 (all line numbers and references confirmed by 10 parallel code analysis agents)
 
 ## Goal
 
@@ -132,6 +133,10 @@ Phase 1: config.py + Project dataclass cleanup
 | `show_project_menu()` missing `loop init` button | Line 225 only shows warning text, IDEA.md requires actionable button to run `loop init` |
 | `help_command()` text | Already generic, no MAIN_PROJECT references — no changes needed |
 | `bot.py` has `(main)` label in project menu | Line 167: `text = f"📁 *{project.name}* (main)\n"` — remove after unifying menu |
+| `bot.py` icon logic order wrong | Line 110: checks `is_main` before `check_running()`, so running main project shows 📂 not 🔄. New logic must check running status first |
+| `create_worktree()` naming scheme differs | Current: `{suffix}` only (L126). IDEA.md requires: `{project_name}-{suffix}` prefix for disambiguation |
+| `projects.py` has `shutil` import for template copy | Line 3: `import shutil` — remove after dropping `CLAUDE_template.md` copy logic |
+| `handle_name()` missing project context | Line 388: calls `create_worktree(name)` without project_path. Need to store selected project in `context.user_data` and pass to generalized function |
 
 ### Resources
 
