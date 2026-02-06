@@ -1,0 +1,27 @@
+{
+  "name": "dev-loop",
+  "version": "0.2.0",
+  "description": "Autonomous development loop system powered by Claude CLI",
+  "bin": {
+    "loop": "./bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "scripts/",
+    "prompts/",
+    "templates/",
+    ".claude/"
+  ],
+  "dependencies": {
+    "commander": "^12.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/miroslawzaniewicz/ai-devcontainer-sync.git"
+  },
+  "license": "MIT"
+}

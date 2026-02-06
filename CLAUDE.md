@@ -42,6 +42,9 @@ Available as local marketplace plugins (`dev-marketplace`):
 | `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |
 | `GIT_USER_NAME` | No | Git global user.name |
 | `GIT_USER_EMAIL` | No | Git global user.email |
+| `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for remote loop control |
+| `TELEGRAM_CHAT_ID` | No | Authorized Telegram chat ID |
+| `MAIN_PROJECT` | No | Main project name for Telegram bot worktree management |
 
 Codespaces: add as repository secrets. Local: create `.devcontainer/.env`.
 
@@ -58,26 +61,30 @@ MCP servers require `uvx` (from `uv`). Installed via Dockerfile in DevContainer/
 
 Pre-installed alongside Claude Code. Reset config with `RESET_GEMINI_CONFIG=true`.
 
-### Loop CLI (dev-loop)
+### Loop System (dev-loop)
 
-Global npm package `dev-loop` (from `ethantiv/playground`) provides the `loop` CLI for autonomous development loops with Claude CLI. Installed at runtime by `setup-env.sh` using `GH_TOKEN`.
+Built-in autonomous development loop at `loop/` in this repository. Includes CLI (`loop` command), shell scripts, prompts, Telegram bot, and templates. Installed to Docker image at `/opt/loop/` via `COPY loop /opt/loop` in Dockerfile.
 
 ```bash
 loop --help             # Show available subcommands
-loop init               # Initialize loop config in current project
+loop init               # Initialize loop config in current project (symlinks scripts/prompts)
 loop run --plan -i 5    # Run loop with planning, 5 iterations
+loop run -i 3           # Run build loop, 3 iterations
 loop cleanup            # Clean up loop artifacts
-loop update             # Update to latest version
+loop update             # Refresh symlinks after update
 ```
+
+**Structure**: `loop/scripts/` (shell), `loop/prompts/` (Claude prompts), `loop/templates/` (project templates), `loop/telegram_bot/` (Python bot), `loop/bin/` + `loop/lib/` (Node.js CLI).
+
+**Telegram bot**: Starts automatically in Docker if `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` env vars are set. Runs from `/opt/loop/telegram_bot/` via entrypoint.sh.
 
 ### Adding New Global npm Tools
 
-Requires changes in 5 files:
+Requires changes in 4 files:
 1. `.devcontainer/Dockerfile` — `npm install -g` + symlink in runtime stage
 2. `docker/Dockerfile` — `npm install -g` + symlink after COPY
 3. `setup-local.sh` — dedicated `install_<tool>()` function + call in `main()`
 4. `.devcontainer/configuration/skills-plugins.txt` — if it has a skill/plugin
-5. `docker/setup-claude.sh` and `.devcontainer/setup-env.sh` — hardcoded skill entry if applicable
 
 ### Adding New Plugins/Skills/Commands
 
@@ -114,6 +121,11 @@ Changes to setup/sync logic must be applied in parallel across:
 - `setup-local.sh` — macOS local setup (no MCP servers — plugins and skills only)
 - `docker/Dockerfile` + `docker/entrypoint.sh` + `docker/setup-claude.sh` — Docker image build and runtime
 - `README.md` — single documentation file for all deployment options (Codespaces, DevContainer, Docker)
+
+Loop system changes require parallel updates across:
+- `loop/` — source code (scripts, prompts, templates, telegram bot, npm CLI)
+- `docker/Dockerfile` — `COPY loop /opt/loop` and `npm install`
+- `docker/entrypoint.sh` — Telegram bot startup path
 
 ### Setup Flow
 
@@ -160,8 +172,9 @@ Changes to setup/sync logic must be applied in parallel across:
 - Skills install syntax: `npx -y skills add "$url" --skill "$name" --agent claude-code gemini-cli -g -y`. The `-g` flag installs globally to `~/.agents/skills/` with symlinks to `~/.claude/skills/`. The `-y` flag skips interactive confirmation prompts. The `--agent claude-code gemini-cli` flag limits installation to Claude Code and Gemini CLI agents only.
 - **Claude binary in Docker**: Lives at `~/.claude/bin/claude` (volume). Scripts should define wrapper: `CLAUDE_CMD="${CLAUDE_DIR}/bin/claude"; claude() { "$CLAUDE_CMD" "$@"; }` to ensure correct binary is used regardless of PATH.
 - **Testing Docker on Raspberry Pi**: `ssh mirek@raspberrypi.local`, then `cd ~/Downloads/ai-devcontainer-sync/docker && git pull && sudo docker compose down && sudo docker compose build --no-cache && sudo docker compose up -d`. Verify with `sudo docker exec claude-code bash -c 'echo $VAR_NAME'`.
-- **Entrypoint optional components**: Use `setup_<name>()` functions in `docker/entrypoint.sh` for optional repos/tools that clone to `~/projects/` volume. Pattern: check if `.git` exists → clone if missing → set executable permissions. Example: `setup_playground()` clones ethantiv/playground.
+- **Loop system in Docker**: Installed at `/opt/loop/` via `COPY loop /opt/loop` + `npm install`. Symlinked as `/usr/bin/loop`. Telegram bot runs from `/opt/loop/telegram_bot/` with `PYTHONPATH="/opt"`. Shell scripts at `/opt/loop/scripts/loop.sh`.
+- **Loop script path resolution**: `loop.sh` resolves `LOOP_SCRIPTS_DIR` via `readlink -f "$0"` to find sibling scripts (notify-telegram.sh, cleanup.sh). Prompt files: uses project-local `loop/PROMPT_*.md` if present (symlinked by `loop init`), falls back to `$LOOP_ROOT/prompts/`. `tasks.py` resolves loop.sh: `/opt/loop/scripts/loop.sh` first, then project-local `./loop/loop.sh`.
 - **UTF-8 locale in Docker**: debian:bookworm-slim has no locales generated by default. Required: `apt install locales`, `sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen`, and `ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`. Without this, Polish characters in tmux display as `_`.
 - **Coolify MCP limitations**: `base_directory` and `docker_compose_location` are not available in the Coolify MCP tool. Use `curl -X PATCH` against the Coolify API directly to set these fields.
 - **Setup scripts must be non-fatal**: In Docker/Coolify containers, `~/.bashrc` may not be writable. All writes to user dotfiles in setup scripts should use `|| warn` / `|| true` instead of relying on `set -e`. Critical setup (plugins, MCP servers) must not be blocked by non-essential operations.
-- **Private npm packages at runtime**: Packages from private GitHub repos can't be installed in Dockerfile (no `GH_TOKEN` at build time). Use `install_global_npm_tools()` in `setup-env.sh` with `sudo npm install -g "git+https://${GH_TOKEN}@github.com/owner/repo.git"`. Check `command -v <bin>` for idempotency.
+- **Loop `init` for external projects**: `loop init` creates symlinks from `/opt/loop/scripts/` and `/opt/loop/prompts/` into project's `loop/` directory. Templates are copied (not symlinked) so they can be customized per project.

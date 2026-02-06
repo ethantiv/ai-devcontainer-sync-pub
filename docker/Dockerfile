@@ -76,6 +76,12 @@ COPY --from=builder /root/.cache/ms-playwright /opt/playwright
 RUN ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini \
     && ln -sf ../lib/node_modules/agent-browser/bin/agent-browser.js /usr/bin/agent-browser
 
+# Install loop system (autonomous dev loop + Telegram bot + CLI)
+COPY loop /opt/loop
+RUN cd /opt/loop && npm install --omit=dev \
+    && chmod +x /opt/loop/scripts/*.sh /opt/loop/bin/cli.js \
+    && ln -sf /opt/loop/bin/cli.js /usr/bin/loop
+
 # Create non-root user with required directories
 RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME} \
@@ -83,8 +89,7 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && mkdir -p ${HOME}/.cache/ms-playwright /tmp/playwright-output \
     && cp -r /opt/playwright/* ${HOME}/.cache/ms-playwright/ \
     && chown -R ${USERNAME}:${USERNAME} ${HOME} /tmp/playwright-output \
-    && echo "alias cc='clear && claude'" >> ${HOME}/.bashrc \
-    && echo 'loop() { local script="$(git rev-parse --show-toplevel)/loop/loop.sh"; local use_tmux=false; local args=(); for arg in "$@"; do if [[ "$arg" == "--tmux" ]]; then use_tmux=true; else args+=("$arg"); fi; done; if $use_tmux; then local session_name="$(basename "$PWD")"; if tmux has-session -t "$session_name" 2>/dev/null; then tmux attach -t "$session_name"; else tmux new-session -s "$session_name" -- "$script" "${args[@]}"; fi; else "$script" "${args[@]}"; fi; }' >> ${HOME}/.bashrc
+    && echo "alias cc='clear && claude'" >> ${HOME}/.bashrc
 
 # Copy configuration files for runtime sync to volume
 COPY .devcontainer/configuration/CLAUDE.md.memory /opt/claude-config/CLAUDE.md

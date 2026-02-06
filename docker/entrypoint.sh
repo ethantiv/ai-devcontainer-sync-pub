@@ -109,36 +109,6 @@ setup_gh_auth() {
 setup_gh_auth
 
 # =============================================================================
-# PLAYGROUND REPOSITORY (clones to projects volume on first run)
-# =============================================================================
-
-setup_playground() {
-    local PLAYGROUND_DIR="$HOME/projects/playground"
-
-    if [[ -d "$PLAYGROUND_DIR/.git" ]]; then
-        # Update existing repository
-        if git -C "$PLAYGROUND_DIR" pull --ff-only 2>/dev/null; then
-            echo "  ✔︎ Playground updated (git pull)"
-        else
-            echo "  ⚠️  Playground git pull failed (local changes?)"
-        fi
-        chmod +x "$PLAYGROUND_DIR/loop"/*.sh 2>/dev/null || true
-        return 0
-    fi
-
-    echo "📦 Cloning playground repository..."
-    if gh repo clone ethantiv/playground "$PLAYGROUND_DIR" 2>/dev/null; then
-        chmod +x "$PLAYGROUND_DIR/loop"/*.sh 2>/dev/null || true
-        echo "  ✔︎ Playground cloned to $PLAYGROUND_DIR"
-    else
-        echo "  ⚠️  Failed to clone playground (will retry on next start)"
-    fi
-}
-
-# Clone playground repository (to projects volume)
-setup_playground
-
-# =============================================================================
 # FIRST-RUN SETUP (MCP servers, settings, plugins)
 # =============================================================================
 
@@ -162,17 +132,15 @@ start_telegram_bot() {
         return 0
     fi
 
-    local PLAYGROUND_DIR="$HOME/projects/playground"
-    local BOT_MODULE="$PLAYGROUND_DIR/loop/telegram_bot"
+    local BOT_MODULE="/opt/loop/telegram_bot"
 
     if [[ ! -d "$BOT_MODULE" ]]; then
         echo "  ⚠️  Telegram bot module not found"
         return 0
     fi
 
-    # Start bot in background
-    cd "$PLAYGROUND_DIR"
-    PROJECTS_ROOT="$HOME/projects" python3 -m loop.telegram_bot.run &
+    # Start bot in background (PYTHONPATH so imports resolve from /opt/loop parent)
+    PYTHONPATH="/opt" PROJECTS_ROOT="$HOME/projects" python3 -m loop.telegram_bot.run &
     echo "  ✔︎ Telegram bot started (PID: $!)"
 }
 
@@ -216,13 +184,13 @@ echo "AI Code DevContainer"
 echo ""
 echo "  claude --version    : $(claude_version)"
 echo "  gemini --version    : $(NO_COLOR=1 gemini --version 2>/dev/null || echo 'not available')"
+echo "  loop --version      : $(loop --version 2>/dev/null || echo 'not available')"
 echo ""
 echo "  Working directory   : $(pwd)"
 echo "  Config initialized  : $([ -f "$CONFIGURED_MARKER" ] && echo 'Yes' || echo 'No')"
 echo ""
-echo "  Loop available      : ~/projects/playground/loop/loop.sh"
+echo "  Loop CLI            : loop run --plan -i 5"
 echo "  Telegram bot        : $([ -n "$TELEGRAM_BOT_TOKEN" ] && echo 'running' || echo 'not configured')"
-echo "  Update playground   : cd ~/projects/playground && git pull"
 echo ""
 
 # Execute command (default: bash)

@@ -1,94 +1,112 @@
 # AI DevContainer Environment
 
-Ready-to-use development environment with Claude Code, Gemini CLI, and pre-configured AI tools for software engineering.
+Ready-to-use development environment with Claude Code, Gemini CLI, autonomous development loops, and pre-configured AI tools.
 
-## Features
+## What's Inside
 
-- **Claude Code** 
-- **Gemini CLI** 
-- **Custom Slash Commands** 
-- **MCP Servers**
-- **Skills**
+- **Claude Code** and **Gemini CLI** — pre-installed and configured
+- **Loop System** — autonomous plan/build cycles powered by Claude CLI (`loop` command)
+- **Telegram Bot** — remote control for loop tasks and brainstorming sessions
+- **MCP Servers** — AWS docs, Terraform, Context7, Coolify
+- **Custom Slash Commands** — code review, design system, roadmap, git worktrees
+- **Skills & Plugins** — auto-installed from `skills-plugins.txt`
 
 ## Getting Started
 
-### Option 1: GitHub Codespaces (Recommended)
-
-1. [Create a Fine-grained personal access token](https://github.com/settings/personal-access-tokens) with `repo` and `workflow` permissions
-2. Go to **Settings → Codespaces → Secrets** and add `GH_TOKEN` with your token
-3. Click **Code → Codespaces → Create codespace** on this repository
-4. Wait for the container to build — everything configures automatically
-
-### Option 2: Local DevContainer
+### Option 1: Local DevContainer
 
 1. Install [Docker](https://www.docker.com/) and [VS Code](https://code.visualstudio.com/) with [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 2. Clone this repository
-3. Create `.devcontainer/.env` with your token:
+3. Create `.devcontainer/.env`:
 
    ```bash
    GH_TOKEN=ghp_your_token_here
    ```
-   
+
 4. Open in VS Code and click **Reopen in Container**
 
-### Option 3: Docker (Raspberry Pi / Standalone)
+### Option 2: Docker (Raspberry Pi / Standalone)
 
-Optimized for ARM64 (Raspberry Pi 5, Apple Silicon) but works on x86_64.
+Works on ARM64 (Raspberry Pi 5, Apple Silicon) and x86_64.
 
 ```bash
 cd docker
-
-# Copy and configure environment
 cp .env.example .env
-# Edit .env with your GH_TOKEN
+# Edit .env — at minimum set GH_TOKEN
 
-# Build and run
 docker compose up -d
-
-# Attach to container
-docker compose exec claude bash
+docker exec -it claude-code bash
 ```
 
-The container auto-restarts after reboot (`restart: unless-stopped`).
+The container auto-restarts after reboot.
 
-#### Docker Volumes
+### Option 3: Coolify (Self-hosted PaaS)
 
-| Volume | Mount Point | Purpose |
-|--------|-------------|---------|
-| `claude-config` | `~/.claude` | Claude configuration and plugins |
-| `gemini-config` | `~/.gemini` | Gemini CLI configuration |
-| `projects` | `~/projects` | Persistent project storage |
+Deploy as a Docker Compose application on a server managed by [Coolify](https://coolify.io/).
 
-#### Manual Docker Build
+1. In Coolify, create a new **Docker Compose** resource pointing to this repository
+2. Set **Base Directory** to `/docker` and **Docker Compose Location** to `/docker-compose.yml`
+3. Add environment variables (same as `docker/.env`) in the Coolify app settings
+4. Deploy — Coolify builds the image from `docker/Dockerfile` with `context: ..` resolving to the repo root
+
+The container runs headless with auto-restart. Manage it through Coolify UI or API.
+
+## Using the Loop System
+
+The `loop` command runs Claude CLI in autonomous plan/build cycles against any project.
 
 ```bash
-# Build
-docker build -t claude-code:latest -f docker/Dockerfile .
+# First, initialize loop in your project
+cd ~/projects/my-project
+loop init
 
-# Run interactively
-docker run -it --rm \
-    -e GH_TOKEN="ghp_..." \
-    -v projects:/home/developer/projects \
-    -v claude-config:/home/developer/.claude \
-    claude-code:latest
+# Run planning (analyzes code, creates IMPLEMENTATION_PLAN.md)
+loop run --plan -i 5
+
+# Run build (implements tasks from the plan)
+loop run -i 3
+
+# Clean up dev server ports
+loop cleanup
 ```
+
+To control loops remotely, set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in your `.env`. The bot starts automatically and lets you manage tasks from your phone.
 
 ## Environment Variables
 
+Set these in `.devcontainer/.env` (DevContainer) or `docker/.env` (Docker).
+
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GH_TOKEN` | Yes | GitHub token for authentication |
+| `GH_TOKEN` | Yes | GitHub token for authentication and repo access |
 | `SSH_PRIVATE_KEY` | No | Base64-encoded SSH key for Git |
 | `CONTEXT7_API_KEY` | No | API key for Context7 MCP server |
-| `RESET_CLAUDE_CONFIG` | No | Clear Claude config on startup |
-| `RESET_GEMINI_CONFIG` | No | Clear Gemini config on startup |
+| `COOLIFY_BASE_URL` | No | URL of Coolify instance for deployment management |
+| `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |
+| `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for remote loop control |
+| `TELEGRAM_CHAT_ID` | No | Authorized Telegram chat ID |
+| `MAIN_PROJECT` | No | Main project name for Telegram bot worktree management |
+| `GIT_USER_NAME` | No | Git global user.name |
+| `GIT_USER_EMAIL` | No | Git global user.email |
+| `RESET_CLAUDE_CONFIG` | No | Set to `true` to clear Claude config on startup |
+| `RESET_GEMINI_CONFIG` | No | Set to `true` to clear Gemini config on startup |
 
 ## Customization
 
-Add your own commands, plugins, or scripts in `.devcontainer/` directories:
+Edit files in `.devcontainer/`, then run `./.devcontainer/setup-env.sh` to apply:
 
-- **Plugins** — edit `configuration/skills-plugins.txt`
-- **Local commands** — add to `plugins/dev-marketplace/`
-- **Scripts** — add `.sh` files to `scripts/`
+- **Plugins & skills** — `configuration/skills-plugins.txt`
+- **Local slash commands** — `plugins/dev-marketplace/`
+- **Scripts** — `scripts/` (synced to `~/.claude/scripts/`)
+- **Claude memory** — `configuration/CLAUDE.md.memory` (synced to `~/.claude/CLAUDE.md`)
 
-After changes, run `./.devcontainer/setup-env.sh` or rebuild the container.
+## Docker Volumes
+
+Data persists across container rebuilds:
+
+| Volume | Mount Point | Purpose |
+|--------|-------------|---------|
+| `claude-config` | `~/.claude` | Claude binary, settings, credentials, plugins |
+| `agents-skills` | `~/.agents` | Globally installed skills |
+| `gemini-config` | `~/.gemini` | Gemini CLI configuration |
+| `projects` | `~/projects` | Your working projects |

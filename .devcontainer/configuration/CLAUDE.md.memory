@@ -30,6 +30,10 @@ Run them after implementation to get immediate feedback:
 
 Always load the correct skills at the beginning of the relevant tasks.
 
+## README.md
+
+Always maintain README.md as a simple instruction guide for new or returning users — not as technical documentation. Write it in second person ("you"), focus on getting started quickly, and keep explanations minimal. Technical details, architecture notes, and codebase patterns belong in CLAUDE.md. When the project changes significantly, update README.md to reflect the current state.
+
 ### CLAUDE.md Template
 
 When generating the CLAUDE.md file with project guidelines, use the following structure:
