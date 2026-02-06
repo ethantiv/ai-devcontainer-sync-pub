@@ -68,8 +68,8 @@ Built-in autonomous development loop at `loop/` in this repository. Includes CLI
 ```bash
 loop --help             # Show available subcommands
 loop init               # Initialize loop config in current project (symlinks scripts/prompts)
-loop run --plan -i 5    # Run loop with planning, 5 iterations
-loop run -i 3           # Run build loop, 3 iterations
+loop run --plan          # Run loop with planning (default: 3 iterations)
+loop run                 # Run build loop (default: 5 iterations)
 loop cleanup            # Clean up loop artifacts
 loop update             # Refresh symlinks after update
 ```
@@ -126,6 +126,8 @@ Loop system changes require parallel updates across:
 - `loop/` — source code (scripts, prompts, templates, telegram bot, npm CLI)
 - `docker/Dockerfile` — `COPY loop /opt/loop` and `npm install`
 - `docker/entrypoint.sh` — Telegram bot startup path
+
+Loop CLI changes (flags, defaults) require edits across 4 files: `loop/bin/cli.js` (Commander option), `loop/lib/run.js` (JS→shell bridge), `loop/scripts/loop.sh` (bash implementation), and optionally `loop/lib/init.js` (suggested commands).
 
 ### Setup Flow
 
