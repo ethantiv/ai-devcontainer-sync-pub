@@ -12,7 +12,7 @@
 
 3. After implementing:
    - Update @docs/plans/IMPLEMENTATION_PLAN.md IMMEDIATELY (mark tasks, update **Current Phase**, change phase **Status**).
-   - If @docs/plans/IMPLEMENTATION_PLAN.md exceeds 500 lines, trim completed content. Remove: completed tasks `[x]`, phases with status `complete`, resolved Issues rows. Keep: pending tasks `[ ]`, active phases, Technical Decisions. Git history = full audit trail.
+   - If @docs/plans/IMPLEMENTATION_PLAN.md exceeds 800 lines, trim completed content. Remove: completed tasks `[x]`, phases with status `complete`, resolved Issues rows. Keep: pending tasks `[ ]`, active phases, Technical Decisions. Git history = full audit trail.
    - Run validation (typecheck, lint).
    - If validation fails, fix before proceeding.
    - Load skill `auto-revise-claude-md` to update `Operational Notes`.
