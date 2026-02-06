@@ -33,10 +33,18 @@
 
 The bot uses inline keyboard buttons for most interactions:
 
+### Project List
+- **📁 Project** - Standalone repo
+- **🔀 Project** - Worktree
+- **🔄 Project** - Running task
+- **➕ Klonuj repo** - Clone a git repository
+
 ### Project Menu
-- **Nowy projekt** - Create new git worktree (main repo only)
 - **Plan** - Start planning mode
 - **Build** - Start build mode
+- **Brainstorm** - Start brainstorming session
+- **Nowy worktree** - Create new git worktree (any project)
+- **Loop init** - Initialize loop in project (shown when loop not configured)
 - **Status** - Show task status
 - **Podlacz** - Get tmux attach command for running task
 - **Kolejka** - View queued tasks

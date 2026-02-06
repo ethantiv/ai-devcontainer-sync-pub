@@ -44,7 +44,6 @@ Available as local marketplace plugins (`dev-marketplace`):
 | `GIT_USER_EMAIL` | No | Git global user.email |
 | `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for remote loop control |
 | `TELEGRAM_CHAT_ID` | No | Authorized Telegram chat ID |
-| `MAIN_PROJECT` | No | Main project name for Telegram bot worktree management |
 
 Codespaces: add as repository secrets. Local: create `.devcontainer/.env`.
 

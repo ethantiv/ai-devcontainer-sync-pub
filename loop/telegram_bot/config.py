@@ -16,5 +16,3 @@ def _safe_int(value: str | None, default: int) -> int:
 TELEGRAM_BOT_TOKEN = environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = _safe_int(environ.get("TELEGRAM_CHAT_ID"), 0)
 PROJECTS_ROOT = environ.get("PROJECTS_ROOT", "/home/developer/projects")
-MAIN_PROJECT = environ.get("MAIN_PROJECT", "")
-DEFAULT_ITERATIONS = _safe_int(environ.get("DEFAULT_ITERATIONS"), 5)

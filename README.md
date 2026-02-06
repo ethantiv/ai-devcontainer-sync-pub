@@ -85,7 +85,6 @@ Set these in `.devcontainer/.env` (DevContainer) or `docker/.env` (Docker).
 | `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |
 | `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for remote loop control |
 | `TELEGRAM_CHAT_ID` | No | Authorized Telegram chat ID |
-| `MAIN_PROJECT` | No | Main project name for Telegram bot worktree management |
 | `GIT_USER_NAME` | No | Git global user.name |
 | `GIT_USER_EMAIL` | No | Git global user.email |
 | `RESET_CLAUDE_CONFIG` | No | Set to `true` to clear Claude config on startup |

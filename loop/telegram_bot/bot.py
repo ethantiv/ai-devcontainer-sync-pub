@@ -15,7 +15,7 @@ from telegram.ext import (
 )
 
 from .config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
-from .projects import create_worktree, get_project, list_projects
+from .projects import clone_repo, create_worktree, get_project, list_projects
 from .tasks import brainstorm_manager, task_manager
 
 logging.basicConfig(
@@ -35,6 +35,7 @@ class State(IntEnum):
     SELECT_ITERATIONS = auto()
     BRAINSTORMING = auto()
     ENTER_BRAINSTORM_PROMPT = auto()
+    ENTER_URL = auto()
 
 
 # Store conversation data
@@ -107,10 +108,10 @@ async def show_projects(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     buttons = []
     for project in projects:
         label = project.name
-        if project.is_main:
-            label = f"📂 {label}"
-        elif task_manager.check_running(project.path):
+        if task_manager.check_running(project.path):
             label = f"🔄 {label}"
+        elif project.is_worktree:
+            label = f"🔀 {label}"
         else:
             label = f"📁 {label}"
         buttons.append(
@@ -119,6 +120,7 @@ async def show_projects(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     # Arrange buttons in rows of 2
     keyboard = [buttons[i : i + 2] for i in range(0, len(buttons), 2)]
+    keyboard.append([InlineKeyboardButton("➕ Klonuj repo", callback_data="action:clone")])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     text = "📂 *Dostępne projekty:*"
@@ -162,70 +164,63 @@ async def show_project_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     queue = task_manager.get_queue(project.path)
     queue_count = len(queue)
 
-    if project.is_main:
-        # Main repo - can create new worktrees
-        text = f"📁 *{project.name}* (main)\n"
-        text += f"Branch: `{project.branch}`"
+    icon = "🔀" if project.is_worktree else "📁"
+    status = "🔄 Zadanie w toku" if task else "🟢 Wolny"
+    text = f"{icon} *{project.name}*\n"
+    text += f"Branch: `{project.branch}`\n"
+    text += f"Status: {status}"
+    if project.is_worktree and project.parent_repo:
+        text += f"\nParent: `{project.parent_repo}`"
+    if queue_count > 0:
+        text += f" ({queue_count} w kolejce)"
 
+    if task:
+        duration = task_manager.get_task_duration(task)
+        current = task_manager.get_current_iteration(task) or "?"
+        text += f"\n\n🔨 {task.mode.title()} • Iteracja: {current}/{task.iterations} • {duration}"
+        row1 = [
+            InlineKeyboardButton("📺 Podłącz", callback_data="action:attach"),
+            InlineKeyboardButton("📊 Status", callback_data="action:status"),
+        ]
+        if queue_count > 0:
+            row1.append(
+                InlineKeyboardButton(f"📋 Kolejka ({queue_count})", callback_data="action:queue")
+            )
         buttons = [
+            row1,
             [
-                InlineKeyboardButton("➕ Nowy projekt", callback_data="action:new"),
-                InlineKeyboardButton("📊 Status", callback_data="action:status"),
+                InlineKeyboardButton("🧐 Plan", callback_data="action:plan"),
+                InlineKeyboardButton("💪 Build", callback_data="action:build"),
+            ],
+            [
+                InlineKeyboardButton("💡 Brainstorm", callback_data="action:brainstorm"),
             ],
             [InlineKeyboardButton("⬅️ Powrót", callback_data="action:back")],
         ]
-    else:
-        # Worktree - can run plan/build
-        status = "🔄 Zadanie w toku" if task else "🟢 Wolny"
-        text = f"📁 *{project.name}*\n"
-        text += f"Branch: `{project.branch}`\n"
-        text += f"Status: {status}"
-        if queue_count > 0:
-            text += f" ({queue_count} w kolejce)"
-
-        if task:
-            duration = task_manager.get_task_duration(task)
-            current = task_manager.get_current_iteration(task) or "?"
-            text += f"\n\n🔨 {task.mode.title()} • Iteracja: {current}/{task.iterations} • {duration}"
-            row1 = [
-                InlineKeyboardButton("📺 Podłącz", callback_data="action:attach"),
+    elif project.has_loop:
+        buttons = [
+            [
+                InlineKeyboardButton("🧐 Plan", callback_data="action:plan"),
+                InlineKeyboardButton("💪 Build", callback_data="action:build"),
+            ],
+            [
+                InlineKeyboardButton("💡 Brainstorm", callback_data="action:brainstorm"),
+                InlineKeyboardButton("🔀 Nowy worktree", callback_data="action:worktree"),
+            ],
+            [
                 InlineKeyboardButton("📊 Status", callback_data="action:status"),
-            ]
-            if queue_count > 0:
-                row1.append(
-                    InlineKeyboardButton(f"📋 Kolejka ({queue_count})", callback_data="action:queue")
-                )
-            buttons = [
-                row1,
-                [
-                    InlineKeyboardButton("🧐 Plan", callback_data="action:plan"),
-                    InlineKeyboardButton("💪 Build", callback_data="action:build"),
-                ],
-                [
-                    InlineKeyboardButton("💡 Brainstorm", callback_data="action:brainstorm"),
-                ],
-                [InlineKeyboardButton("⬅️ Powrót", callback_data="action:back")],
-            ]
-        else:
-            if project.has_loop:
-                buttons = [
-                    [
-                        InlineKeyboardButton("🧐 Plan", callback_data="action:plan"),
-                        InlineKeyboardButton("💪 Build", callback_data="action:build"),
-                    ],
-                    [
-                        InlineKeyboardButton("💡 Brainstorm", callback_data="action:brainstorm"),
-                    ],
-                    [
-                        InlineKeyboardButton("📊 Status", callback_data="action:status"),
-                        InlineKeyboardButton("⬅️ Powrót", callback_data="action:back"),
-                    ],
-                ]
-            else:
-                text += "\n\n⚠️ Loop not available (loop/loop.sh not found)"
-                buttons = [
-                    [InlineKeyboardButton("⬅️ Powrót", callback_data="action:back")],
-                ]
+                InlineKeyboardButton("⬅️ Powrót", callback_data="action:back"),
+            ],
+        ]
+    else:
+        text += "\n\n⚠️ Loop not initialized (loop/loop.sh not found)"
+        buttons = [
+            [
+                InlineKeyboardButton("🔧 Loop init", callback_data="action:loop_init"),
+                InlineKeyboardButton("🔀 Nowy worktree", callback_data="action:worktree"),
+            ],
+            [InlineKeyboardButton("⬅️ Powrót", callback_data="action:back")],
+        ]
 
     reply_markup = InlineKeyboardMarkup(buttons)
 
@@ -260,15 +255,42 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     if action == "status":
         return await show_status(update, context)
 
-    if action == "new":
+    if action == "clone":
         await query.edit_message_text(
-            "📝 *Podaj nazwę projektu:*\n\n"
-            f"Utworzę: `{{name}}`\n"
-            "Branch: `{name}`\n\n"
+            "🔗 *Podaj URL repozytorium:*\n\n"
+            "Np. `https://github.com/user/repo.git`\n\n"
             "Wyślij /cancel aby anulować.",
             parse_mode="Markdown",
         )
-        return State.ENTER_NAME
+        return State.ENTER_URL
+
+    if action == "worktree":
+        if project:
+            await query.edit_message_text(
+                f"📝 *Podaj nazwę worktree:*\n\n"
+                f"Utworzę: `{project.name}-{{name}}`\n"
+                "Branch: `{name}`\n\n"
+                "Wyślij /cancel aby anulować.",
+                parse_mode="Markdown",
+            )
+            return State.ENTER_NAME
+        return await show_projects(update, context)
+
+    if action == "loop_init":
+        if project:
+            from .projects import _run_loop_init
+
+            success = _run_loop_init(project.path)
+            if success:
+                await query.edit_message_text(f"✅ Loop zainicjalizowany w {project.name}")
+            else:
+                await query.edit_message_text(f"❌ Loop init nie powiodlo sie w {project.name}")
+            # Refresh project data
+            refreshed = get_project(project.name)
+            if refreshed:
+                user_data["project"] = refreshed
+                return await show_project_menu(update, context, refreshed)
+        return await show_projects(update, context)
 
     if action == "plan":
         user_data["mode"] = "plan"
@@ -372,27 +394,57 @@ async def handle_cancel_queue(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 @authorized
 async def handle_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle new project name input."""
+    """Handle worktree name input."""
     assert update.message is not None
     assert update.message.text is not None
+    assert update.effective_chat is not None
     name = update.message.text.strip().lower()
 
     # Validate name
     if not name or not name.replace("-", "").replace("_", "").isalnum():
         await update.message.reply_text(
-            "Invalid name. Use only letters, numbers, dashes and underscores."
+            "Niepoprawna nazwa. Uzyj liter, cyfr, myslnikow i podkreslnikow."
         )
         return State.ENTER_NAME
 
-    success, message = create_worktree(name)
+    user_data = get_user_data(update.effective_chat.id)
+    project = user_data.get("project")
+
+    if not project:
+        await update.message.reply_text("❌ Brak wybranego projektu.")
+        return ConversationHandler.END
+
+    success, message = create_worktree(project.path, name)
 
     if success:
         await update.message.reply_text(f"✅ {message}")
-        # Refresh project list
         return await start(update, context)
     else:
         await update.message.reply_text(f"❌ {message}")
         return State.ENTER_NAME
+
+
+@authorized
+async def handle_clone_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle git clone URL input."""
+    assert update.message is not None
+    assert update.message.text is not None
+    url = update.message.text.strip()
+
+    if not url:
+        await update.message.reply_text("❌ Podaj URL repozytorium.")
+        return State.ENTER_URL
+
+    await update.message.reply_text("⏳ Klonuje repozytorium...")
+
+    success, message = clone_repo(url)
+
+    if success:
+        await update.message.reply_text(f"✅ {message}")
+        return await start(update, context)
+    else:
+        await update.message.reply_text(f"❌ {message}")
+        return State.ENTER_URL
 
 
 @authorized
@@ -905,6 +957,7 @@ def create_application() -> Application:
         states={
             State.SELECT_PROJECT: [
                 CallbackQueryHandler(project_selected, pattern=r"^project:"),
+                CallbackQueryHandler(handle_action, pattern=r"^action:"),
             ],
             State.PROJECT_MENU: [
                 CallbackQueryHandler(handle_action, pattern=r"^action:"),
@@ -914,6 +967,10 @@ def create_application() -> Application:
             State.ENTER_NAME: [
                 CommandHandler("cancel", cancel),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_name),
+            ],
+            State.ENTER_URL: [
+                CommandHandler("cancel", cancel),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_clone_url),
             ],
             State.ENTER_IDEA: [
                 CommandHandler("cancel", cancel),

@@ -1,90 +1,80 @@
 """Project and worktree management."""
 
-import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from .config import MAIN_PROJECT, PROJECTS_ROOT
+from .config import PROJECTS_ROOT
 
 
 @dataclass
 class Project:
-    """Represents a git worktree project."""
+    """Represents a git project (standalone repo or worktree)."""
 
     name: str
     path: Path
     branch: str
-    is_main: bool
+    is_worktree: bool
+    parent_repo: str | None
     has_loop: bool
 
 
+def _parse_gitdir(git_path: Path) -> str | None:
+    """Parse a .git file to extract the parent repo name.
+
+    Worktrees have a .git *file* (not directory) containing:
+        gitdir: /path/to/parent/.git/worktrees/<name>
+
+    Returns the parent repo directory name, or None if not a worktree.
+    """
+    if not git_path.is_file():
+        return None
+    try:
+        content = git_path.read_text().strip()
+    except OSError:
+        return None
+    if not content.startswith("gitdir:"):
+        return None
+    gitdir = content.split("gitdir:", 1)[1].strip()
+    # gitdir looks like: /path/to/parent/.git/worktrees/<name>
+    # Find ".git" in path parts and take the parent directory name
+    parts = Path(gitdir).parts
+    for i, part in enumerate(parts):
+        if part == ".git" and i > 0:
+            return parts[i - 1]
+    return None
+
+
 def list_projects() -> list[Project]:
-    """List all git worktree projects under PROJECTS_ROOT."""
+    """List all git projects under PROJECTS_ROOT.
+
+    Scans all directories — detects standalone repos (.git directory)
+    and worktrees (.git file with gitdir: link).
+    """
     projects_root = Path(PROJECTS_ROOT)
-
-    if not MAIN_PROJECT:
-        # No main project configured — list all directories with .git
-        projects = []
-        if projects_root.exists():
-            for child in sorted(projects_root.iterdir()):
-                if child.is_dir() and (child / ".git").exists():
-                    branch = _get_branch(child)
-                    has_loop = (child / "loop" / "loop.sh").exists()
-                    projects.append(
-                        Project(
-                            name=child.name,
-                            path=child,
-                            branch=branch,
-                            is_main=False,
-                            has_loop=has_loop,
-                        )
-                    )
-        return projects
-
-    main_project_path = projects_root / MAIN_PROJECT
-
-    if not main_project_path.exists():
-        return []
-
-    result = subprocess.run(
-        ["git", "worktree", "list", "--porcelain"],
-        cwd=main_project_path,
-        capture_output=True,
-        text=True,
-    )
-
-    if result.returncode != 0:
+    if not projects_root.exists():
         return []
 
     projects = []
-    lines = result.stdout.strip().split("\n")
-    i = 0
-
-    while i < len(lines):
-        if not lines[i].startswith("worktree "):
-            i += 1
+    for child in sorted(projects_root.iterdir()):
+        if not child.is_dir():
+            continue
+        git_path = child / ".git"
+        if not git_path.exists():
             continue
 
-        path = Path(lines[i].replace("worktree ", ""))
-        branch = ""
-
-        i += 1
-        while i < len(lines) and lines[i] and not lines[i].startswith("worktree "):
-            if lines[i].startswith("branch "):
-                branch = lines[i].replace("branch refs/heads/", "")
-            i += 1
-
-        name = path.name
-        is_main = name == MAIN_PROJECT
-        has_loop = (path / "loop" / "loop.sh").exists()
+        parent_repo = _parse_gitdir(git_path)
+        is_worktree = parent_repo is not None
+        branch = _get_branch(child)
+        has_loop = (child / "loop" / "loop.sh").exists()
 
         projects.append(
             Project(
-                name=name,
-                path=path,
+                name=child.name,
+                path=child,
                 branch=branch,
-                is_main=is_main,
+                is_worktree=is_worktree,
+                parent_repo=parent_repo,
                 has_loop=has_loop,
             )
         )
@@ -111,24 +101,25 @@ def get_project(name: str) -> Project | None:
     return None
 
 
-def create_worktree(suffix: str) -> tuple[bool, str]:
-    """Create a new worktree with the given suffix.
+def create_worktree(project_path: Path, suffix: str) -> tuple[bool, str]:
+    """Create a new worktree from any repo.
 
-    Creates: {suffix}/ with branch {suffix}
+    Creates: PROJECTS_ROOT/{project_name}-{suffix}/ with branch {suffix}
 
     Returns:
         (success, message)
     """
     projects_root = Path(PROJECTS_ROOT)
-    main_project_path = projects_root / MAIN_PROJECT
-    new_path = projects_root / suffix
+    project_name = project_path.name
+    new_name = f"{project_name}-{suffix}"
+    new_path = projects_root / new_name
 
     if new_path.exists():
-        return False, f"Project {new_path.name} already exists"
+        return False, f"Projekt {new_name} already exists"
 
     result = subprocess.run(
         ["git", "worktree", "add", "-b", suffix, str(new_path)],
-        cwd=main_project_path,
+        cwd=project_path,
         capture_output=True,
         text=True,
     )
@@ -136,11 +127,64 @@ def create_worktree(suffix: str) -> tuple[bool, str]:
     if result.returncode != 0:
         return False, f"Failed to create worktree: {result.stderr}"
 
-    # Copy CLAUDE_template.md as CLAUDE.md in new worktree
-    template_path = main_project_path / "CLAUDE_template.md"
-    target_path = new_path / "CLAUDE.md"
+    return True, f"Utworzono {new_name} na branchu {suffix}"
 
-    if template_path.exists():
-        shutil.copy(template_path, target_path)
 
-    return True, f"Created {new_path.name} on branch {suffix}"
+def clone_repo(url: str) -> tuple[bool, str]:
+    """Clone a git repository into PROJECTS_ROOT.
+
+    Extracts repo name from URL, clones, then runs `loop init`.
+
+    Returns:
+        (success, message)
+    """
+    # Parse repo name from URL (last path segment, strip .git)
+    name = url.rstrip("/").rsplit("/", 1)[-1]
+    if name.endswith(".git"):
+        name = name[:-4]
+    if not name:
+        return False, "Could not parse repository name from URL"
+
+    projects_root = Path(PROJECTS_ROOT)
+    target = projects_root / name
+
+    if target.exists():
+        return False, f"Katalog {name} already exists"
+
+    result = subprocess.run(
+        ["git", "clone", url, str(target)],
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode != 0:
+        return False, f"git clone failed: {result.stderr}"
+
+    # Auto-run loop init in the cloned repo
+    loop_init = _run_loop_init(target)
+
+    msg = f"Sklonowano {name}"
+    if loop_init:
+        msg += ". Loop zainicjalizowany."
+    else:
+        msg += ". Loop init nie powiodlo sie — uruchom recznie `loop init`."
+
+    return True, msg
+
+
+def _run_loop_init(project_path: Path) -> bool:
+    """Run `loop init` in a project directory. Returns True on success."""
+    # Resolve loop binary — same logic as tasks.py
+    loop_cmd = "/opt/loop/scripts/loop.sh"
+    if not Path(loop_cmd).exists():
+        loop_cmd = str(project_path / "loop" / "loop.sh")
+        if not Path(loop_cmd).exists():
+            return False
+
+    result = subprocess.run(
+        ["bash", loop_cmd, "init"],
+        cwd=project_path,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
