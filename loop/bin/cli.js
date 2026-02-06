@@ -20,7 +20,7 @@ program
   .command('run')
   .description('Run the development loop')
   .option('-p, --plan', 'Run in plan mode')
-  .option('-i, --iterations <n>', 'Number of iterations', '5')
+  .option('-i, --iterations <n>', 'Number of iterations (default: 5 build, 3 plan)')
   .option('-I, --idea <text>', 'Initial idea for planning')
   .option('--interactive', 'Interactive mode (default: autonomous)')
   .option('-e, --no-early-exit', 'Disable early exit')

@@ -33,7 +33,7 @@ cleanup() {
 trap cleanup EXIT SIGINT SIGTERM SIGHUP
 
 # Default values
-ITERATIONS=5
+ITERATIONS=""
 AUTONOMOUS=false
 LOG_DIR="loop/logs"
 SCRIPT_NAME="build"
@@ -45,7 +45,7 @@ usage() {
     echo "Usage: $0 [-p] [-a] [-i iterations] [-e] [-I idea]"
     echo "  -p              Plan mode (default: build mode)"
     echo "  -a              Autonomous mode (default: interactive)"
-    echo "  -i iterations   Number of iterations in autonomous mode (default: 5)"
+    echo "  -i iterations   Number of iterations in autonomous mode (default: 5 build, 3 plan)"
     echo "  -e              Disable early exit (run all iterations)"
     echo "  -I, --idea      Write idea to docs/IDEA.md"
     echo "  -h              Show help"
@@ -166,6 +166,15 @@ while getopts "pai:ehI:" opt; do
         *) usage ;;
     esac
 done
+
+# Default iterations: 3 for plan, 5 for build
+if [[ -z "$ITERATIONS" ]]; then
+    if [[ "$SCRIPT_NAME" == "plan" ]]; then
+        ITERATIONS=3
+    else
+        ITERATIONS=5
+    fi
+fi
 
 # Select prompt file — use project-local symlink if available, else built-in
 if [[ -f "loop/PROMPT_${SCRIPT_NAME}.md" ]]; then

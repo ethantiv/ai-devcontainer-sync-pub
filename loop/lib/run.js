@@ -17,8 +17,9 @@ function run(opts) {
   // Autonomous by default (unless --interactive)
   if (!opts.interactive) args.push('-a');
 
-  // Iterations
-  args.push('-i', opts.iterations);
+  // Iterations (default: 3 for plan, 5 for build)
+  const iterations = opts.iterations || (opts.plan ? '3' : '5');
+  args.push('-i', iterations);
 
   // Idea
   if (opts.idea) args.push('-I', opts.idea);
