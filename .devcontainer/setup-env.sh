@@ -128,6 +128,31 @@ setup_github_token() {
 }
 
 # =============================================================================
+# LOOP CLI INSTALLATION
+# =============================================================================
+
+install_loop_cli() {
+    echo "📦 Installing loop CLI..."
+
+    local loop_dir="${WORKSPACE_FOLDER}/loop"
+
+    if [[ ! -d "$loop_dir" ]]; then
+        warn "loop/ directory not found in workspace"
+        return 0
+    fi
+
+    cd "$loop_dir" && npm install --omit=dev 2>/dev/null
+    chmod +x "$loop_dir/bin/cli.js" "$loop_dir/scripts/"*.sh
+    sudo ln -sf "$loop_dir/bin/cli.js" /usr/bin/loop
+
+    if command -v loop &>/dev/null; then
+        ok "loop CLI installed ($(loop --version 2>/dev/null))"
+    else
+        warn "Failed to install loop CLI"
+    fi
+}
+
+# =============================================================================
 # CLAUDE CONFIGURATION
 # =============================================================================
 
@@ -572,6 +597,7 @@ main() {
 
     setup_ssh_authentication
     setup_github_token
+    install_loop_cli
 
     # Optional config reset (set RESET_CLAUDE_CONFIG=true or RESET_GEMINI_CONFIG=true)
     reset_config_if_requested "RESET_CLAUDE_CONFIG" "$CLAUDE_DIR"

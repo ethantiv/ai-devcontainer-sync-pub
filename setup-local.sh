@@ -165,6 +165,31 @@ install_agent_browser() {
 }
 
 # =============================================================================
+# LOOP CLI INSTALLATION
+# =============================================================================
+
+install_loop() {
+    print_header "Loop CLI"
+
+    local loop_dir="$SCRIPT_DIR/loop"
+
+    if [[ ! -d "$loop_dir" ]]; then
+        warn "loop/ directory not found"
+        return 0
+    fi
+
+    cd "$loop_dir" && npm install --omit=dev 2>/dev/null
+    chmod +x "$loop_dir/bin/cli.js" "$loop_dir/scripts/"*.sh
+    sudo ln -sf "$loop_dir/bin/cli.js" /usr/local/bin/loop
+
+    if command -v loop &>/dev/null; then
+        ok "loop CLI installed"
+    else
+        warn "Failed to install loop CLI"
+    fi
+}
+
+# =============================================================================
 # CLAUDE CONFIGURATION
 # =============================================================================
 
@@ -397,6 +422,7 @@ main() {
     check_requirements
     install_claude_cli
     install_agent_browser
+    install_loop
     setup_claude_configuration
     install_all_plugins_and_skills
 }
