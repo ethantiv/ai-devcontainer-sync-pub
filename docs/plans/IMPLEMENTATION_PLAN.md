@@ -1,7 +1,7 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 0/16 (0%)
+**Progress:** 0/18 (0%)
 
 ## Goal
 
@@ -20,10 +20,11 @@ Phase 1: config.py + Project dataclass cleanup
 - **Status:** pending
 
 ### Phase 2: Rewrite projects.py Core Logic
-- [ ] Rewrite `list_projects()` to single-mode scan: iterate `PROJECTS_ROOT` dirs, detect `.git` (standalone) vs `.git` file (worktree link), parse parent repo for worktrees, check `has_loop`
-- [ ] Generalize `create_worktree(project_path, suffix)` to work from any repo (not just MAIN_PROJECT). Naming: `{project_name}-{suffix}`, branch: `{suffix}`. Remove `CLAUDE_template.md` copying
-- [ ] Add `clone_repo(url)` function: parse repo name from URL, `git clone`, run `loop init`, return (success, message)
-- [ ] Remove all `MAIN_PROJECT` imports and references from `projects.py`
+- [ ] Add `_parse_gitdir(git_path)` helper: read `.git` file content, parse `gitdir:` path, extract parent repo name. Return `str | None`
+- [ ] Rewrite `list_projects()` to single-mode scan: iterate `PROJECTS_ROOT` dirs, use `_parse_gitdir()` to detect `.git` directory (standalone, `is_worktree=False`) vs `.git` file (worktree link, `is_worktree=True`, `parent_repo` from gitdir), check `has_loop`
+- [ ] Generalize `create_worktree(project_path, suffix)` to work from any repo (not just MAIN_PROJECT). Naming: `{project_name}-{suffix}`, branch: `{suffix}`. Remove `CLAUDE_template.md` copying (lines 139-144). Remove `shutil` import
+- [ ] Add `clone_repo(url)` function: parse repo name from URL (last path segment, strip `.git`), `git clone`, run `loop init`, return (success, message)
+- [ ] Remove all `MAIN_PROJECT` imports and references from `projects.py` (line 8 import, lines 26/45/79/123 usage)
 - **Status:** pending
 
 ### Phase 3: Update bot.py UI and Handlers
@@ -37,8 +38,9 @@ Phase 1: config.py + Project dataclass cleanup
 - **Status:** pending
 
 ### Phase 4: Documentation and Cleanup
-- [ ] Remove `MAIN_PROJECT` from env vars table in `CLAUDE.md`
-- [ ] Remove `MAIN_PROJECT` from env vars section in `README.md`
+- [ ] Remove `MAIN_PROJECT` from env vars table in `CLAUDE.md` (line 47)
+- [ ] Remove `MAIN_PROJECT` from env vars section in `README.md` (line 88)
+- [ ] Update `COMMANDS.md`: replace "Nowy projekt - Create new git worktree (main repo only)" with "Nowy worktree" for all projects, add clone flow documentation, add icon legend (📁 🔀 🔄)
 - **Status:** pending
 
 ## Key Questions
@@ -84,10 +86,23 @@ Phase 1: config.py + Project dataclass cleanup
 | `entrypoint.sh` | Does NOT pass MAIN_PROJECT to bot (line 143) | No changes needed |
 
 **Worktree detection approach:**
-- Standalone repo: directory contains `.git/` (directory)
-- Worktree: directory contains `.git` (file) with content like `gitdir: /path/to/parent/.git/worktrees/name`
-- Parent can be extracted from the gitdir path
-- `git worktree list --porcelain` can be run on any repo (not just "main")
+- Standalone repo: directory contains `.git/` (directory) → `is_worktree=False`, `parent_repo=None`
+- Worktree: directory contains `.git` (file) with content like `gitdir: /path/to/parent/.git/worktrees/name` → `is_worktree=True`, `parent_repo` extracted from path
+- Parent extracted by finding `.git` in gitdir path parts and taking the directory name before it
+- No need for `git worktree list --porcelain` — simple file parsing is sufficient and faster
+
+**MAIN_PROJECT references (complete list from codebase scan):**
+- `config.py:19` — definition
+- `projects.py:8` — import
+- `projects.py:26,45,79,123` — usage in list_projects() and create_worktree()
+- `CLAUDE.md:47` — env vars table row
+- `README.md:88` — env vars table row
+- `COMMANDS.md:37` — "(main repo only)" text
+- `docker/.env` — NOT present
+- `.devcontainer/setup-env.sh` — NOT present
+- `entrypoint.sh:143` — NOT passed to bot
+- `tasks.py` — NOT referenced
+- `bot.py` — NOT imported directly (uses `is_main` field from Project dataclass)
 
 **Icon mapping (from IDEA.md):**
 - 📁 Standalone repo (replaces current 📂 for main)
@@ -109,12 +124,18 @@ Phase 1: config.py + Project dataclass cleanup
 
 | Issue | Resolution |
 |-------|------------|
-| `entrypoint.sh` listed in IDEA.md as needing changes | Confirmed it does NOT pass MAIN_PROJECT to bot. No entrypoint changes needed |
-| `DEFAULT_ITERATIONS` usage unclear | Confirmed unused in bot.py — bot always shows iteration selection UI. Safe to remove |
-| `config.py` also imported by `projects.py` | After removing MAIN_PROJECT, update all imports in projects.py |
+| `entrypoint.sh` listed in IDEA.md as needing changes | Confirmed it does NOT pass MAIN_PROJECT to bot (line 143). No entrypoint changes needed |
+| `DEFAULT_ITERATIONS` usage unclear | Confirmed unused — never imported anywhere in codebase. Bot always shows iteration selection UI. Safe to remove |
+| `config.py` also imported by `projects.py` | After removing MAIN_PROJECT, update import on line 8: `from .config import PROJECTS_ROOT` (remove MAIN_PROJECT) |
+| `COMMANDS.md` not in IDEA.md file list | Line 37 says "(main repo only)" — must be updated to match unified menu |
+| No `.git` file parser exists in codebase | Need to add `_parse_gitdir()` helper to projects.py for worktree detection |
+| `show_project_menu()` missing `loop init` button | Line 225 only shows warning text, IDEA.md requires actionable button to run `loop init` |
+| `help_command()` text | Already generic, no MAIN_PROJECT references — no changes needed |
+| `bot.py` has `(main)` label in project menu | Line 167: `text = f"📁 *{project.name}* (main)\n"` — remove after unifying menu |
 
 ### Resources
 
 - Source: `loop/telegram_bot/` (bot.py, projects.py, config.py, tasks.py, run.py)
 - Design: `docs/IDEA.md`
 - Data flows: Clone repo flow and Create worktree flow documented in IDEA.md
+- Commands reference: `loop/telegram_bot/COMMANDS.md`
