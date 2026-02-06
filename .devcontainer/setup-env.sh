@@ -125,7 +125,30 @@ setup_github_token() {
     echo "alias cc='clear && claude'" >> ~/.bashrc
     echo "alias ccc='clear && claude -c'" >> ~/.bashrc
     echo "alias ccr='clear && claude -r'" >> ~/.bashrc
-    echo 'loop() { "$(git rev-parse --show-toplevel)/loop/loop.sh" "$@"; }' >> ~/.bashrc
+}
+
+# =============================================================================
+# GLOBAL NPM TOOLS
+# =============================================================================
+
+install_global_npm_tools() {
+    echo "📦 Installing global npm tools..."
+
+    if [[ -z "${GH_TOKEN}" ]]; then
+        warn "GH_TOKEN not set, skipping private npm packages"
+        return 0
+    fi
+
+    if command -v loop &>/dev/null; then
+        ok "dev-loop already installed"
+        return 0
+    fi
+
+    if sudo npm install -g "git+https://${GH_TOKEN}@github.com/ethantiv/playground.git" 2>/dev/null; then
+        ok "Installed: dev-loop (loop CLI)"
+    else
+        warn "Failed to install dev-loop"
+    fi
 }
 
 # =============================================================================
@@ -573,6 +596,7 @@ main() {
 
     setup_ssh_authentication
     setup_github_token
+    install_global_npm_tools
 
     # Optional config reset (set RESET_CLAUDE_CONFIG=true or RESET_GEMINI_CONFIG=true)
     reset_config_if_requested "RESET_CLAUDE_CONFIG" "$CLAUDE_DIR"
