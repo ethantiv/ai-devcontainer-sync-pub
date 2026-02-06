@@ -7,6 +7,12 @@
 LOOP_SCRIPTS_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 LOOP_ROOT="$(dirname "$LOOP_SCRIPTS_DIR")"
 
+# Resolve claude binary (prefer ~/.claude/bin, fall back to PATH)
+CLAUDE_CMD="${HOME}/.claude/bin/claude"
+[[ -x "$CLAUDE_CMD" ]] || CLAUDE_CMD="$(command -v claude 2>/dev/null || true)"
+[[ -x "$CLAUDE_CMD" ]] || { echo "[ERROR] Claude CLI not found" >&2; exit 1; }
+claude() { "$CLAUDE_CMD" "$@"; }
+
 # Tracking variables for notifications
 START_TIME=$(date +%s)
 COMPLETED_ITERATIONS=0

@@ -89,6 +89,7 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && mkdir -p ${HOME}/.cache/ms-playwright /tmp/playwright-output \
     && cp -r /opt/playwright/* ${HOME}/.cache/ms-playwright/ \
     && chown -R ${USERNAME}:${USERNAME} ${HOME} /tmp/playwright-output \
+    && echo 'export PATH="$HOME/.claude/bin:$HOME/.local/bin:$HOME/.uv/bin:$PATH"' >> ${HOME}/.bashrc \
     && echo "alias cc='clear && claude'" >> ${HOME}/.bashrc \
     && echo "set-option -g default-shell /bin/bash" >> ${HOME}/.tmux.conf
 
