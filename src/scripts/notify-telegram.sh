@@ -35,10 +35,10 @@ format_duration() {
 
 # Map status to emoji and text
 case $STATUS in
-    success) STATUS_EMOJI="✅"; STATUS_TEXT="Sukces" ;;
-    completed) STATUS_EMOJI="✔️"; STATUS_TEXT="Ukończono iteracje" ;;
-    interrupted) STATUS_EMOJI="⚠️"; STATUS_TEXT="Przerwane" ;;
-    *) STATUS_EMOJI="❓"; STATUS_TEXT="Nieznany" ;;
+    success) STATUS_EMOJI="✅"; STATUS_TEXT="Success" ;;
+    completed) STATUS_EMOJI="✔️"; STATUS_TEXT="Iterations completed" ;;
+    interrupted) STATUS_EMOJI="⚠️"; STATUS_TEXT="Interrupted" ;;
+    *) STATUS_EMOJI="❓"; STATUS_TEXT="Unknown" ;;
 esac
 
 # Map mode to icon
@@ -52,13 +52,13 @@ esac
 PROJECT=$(basename "$(pwd)")
 
 # Build message
-MESSAGE="${MODE_ICON} *Zadanie zakończone*
+MESSAGE="${MODE_ICON} *Task completed*
 
-Tryb: ${MODE}
+Mode: ${MODE}
 Status: ${STATUS_EMOJI} ${STATUS_TEXT}
-Iteracje: ${ITERATIONS}/${TOTAL}
-Czas: $(format_duration "$DURATION")
-Projekt: ${PROJECT}"
+Iterations: ${ITERATIONS}/${TOTAL}
+Time: $(format_duration "$DURATION")
+Project: ${PROJECT}"
 
 # Send to Telegram
 curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \

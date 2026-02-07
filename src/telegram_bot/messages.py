@@ -1,0 +1,230 @@
+"""Centralized user-facing string constants for the Telegram bot.
+
+All translatable strings live here. Import by name in bot.py, tasks.py, projects.py.
+Error codes for BrainstormManager are also defined here to decouple
+error detection from display language.
+"""
+
+# --- Error codes for BrainstormManager (used by _is_brainstorm_error) ---
+
+ERR_SESSION_ACTIVE = "session_active"
+ERR_START_FAILED = "start_failed"
+ERR_TIMEOUT = "timeout"
+ERR_NO_SESSION = "no_session"
+ERR_NOT_READY = "not_ready"
+ERR_NO_RESULT = "no_result"
+ERR_CLAUDE_ERROR = "claude_error"
+
+BRAINSTORM_ERROR_CODES = frozenset({
+    ERR_SESSION_ACTIVE,
+    ERR_START_FAILED,
+    ERR_TIMEOUT,
+    ERR_NO_SESSION,
+    ERR_NOT_READY,
+    ERR_NO_RESULT,
+    ERR_CLAUDE_ERROR,
+})
+
+# --- bot.py strings ---
+
+MSG_UNAUTHORIZED = "Unauthorized"
+MSG_NO_PROJECTS = "No projects found. Check PROJECTS_ROOT configuration."
+MSG_PROJECT_NOT_FOUND = "Project not found"
+MSG_AVAILABLE_PROJECTS = "*Available projects:*"
+MSG_CLONE_REPO_BTN = "\u2193 Clone repo"
+MSG_STATUS_RUNNING = "\u25c9 Running"
+MSG_STATUS_FREE = "\u25cb Free"
+MSG_IN_QUEUE = "{count} in queue"
+MSG_ACTIVE_BRAINSTORM = "\n~ Active brainstorming session"
+MSG_RESUME_SESSION_BTN = "\u21ba Resume session"
+MSG_ATTACH_BTN = "\u25b6 Attach"
+MSG_STATUS_BTN = "\u25ce Status"
+MSG_QUEUE_BTN = "\u2261 Queue ({count})"
+MSG_PLAN_BTN = "\u25c7 Plan"
+MSG_BUILD_BTN = "\u25a0 Build"
+MSG_BRAINSTORM_BTN = "~ Brainstorm"
+MSG_BACK_BTN = "\u2b05\ufe0f Back"
+MSG_NEW_WORKTREE_BTN = "\u21b3 New worktree"
+MSG_LOOP_INIT_BTN = "\u2699 Loop init"
+MSG_LOOP_NOT_INITIALIZED = "\n\n! Loop not initialized (loop/loop.sh not found)"
+MSG_ITERATION_LABEL = "Iteration"
+
+# Clone flow
+MSG_ENTER_REPO_URL = (
+    "*Enter repository URL:*\n\n"
+    "E.g. `https://github.com/user/repo.git`\n\n"
+    "Send /cancel to cancel."
+)
+MSG_ENTER_REPO_URL_EMPTY = "\u2717 Enter repository URL."
+MSG_CLONING_REPO = "\u2026 Cloning repository..."
+
+# Worktree flow
+MSG_ENTER_WORKTREE_NAME = (
+    "*Enter worktree name:*\n\n"
+    "Will create: `{project}-{{name}}`\n"
+    "Branch: `{{name}}`\n\n"
+    "Send /cancel to cancel."
+)
+MSG_INVALID_NAME = "Invalid name. Use letters, digits, hyphens and underscores."
+MSG_NO_PROJECT_SELECTED = "\u2717 No project selected."
+
+# Loop init
+MSG_LOOP_INIT_OK = "\u2713 Loop initialized in {name}"
+MSG_LOOP_INIT_FAIL = "\u2717 Loop init failed in {name}"
+
+# Plan flow
+MSG_PLAN_ENTER_IDEA = (
+    "*Plan: Describe idea*\n\n"
+    "Enter a feature description or send /skip to skip.\n"
+    "Send /cancel to cancel."
+)
+
+# Attach
+MSG_ATTACH_SESSION = "\u25b6 *Attach to session:*\n\n`tmux attach -t {session}`"
+
+# Brainstorm flow
+MSG_BRAINSTORM_HEADER = (
+    "~ *Brainstorming*\n\n"
+    "Project: `{project}`\n\n"
+    "Describe a topic/idea to discuss:\n\n"
+    "Send /cancel to cancel."
+)
+MSG_BRAINSTORM_ENTER_TOPIC = "\u2717 Enter a brainstorming topic."
+MSG_BRAINSTORM_NO_SESSION = "\u2717 No active brainstorming session for this project."
+MSG_BRAINSTORM_RESUME = (
+    "~ *Resuming brainstorming session*\n\n"
+    "Project: `{project}`\n"
+    "Started: {time}\n\n"
+    "_Continue the discussion. Use /done to save, /cancel to cancel._"
+)
+MSG_BRAINSTORM_THINKING = "~ *Brainstorming*\n\nProject: `{project}`\n_{status}_"
+MSG_BRAINSTORM_STARTING = "Starting Claude..."
+MSG_BRAINSTORM_CLAUDE_THINKING = "Claude thinking..."
+MSG_BRAINSTORM_REPLY_HINT = (
+    "_Reply to continue. Use /done to save, /cancel to cancel._"
+)
+MSG_BRAINSTORM_REPLY_HINT_LONG = (
+    "_Reply to continue. Use /done or /save to save to ROADMAP.md, "
+    "or /cancel to cancel._"
+)
+MSG_BRAINSTORM_SAVING = "\u2026 _Saving IDEA..._"
+MSG_BRAINSTORM_RUN_PLAN_BTN = "\u25c7 Run Plan"
+MSG_BRAINSTORM_END_BTN = "\u00b7 Finish"
+MSG_BRAINSTORM_WHAT_NEXT = "\u2713 *{message}*\n\nWhat would you like to do next?"
+MSG_BRAINSTORM_STARTING_PLAN = "\u25b6 *Starting Plan for {project}...*"
+MSG_BRAINSTORM_SESSION_ENDED = "\u2713 Brainstorming session ended."
+MSG_BRAINSTORM_CANCELLED = "\u2717 Brainstorming cancelled."
+MSG_BRAINSTORM_NO_ACTIVE = "No active brainstorming session."
+
+# Iterations
+MSG_CUSTOM_AMOUNT_BTN = "Custom amount..."
+MSG_CANCEL_BTN = "\u2717 Cancel"
+MSG_SELECT_ITERATIONS = "# *Select number of iterations:*\n\nProject: `{project}`\nMode: {mode}"
+MSG_ENTER_ITERATIONS = (
+    "# *Enter number of iterations:*\n\n"
+    "Send /cancel to cancel."
+)
+
+# Task started / queued
+MSG_TASK_STARTED = "{icon} *Task started*\n\n"
+MSG_TASK_QUEUED = "\u2261 *{message}*\n\n"
+MSG_TASK_ERROR = "\u2717 *Error*\n\n{message}"
+MSG_PROJECT_LABEL = "Project: `{project}`\n"
+MSG_MODE_LABEL = "Mode: {mode}\n"
+MSG_ITERATIONS_LABEL = "Iterations: {iterations}\n"
+MSG_IDEA_LABEL = "Idea: {idea}\n"
+MSG_SESSION_LABEL = "\nSession: `loop-{project}`"
+MSG_CANCELLED = "Cancelled."
+
+# Queue
+MSG_QUEUE_TITLE = "\u2261 *Queue for {project}*\n\n"
+MSG_QUEUE_EMPTY = "Queue is empty."
+MSG_CANCEL_QUEUE_ITEM = "\u2717 Cancel #{num}"
+MSG_REMOVED_FROM_QUEUE = "Removed from queue"
+MSG_TASK_NOT_FOUND = "Task not found"
+
+# Status
+MSG_STATUS_TITLE = "\u25ce *Status*\n\nNo active tasks."
+MSG_ACTIVE_TASKS_TITLE = "\u25ce *Active tasks:*\n\n"
+
+# Completion summary
+MSG_COMPLETION_TITLE = "{icon} *{project}* \u2014 {mode} completed\n\n"
+MSG_COMPLETION_ITERATIONS = "Iterations: {iterations}\n"
+MSG_COMPLETION_TIME = "Time: {duration}\n"
+MSG_COMPLETION_CHANGES = (
+    "\n\u0394 *Changes:*\n"
+    "  Files: {files}\n"
+    "  Lines: +{ins} / -{dels}\n"
+)
+MSG_COMPLETION_COMMITS = "\n\u2192 *Commits:*\n"
+MSG_COMPLETION_PLAN = "\n\u25c7 *Plan:* {done}/{total} ({pct}%)\n  {bar}\n"
+MSG_DIFF_SUMMARY_BTN = "\u0394 Change summary"
+MSG_PROJECT_BTN = "\u25b8 Project"
+MSG_STARTED_FROM_QUEUE = (
+    "\u25b6 *Started from queue:*\n"
+    "{icon} {project} - {mode} \u2022 {iterations} iterations"
+)
+
+# Stale progress
+MSG_STALE_PROGRESS = "! *{project}* \u2014 no progress for 5 min"
+
+# Diff
+MSG_DIFF_TITLE = "\u0394 *Changes in {project}:*\n\n```\n{diff}\n```"
+MSG_NO_DATA = "No data"
+MSG_TRUNCATED = "\n... (truncated)"
+
+# Help
+MSG_HELP = (
+    "How does the bot work?\n"
+    "\n"
+    "1. Select a project from the list (/start)\n"
+    "2. Choose action: Plan, Build, or view queue\n"
+    "3. Enter task description (optional in Plan mode)\n"
+    "4. Select number of iterations\n"
+    "5. Bot will run Claude in background \u2014 track progress via /status\n"
+    "\n"
+    "You can also start a brainstorming session with /brainstorming.\n"
+    "\n"
+    "Commands:\n"
+    "\n"
+    "/start \u2014 Show project list and select a project\n"
+    "/status \u2014 Show active tasks and their progress\n"
+    "/brainstorming <topic> \u2014 Start brainstorming session with Claude\n"
+    "/cancel \u2014 Cancel current operation\n"
+    "/skip \u2014 Skip task description (Plan mode)\n"
+    "/done \u2014 Finish brainstorming and save result\n"
+    "/save \u2014 Alias for /done"
+)
+
+MSG_BRAINSTORM_CMD_USAGE = (
+    "\u2717 Select a project first with /projects"
+)
+MSG_BRAINSTORM_CMD_PROMPT_REQUIRED = (
+    "\u2717 Enter a brainstorming topic:\n`/brainstorming <idea description>`"
+)
+
+# --- tasks.py strings ---
+
+MSG_QUEUE_FULL = "Queue full ({max_size} tasks)"
+MSG_QUEUED_AT = "Queued #{position}"
+MSG_CLAUDE_ENDED_NO_RESULT = "Claude ended without result:\n{tail}"
+MSG_CLAUDE_ENDED_NO_RESPONSE = "Claude ended without response"
+MSG_TIMEOUT_WAITING = "Timeout waiting for Claude response"
+MSG_SESSION_ALREADY_ACTIVE = "Brainstorming session already active. Use /done or /cancel."
+MSG_FAILED_TO_START_CLAUDE = "Failed to start Claude"
+MSG_NO_ACTIVE_BRAINSTORM = "No active brainstorming session. Use /brainstorming <prompt>."
+MSG_SESSION_NOT_READY = "Brainstorming session is not ready."
+MSG_IDEA_SAVED = "IDEA saved to {path}"
+MSG_SUMMARY_PROMPT = (
+    "Summarize our brainstorming as an IDEA specification. "
+    "Format: '# User Idea\\n\\n[project description]'. "
+    "Write only the IDEA content, no extra text."
+)
+
+# --- projects.py strings ---
+
+MSG_WORKTREE_CREATED = "Created {name} on branch {suffix}"
+MSG_DIR_ALREADY_EXISTS = "{name} already exists"
+MSG_CLONED = "Cloned {name}"
+MSG_LOOP_INITIALIZED = "Loop initialized."
+MSG_LOOP_INIT_FAILED = "Loop init failed \u2014 run `loop init` manually."

@@ -5,6 +5,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import PROJECTS_ROOT
+from .messages import (
+    MSG_CLONED,
+    MSG_DIR_ALREADY_EXISTS,
+    MSG_LOOP_INIT_FAILED,
+    MSG_LOOP_INITIALIZED,
+    MSG_WORKTREE_CREATED,
+)
 
 
 @dataclass
@@ -115,7 +122,7 @@ def create_worktree(project_path: Path, suffix: str) -> tuple[bool, str]:
     new_path = projects_root / new_name
 
     if new_path.exists():
-        return False, f"Projekt {new_name} already exists"
+        return False, MSG_DIR_ALREADY_EXISTS.format(name=new_name)
 
     result = subprocess.run(
         ["git", "worktree", "add", "-b", suffix, str(new_path)],
@@ -127,7 +134,7 @@ def create_worktree(project_path: Path, suffix: str) -> tuple[bool, str]:
     if result.returncode != 0:
         return False, f"Failed to create worktree: {result.stderr}"
 
-    return True, f"Utworzono {new_name} na branchu {suffix}"
+    return True, MSG_WORKTREE_CREATED.format(name=new_name, suffix=suffix)
 
 
 def clone_repo(url: str) -> tuple[bool, str]:
@@ -149,7 +156,7 @@ def clone_repo(url: str) -> tuple[bool, str]:
     target = projects_root / name
 
     if target.exists():
-        return False, f"Katalog {name} already exists"
+        return False, MSG_DIR_ALREADY_EXISTS.format(name=name)
 
     result = subprocess.run(
         ["git", "clone", url, str(target)],
@@ -163,11 +170,11 @@ def clone_repo(url: str) -> tuple[bool, str]:
     # Auto-run loop init in the cloned repo
     loop_init = _run_loop_init(target)
 
-    msg = f"Sklonowano {name}"
+    msg = MSG_CLONED.format(name=name)
     if loop_init:
-        msg += ". Loop zainicjalizowany."
+        msg += ". " + MSG_LOOP_INITIALIZED
     else:
-        msg += ". Loop init nie powiodlo sie — uruchom recznie `loop init`."
+        msg += ". " + MSG_LOOP_INIT_FAILED
 
     return True, msg
 

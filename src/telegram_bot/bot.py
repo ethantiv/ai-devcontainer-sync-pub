@@ -19,6 +19,92 @@ from telegram.ext import (
 
 from .config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from .git_utils import get_diff_stats, get_plan_progress, get_recent_commits
+from .messages import (
+    BRAINSTORM_ERROR_CODES,
+    MSG_ACTIVE_BRAINSTORM,
+    MSG_ACTIVE_TASKS_TITLE,
+    MSG_ATTACH_BTN,
+    MSG_ATTACH_SESSION,
+    MSG_AVAILABLE_PROJECTS,
+    MSG_BACK_BTN,
+    MSG_BRAINSTORM_BTN,
+    MSG_BRAINSTORM_CANCELLED,
+    MSG_BRAINSTORM_CMD_PROMPT_REQUIRED,
+    MSG_BRAINSTORM_CMD_USAGE,
+    MSG_BRAINSTORM_CLAUDE_THINKING,
+    MSG_BRAINSTORM_END_BTN,
+    MSG_BRAINSTORM_ENTER_TOPIC,
+    MSG_BRAINSTORM_HEADER,
+    MSG_BRAINSTORM_NO_ACTIVE,
+    MSG_BRAINSTORM_NO_SESSION,
+    MSG_BRAINSTORM_REPLY_HINT,
+    MSG_BRAINSTORM_REPLY_HINT_LONG,
+    MSG_BRAINSTORM_RESUME,
+    MSG_BRAINSTORM_RUN_PLAN_BTN,
+    MSG_BRAINSTORM_SAVING,
+    MSG_BRAINSTORM_SESSION_ENDED,
+    MSG_BRAINSTORM_STARTING,
+    MSG_BRAINSTORM_STARTING_PLAN,
+    MSG_BRAINSTORM_THINKING,
+    MSG_BRAINSTORM_WHAT_NEXT,
+    MSG_BUILD_BTN,
+    MSG_CANCEL_BTN,
+    MSG_CANCEL_QUEUE_ITEM,
+    MSG_CANCELLED,
+    MSG_CLONE_REPO_BTN,
+    MSG_CLONING_REPO,
+    MSG_COMPLETION_CHANGES,
+    MSG_COMPLETION_COMMITS,
+    MSG_COMPLETION_ITERATIONS,
+    MSG_COMPLETION_PLAN,
+    MSG_COMPLETION_TIME,
+    MSG_COMPLETION_TITLE,
+    MSG_CUSTOM_AMOUNT_BTN,
+    MSG_DIFF_SUMMARY_BTN,
+    MSG_DIFF_TITLE,
+    MSG_ENTER_ITERATIONS,
+    MSG_ENTER_REPO_URL,
+    MSG_ENTER_REPO_URL_EMPTY,
+    MSG_ENTER_WORKTREE_NAME,
+    MSG_HELP,
+    MSG_IDEA_LABEL,
+    MSG_IN_QUEUE,
+    MSG_INVALID_NAME,
+    MSG_ITERATION_LABEL,
+    MSG_ITERATIONS_LABEL,
+    MSG_LOOP_INIT_BTN,
+    MSG_LOOP_INIT_FAIL,
+    MSG_LOOP_INIT_OK,
+    MSG_LOOP_NOT_INITIALIZED,
+    MSG_MODE_LABEL,
+    MSG_NEW_WORKTREE_BTN,
+    MSG_NO_DATA,
+    MSG_NO_PROJECT_SELECTED,
+    MSG_NO_PROJECTS,
+    MSG_PLAN_BTN,
+    MSG_PLAN_ENTER_IDEA,
+    MSG_PROJECT_BTN,
+    MSG_PROJECT_LABEL,
+    MSG_PROJECT_NOT_FOUND,
+    MSG_QUEUE_BTN,
+    MSG_QUEUE_EMPTY,
+    MSG_QUEUE_TITLE,
+    MSG_REMOVED_FROM_QUEUE,
+    MSG_SELECT_ITERATIONS,
+    MSG_SESSION_LABEL,
+    MSG_STALE_PROGRESS,
+    MSG_STARTED_FROM_QUEUE,
+    MSG_STATUS_BTN,
+    MSG_STATUS_FREE,
+    MSG_STATUS_RUNNING,
+    MSG_STATUS_TITLE,
+    MSG_RESUME_SESSION_BTN,
+    MSG_TASK_ERROR,
+    MSG_TASK_NOT_FOUND,
+    MSG_TASK_STARTED,
+    MSG_TRUNCATED,
+    MSG_UNAUTHORIZED,
+)
 from .projects import clone_repo, create_worktree, get_project, list_projects
 from .tasks import Task, brainstorm_manager, task_manager
 
@@ -55,7 +141,7 @@ def authorized(func):
         if chat_id != TELEGRAM_CHAT_ID:
             message = update.effective_message
             if message:
-                await message.reply_text("Unauthorized")
+                await message.reply_text(MSG_UNAUTHORIZED)
             return ConversationHandler.END
         return await func(update, context)
 
@@ -70,7 +156,7 @@ def authorized_callback(func):
         assert update.callback_query is not None
         chat_id = update.effective_chat.id
         if chat_id != TELEGRAM_CHAT_ID:
-            await update.callback_query.answer("Unauthorized")
+            await update.callback_query.answer(MSG_UNAUTHORIZED)
             return ConversationHandler.END
         return await func(update, context)
 
@@ -95,10 +181,9 @@ async def reply_text(update: Update, text: str, reply_markup=None, parse_mode="M
         )
 
 
-def _is_brainstorm_error(status: str) -> bool:
-    """Check if a brainstorm status message indicates an error."""
-    error_markers = ("Sesja brainstorming już", "Nie udało", "Timeout", "Brak aktywnej", "nie jest gotowa")
-    return any(marker in status for marker in error_markers) or "error" in status.lower()
+def _is_brainstorm_error(error_code: str | None) -> bool:
+    """Check if a brainstorm result indicates an error via error code."""
+    return error_code is not None and error_code in BRAINSTORM_ERROR_CODES
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -107,7 +192,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     assert update.message is not None
     chat_id = update.effective_chat.id
     if chat_id != TELEGRAM_CHAT_ID:
-        await update.message.reply_text("Unauthorized")
+        await update.message.reply_text(MSG_UNAUTHORIZED)
         return ConversationHandler.END
 
     return await show_projects(update, context)
@@ -118,7 +203,7 @@ async def show_projects(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     projects = list_projects()
 
     if not projects:
-        await reply_text(update, "No projects found. Check PROJECTS_ROOT configuration.", parse_mode=None)
+        await reply_text(update, MSG_NO_PROJECTS, parse_mode=None)
         return ConversationHandler.END
 
     buttons = []
@@ -136,10 +221,10 @@ async def show_projects(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     # Arrange buttons in rows of 2
     keyboard = [buttons[i : i + 2] for i in range(0, len(buttons), 2)]
-    keyboard.append([InlineKeyboardButton("↓ Klonuj repo", callback_data="action:clone")])
+    keyboard.append([InlineKeyboardButton(MSG_CLONE_REPO_BTN, callback_data="action:clone")])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await reply_text(update, "*Dostępne projekty:*", reply_markup=reply_markup)
+    await reply_text(update, MSG_AVAILABLE_PROJECTS, reply_markup=reply_markup)
     return State.SELECT_PROJECT
 
 
@@ -155,7 +240,7 @@ async def project_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     project = get_project(project_name)
 
     if not project:
-        await query.edit_message_text("Project not found")
+        await query.edit_message_text(MSG_PROJECT_NOT_FOUND)
         return ConversationHandler.END
 
     user_data = get_user_data(update.effective_chat.id)
@@ -177,63 +262,63 @@ async def show_project_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     )
 
     icon = "↳" if project.is_worktree else "▸"
-    status = "◉ W toku" if task else "○ Wolny"
+    status = MSG_STATUS_RUNNING if task else MSG_STATUS_FREE
     text = f"{icon} *{project.name}*\n"
     text += f"Branch: `{project.branch}`\n"
     text += f"Status: {status}"
     if project.is_worktree and project.parent_repo:
         text += f"\nParent: `{project.parent_repo}`"
     if queue_count > 0:
-        text += f" ({queue_count} w kolejce)"
+        text += f" ({MSG_IN_QUEUE.format(count=queue_count)})"
     if has_brainstorm:
-        text += "\n~ Aktywna sesja brainstorming"
+        text += MSG_ACTIVE_BRAINSTORM
 
-    brainstorm_row = [InlineKeyboardButton("~ Brainstorm", callback_data="action:brainstorm")]
+    brainstorm_row = [InlineKeyboardButton(MSG_BRAINSTORM_BTN, callback_data="action:brainstorm")]
     if has_brainstorm:
-        brainstorm_row.append(InlineKeyboardButton("↺ Wznów sesję", callback_data="action:resume_brainstorm"))
+        brainstorm_row.append(InlineKeyboardButton(MSG_RESUME_SESSION_BTN, callback_data="action:resume_brainstorm"))
 
     if task:
         duration = task_manager.get_task_duration(task)
         current = task_manager.get_current_iteration(task) or "?"
-        text += f"\n\n■ {task.mode.title()} • Iteracja: {current}/{task.iterations} • {duration}"
+        text += f"\n\n■ {task.mode.title()} • {MSG_ITERATION_LABEL}: {current}/{task.iterations} • {duration}"
         row1 = [
-            InlineKeyboardButton("▶ Podłącz", callback_data="action:attach"),
-            InlineKeyboardButton("◎ Status", callback_data="action:status"),
+            InlineKeyboardButton(MSG_ATTACH_BTN, callback_data="action:attach"),
+            InlineKeyboardButton(MSG_STATUS_BTN, callback_data="action:status"),
         ]
         if queue_count > 0:
             row1.append(
-                InlineKeyboardButton(f"≡ Kolejka ({queue_count})", callback_data="action:queue")
+                InlineKeyboardButton(MSG_QUEUE_BTN.format(count=queue_count), callback_data="action:queue")
             )
         buttons = [
             row1,
             [
-                InlineKeyboardButton("◇ Plan", callback_data="action:plan"),
-                InlineKeyboardButton("■ Build", callback_data="action:build"),
+                InlineKeyboardButton(MSG_PLAN_BTN, callback_data="action:plan"),
+                InlineKeyboardButton(MSG_BUILD_BTN, callback_data="action:build"),
             ],
             brainstorm_row,
-            [InlineKeyboardButton("⬅️ Powrót", callback_data="action:back")],
+            [InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")],
         ]
     elif project.has_loop:
         buttons = [
             [
-                InlineKeyboardButton("◇ Plan", callback_data="action:plan"),
-                InlineKeyboardButton("■ Build", callback_data="action:build"),
+                InlineKeyboardButton(MSG_PLAN_BTN, callback_data="action:plan"),
+                InlineKeyboardButton(MSG_BUILD_BTN, callback_data="action:build"),
             ],
             brainstorm_row,
             [
-                InlineKeyboardButton("↳ Nowy worktree", callback_data="action:worktree"),
-                InlineKeyboardButton("◎ Status", callback_data="action:status"),
+                InlineKeyboardButton(MSG_NEW_WORKTREE_BTN, callback_data="action:worktree"),
+                InlineKeyboardButton(MSG_STATUS_BTN, callback_data="action:status"),
             ],
-            [InlineKeyboardButton("⬅️ Powrót", callback_data="action:back")],
+            [InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")],
         ]
     else:
-        text += "\n\n! Loop not initialized (loop/loop.sh not found)"
+        text += MSG_LOOP_NOT_INITIALIZED
         buttons = [
             [
-                InlineKeyboardButton("⚙ Loop init", callback_data="action:loop_init"),
-                InlineKeyboardButton("↳ Nowy worktree", callback_data="action:worktree"),
+                InlineKeyboardButton(MSG_LOOP_INIT_BTN, callback_data="action:loop_init"),
+                InlineKeyboardButton(MSG_NEW_WORKTREE_BTN, callback_data="action:worktree"),
             ],
-            [InlineKeyboardButton("⬅️ Powrót", callback_data="action:back")],
+            [InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")],
         ]
 
     reply_markup = InlineKeyboardMarkup(buttons)
@@ -271,9 +356,7 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     if action == "clone":
         await query.edit_message_text(
-            "*Podaj URL repozytorium:*\n\n"
-            "Np. `https://github.com/user/repo.git`\n\n"
-            "Wyślij /cancel aby anulować.",
+            MSG_ENTER_REPO_URL,
             parse_mode="Markdown",
         )
         return State.ENTER_URL
@@ -281,10 +364,7 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     if action == "worktree":
         if project:
             await query.edit_message_text(
-                f"*Podaj nazwę worktree:*\n\n"
-                f"Utworzę: `{project.name}-{{name}}`\n"
-                "Branch: `{name}`\n\n"
-                "Wyślij /cancel aby anulować.",
+                MSG_ENTER_WORKTREE_NAME.format(project=project.name),
                 parse_mode="Markdown",
             )
             return State.ENTER_NAME
@@ -296,9 +376,9 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
             success = _run_loop_init(project.path)
             if success:
-                await query.edit_message_text(f"✓ Loop zainicjalizowany w {project.name}")
+                await query.edit_message_text(MSG_LOOP_INIT_OK.format(name=project.name))
             else:
-                await query.edit_message_text(f"✗ Loop init nie powiodlo sie w {project.name}")
+                await query.edit_message_text(MSG_LOOP_INIT_FAIL.format(name=project.name))
             # Refresh project data
             refreshed = get_project(project.name)
             if refreshed:
@@ -309,9 +389,7 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     if action == "plan":
         user_data["mode"] = "plan"
         await query.edit_message_text(
-            "*Plan: Opisz ideę*\n\n"
-            "Wpisz opis funkcjonalności lub wyślij /skip aby pominąć.\n"
-            "Wyślij /cancel aby anulować.",
+            MSG_PLAN_ENTER_IDEA,
             parse_mode="Markdown",
         )
         return State.ENTER_IDEA
@@ -325,7 +403,7 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         if project is not None:
             session = f"loop-{project.name}"
             await query.edit_message_text(
-                f"▶ *Podłącz do sesji:*\n\n`tmux attach -t {session}`",
+                MSG_ATTACH_SESSION.format(session=session),
                 parse_mode="Markdown",
             )
         return ConversationHandler.END
@@ -335,17 +413,14 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     if action == "brainstorm":
         await query.edit_message_text(
-            "~ *Brainstorming*\n\n"
-            f"Projekt: `{project.name}`\n\n"
-            "Opisz temat/pomysł do dyskusji:\n\n"
-            "Wyślij /cancel aby anulować.",
+            MSG_BRAINSTORM_HEADER.format(project=project.name),
             parse_mode="Markdown",
         )
         return State.ENTER_BRAINSTORM_PROMPT
 
     if action == "resume_brainstorm":
         if not project:
-            await query.edit_message_text("✗ Brak wybranego projektu.")
+            await query.edit_message_text(MSG_NO_PROJECT_SELECTED)
             return ConversationHandler.END
         # Find the session for this project
         session = next(
@@ -353,13 +428,13 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             None,
         )
         if not session:
-            await query.edit_message_text("✗ Brak aktywnej sesji brainstorming dla tego projektu.")
+            await query.edit_message_text(MSG_BRAINSTORM_NO_SESSION)
             return ConversationHandler.END
         await query.edit_message_text(
-            f"~ *Wznawiam sesję brainstorming*\n\n"
-            f"Projekt: `{project.name}`\n"
-            f"Rozpoczęta: {session.started_at.strftime('%H:%M %d.%m')}\n\n"
-            "_Kontynuuj dyskusję. Użyj /done aby zapisać, /cancel aby anulować._",
+            MSG_BRAINSTORM_RESUME.format(
+                project=project.name,
+                time=session.started_at.strftime('%H:%M %d.%m'),
+            ),
             parse_mode="Markdown",
         )
         return State.BRAINSTORMING
@@ -376,16 +451,16 @@ async def show_queue(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     project = user_data.get("project")
 
     if not project:
-        await query.edit_message_text("Brak wybranego projektu")
+        await query.edit_message_text(MSG_NO_PROJECT_SELECTED)
         return ConversationHandler.END
 
     queue = task_manager.get_queue(project.path)
 
     if not queue:
-        text = f"≡ *Kolejka dla {project.name}*\n\nKolejka jest pusta."
-        buttons = [[InlineKeyboardButton("⬅️ Powrót", callback_data="action:back_to_project")]]
+        text = MSG_QUEUE_TITLE.format(project=project.name) + MSG_QUEUE_EMPTY
+        buttons = [[InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back_to_project")]]
     else:
-        text = f"≡ *Kolejka dla {project.name}*\n\n"
+        text = MSG_QUEUE_TITLE.format(project=project.name)
         buttons = []
         for i, task in enumerate(queue, 1):
             mode_icon = "◇" if task.mode == "plan" else "■"
@@ -395,10 +470,10 @@ async def show_queue(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             text += "\n\n"
             buttons.append([
                 InlineKeyboardButton(
-                    f"✗ Anuluj #{i}", callback_data=f"cancel_queue:{task.id}"
+                    MSG_CANCEL_QUEUE_ITEM.format(num=i), callback_data=f"cancel_queue:{task.id}"
                 )
             ])
-        buttons.append([InlineKeyboardButton("⬅️ Powrót", callback_data="action:back_to_project")])
+        buttons.append([InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back_to_project")])
 
     reply_markup = InlineKeyboardMarkup(buttons)
     await query.edit_message_text(text, reply_markup=reply_markup, parse_mode="Markdown")
@@ -420,9 +495,9 @@ async def handle_cancel_queue(update: Update, context: ContextTypes.DEFAULT_TYPE
     project = user_data.get("project")
 
     if project and task_manager.cancel_queued_task(project.path, task_id):
-        await query.answer("Usunięto z kolejki", show_alert=True)
+        await query.answer(MSG_REMOVED_FROM_QUEUE, show_alert=True)
     else:
-        await query.answer("Nie znaleziono zadania", show_alert=True)
+        await query.answer(MSG_TASK_NOT_FOUND, show_alert=True)
 
     return await show_queue(update, context)
 
@@ -437,16 +512,14 @@ async def handle_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
     # Validate name
     if not name or not name.replace("-", "").replace("_", "").isalnum():
-        await update.message.reply_text(
-            "Niepoprawna nazwa. Uzyj liter, cyfr, myslnikow i podkreslnikow."
-        )
+        await update.message.reply_text(MSG_INVALID_NAME)
         return State.ENTER_NAME
 
     user_data = get_user_data(update.effective_chat.id)
     project = user_data.get("project")
 
     if not project:
-        await update.message.reply_text("✗ Brak wybranego projektu.")
+        await update.message.reply_text(MSG_NO_PROJECT_SELECTED)
         return ConversationHandler.END
 
     success, message = create_worktree(project.path, name)
@@ -467,10 +540,10 @@ async def handle_clone_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     url = update.message.text.strip()
 
     if not url:
-        await update.message.reply_text("✗ Podaj URL repozytorium.")
+        await update.message.reply_text(MSG_ENTER_REPO_URL_EMPTY)
         return State.ENTER_URL
 
-    await update.message.reply_text("… Klonuje repozytorium...")
+    await update.message.reply_text(MSG_CLONING_REPO)
 
     success, message = clone_repo(url)
 
@@ -502,39 +575,39 @@ async def handle_brainstorm_prompt(update: Update, context: ContextTypes.DEFAULT
 
     prompt = (update.message.text or "").strip()
     if not prompt:
-        await update.message.reply_text("✗ Podaj temat brainstorming.")
+        await update.message.reply_text(MSG_BRAINSTORM_ENTER_TOPIC)
         return State.ENTER_BRAINSTORM_PROMPT
 
     user_data = get_user_data(update.effective_chat.id)
     project = user_data.get("project")
 
     if not project:
-        await update.message.reply_text("✗ Brak wybranego projektu.")
+        await update.message.reply_text(MSG_NO_PROJECT_SELECTED)
         return ConversationHandler.END
 
     # Send "thinking" message that we'll update with progress
     thinking_msg = await update.message.reply_text(
-        f"~ *Brainstorming*\n\nProjekt: `{project.name}`\n_Uruchamiam Claude..._",
+        MSG_BRAINSTORM_THINKING.format(project=project.name, status=MSG_BRAINSTORM_STARTING),
         parse_mode="Markdown",
     )
 
-    last_status = "Uruchamiam Claude..."
+    last_status = MSG_BRAINSTORM_STARTING
 
-    async for status, is_final in brainstorm_manager.start(
+    async for error_code, status, is_final in brainstorm_manager.start(
         chat_id=update.effective_chat.id,
         project=project.name,
         project_path=project.path,
         prompt=prompt,
     ):
         if is_final:
-            if _is_brainstorm_error(status):
-                await thinking_msg.edit_text(f"✗ {status}", parse_mode="Markdown")
+            if _is_brainstorm_error(error_code):
+                await thinking_msg.edit_text(f"\u2717 {status}", parse_mode="Markdown")
                 return ConversationHandler.END
 
             await thinking_msg.delete()
             await update.message.reply_text(
-                f"› *Claude:*\n\n{status}\n\n"
-                "_Odpowiedz aby kontynuować. Użyj /done aby zapisać, /cancel aby anulować._",
+                f"\u203a *Claude:*\n\n{status}\n\n"
+                + MSG_BRAINSTORM_REPLY_HINT,
                 parse_mode="Markdown",
             )
             return State.BRAINSTORMING
@@ -542,7 +615,7 @@ async def handle_brainstorm_prompt(update: Update, context: ContextTypes.DEFAULT
         if status != last_status:
             last_status = status
             await thinking_msg.edit_text(
-                f"~ *Brainstorming*\n\nProjekt: `{project.name}`\n_{status}_",
+                MSG_BRAINSTORM_THINKING.format(project=project.name, status=status),
                 parse_mode="Markdown",
             )
 
@@ -568,8 +641,8 @@ async def show_iterations_menu(update: Update, context: ContextTypes.DEFAULT_TYP
             InlineKeyboardButton("5", callback_data="iter:5"),
             InlineKeyboardButton("10", callback_data="iter:10"),
         ],
-        [InlineKeyboardButton("Inna ilość...", callback_data="iter:custom")],
-        [InlineKeyboardButton("✗ Anuluj", callback_data="iter:cancel")],
+        [InlineKeyboardButton(MSG_CUSTOM_AMOUNT_BTN, callback_data="iter:custom")],
+        [InlineKeyboardButton(MSG_CANCEL_BTN, callback_data="iter:cancel")],
     ]
     reply_markup = InlineKeyboardMarkup(buttons)
 
@@ -578,7 +651,7 @@ async def show_iterations_menu(update: Update, context: ContextTypes.DEFAULT_TYP
     project = user_data.get("project")
 
     project_name = project.name if project else "unknown"
-    text = f"# *Wybierz liczbę iteracji:*\n\nProjekt: `{project_name}`\nTryb: {mode}"
+    text = MSG_SELECT_ITERATIONS.format(project=project_name, mode=mode)
 
     await reply_text(update, text, reply_markup=reply_markup)
     return State.SELECT_ITERATIONS
@@ -599,8 +672,7 @@ async def handle_iterations(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     if value == "custom":
         await query.edit_message_text(
-            "# *Wpisz liczbę iteracji:*\n\n"
-            "Wyślij /cancel aby anulować.",
+            MSG_ENTER_ITERATIONS,
             parse_mode="Markdown",
         )
         return State.SELECT_ITERATIONS
@@ -651,26 +723,26 @@ async def start_task(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     )
 
     mode_icon = "◇" if mode == "plan" else "■"
-    is_queued = "Dodano do kolejki" in message
+    is_queued = message.startswith("Queued")
 
     if success:
         if is_queued:
-            text = f"≡ *{message}*\n\n"
-            text += f"Projekt: `{project.name}`\n"
-            text += f"Tryb: {mode}\n"
-            text += f"Iteracje: {iterations}\n"
+            text = f"\u2261 *{message}*\n\n"
+            text += MSG_PROJECT_LABEL.format(project=project.name)
+            text += MSG_MODE_LABEL.format(mode=mode)
+            text += MSG_ITERATIONS_LABEL.format(iterations=iterations)
             if idea:
-                text += f"Idea: {idea[:100]}{'...' if len(idea) > 100 else ''}"
+                text += MSG_IDEA_LABEL.format(idea=f"{idea[:100]}{'...' if len(idea) > 100 else ''}")
         else:
-            text = f"{mode_icon} *Task uruchomiony*\n\n"
-            text += f"Projekt: `{project.name}`\n"
-            text += f"Tryb: {mode}\n"
-            text += f"Iteracje: {iterations}\n"
+            text = MSG_TASK_STARTED.format(icon=mode_icon)
+            text += MSG_PROJECT_LABEL.format(project=project.name)
+            text += MSG_MODE_LABEL.format(mode=mode)
+            text += MSG_ITERATIONS_LABEL.format(iterations=iterations)
             if idea:
-                text += f"Idea: {idea[:100]}{'...' if len(idea) > 100 else ''}\n"
-            text += f"\nSesja: `loop-{project.name}`"
+                text += MSG_IDEA_LABEL.format(idea=f"{idea[:100]}{'...' if len(idea) > 100 else ''}")
+            text += MSG_SESSION_LABEL.format(project=project.name)
     else:
-        text = f"✗ *Błąd*\n\n{message}"
+        text = MSG_TASK_ERROR.format(message=message)
 
     await reply_text(update, text)
     return ConversationHandler.END
@@ -681,18 +753,18 @@ async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     tasks = task_manager.list_active()
 
     if not tasks:
-        text = "◎ *Status*\n\nBrak aktywnych zadań."
+        text = MSG_STATUS_TITLE
     else:
-        text = "◎ *Aktywne zadania:*\n\n"
+        text = MSG_ACTIVE_TASKS_TITLE
         for task in tasks:
             mode_icon = "◇" if task.mode == "plan" else "■"
             duration = task_manager.get_task_duration(task)
             text += f"{mode_icon} *{task.project}*\n"
             current = task_manager.get_current_iteration(task) or "?"
-            text += f"   {task.mode.title()} • Iteracja: {current}/{task.iterations} • {duration}\n\n"
+            text += f"   {task.mode.title()} • {MSG_ITERATION_LABEL}: {current}/{task.iterations} • {duration}\n\n"
 
     reply_markup = InlineKeyboardMarkup(
-        [[InlineKeyboardButton("⬅️ Powrót", callback_data="action:back")]]
+        [[InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")]]
     )
     await reply_text(update, text, reply_markup=reply_markup)
     return State.PROJECT_MENU
@@ -708,9 +780,7 @@ async def start_brainstorming(update: Update, context: ContextTypes.DEFAULT_TYPE
     project = user_data.get("project")
 
     if not project:
-        await update.message.reply_text(
-            "✗ Najpierw wybierz projekt za pomocą /projects"
-        )
+        await update.message.reply_text(MSG_BRAINSTORM_CMD_USAGE)
         return ConversationHandler.END
 
     # Extract prompt from command
@@ -719,35 +789,34 @@ async def start_brainstorming(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if not prompt:
         await update.message.reply_text(
-            "✗ Podaj temat brainstorming:\n`/brainstorming <opis pomysłu>`",
+            MSG_BRAINSTORM_CMD_PROMPT_REQUIRED,
             parse_mode="Markdown",
         )
         return ConversationHandler.END
 
     # Send "thinking" message that we'll update with progress
     thinking_msg = await update.message.reply_text(
-        f"~ *Brainstorming*\n\nProjekt: `{project.name}`\n_Uruchamiam Claude..._",
+        MSG_BRAINSTORM_THINKING.format(project=project.name, status=MSG_BRAINSTORM_STARTING),
         parse_mode="Markdown",
     )
 
-    last_status = "Uruchamiam Claude..."
+    last_status = MSG_BRAINSTORM_STARTING
 
-    async for status, is_final in brainstorm_manager.start(
+    async for error_code, status, is_final in brainstorm_manager.start(
         chat_id=update.effective_chat.id,
         project=project.name,
         project_path=project.path,
         prompt=prompt,
     ):
         if is_final:
-            if _is_brainstorm_error(status):
-                await thinking_msg.edit_text(f"✗ {status}", parse_mode="Markdown")
+            if _is_brainstorm_error(error_code):
+                await thinking_msg.edit_text(f"\u2717 {status}", parse_mode="Markdown")
                 return ConversationHandler.END
 
             await thinking_msg.delete()
             await update.message.reply_text(
-                f"› *Claude:*\n\n{status}\n\n"
-                "_Odpowiedz, aby kontynuować. Użyj /done lub /save aby zapisać do ROADMAP.md, "
-                "lub /cancel aby anulować._",
+                f"\u203a *Claude:*\n\n{status}\n\n"
+                + MSG_BRAINSTORM_REPLY_HINT_LONG,
                 parse_mode="Markdown",
             )
             return State.BRAINSTORMING
@@ -755,7 +824,7 @@ async def start_brainstorming(update: Update, context: ContextTypes.DEFAULT_TYPE
         if status != last_status:
             last_status = status
             await thinking_msg.edit_text(
-                f"~ *Brainstorming*\n\nProjekt: `{project.name}`\n_{status}_",
+                MSG_BRAINSTORM_THINKING.format(project=project.name, status=status),
                 parse_mode="Markdown",
             )
 
@@ -772,28 +841,30 @@ async def handle_brainstorm_message(update: Update, context: ContextTypes.DEFAUL
     if not message:
         return State.BRAINSTORMING
 
-    thinking_msg = await update.message.reply_text("… _Claude myśli..._", parse_mode="Markdown")
-    last_status = "Claude myśli..."
+    thinking_msg = await update.message.reply_text(
+        f"\u2026 _{MSG_BRAINSTORM_CLAUDE_THINKING}_", parse_mode="Markdown"
+    )
+    last_status = MSG_BRAINSTORM_CLAUDE_THINKING
 
-    async for status, is_final in brainstorm_manager.respond(
+    async for error_code, status, is_final in brainstorm_manager.respond(
         chat_id=update.effective_chat.id,
         message=message,
     ):
         if is_final:
-            if _is_brainstorm_error(status):
-                await thinking_msg.edit_text(f"✗ {status}", parse_mode="Markdown")
+            if _is_brainstorm_error(error_code):
+                await thinking_msg.edit_text(f"\u2717 {status}", parse_mode="Markdown")
                 return State.BRAINSTORMING
 
             await thinking_msg.delete()
             await update.message.reply_text(
-                f"› *Claude:*\n\n{status}",
+                f"\u203a *Claude:*\n\n{status}",
                 parse_mode="Markdown",
             )
             return State.BRAINSTORMING
 
         if status != last_status:
             last_status = status
-            await thinking_msg.edit_text(f"… _{status}_", parse_mode="Markdown")
+            await thinking_msg.edit_text(f"\u2026 _{status}_", parse_mode="Markdown")
 
     return State.BRAINSTORMING
 
@@ -804,27 +875,27 @@ async def finish_brainstorming(update: Update, context: ContextTypes.DEFAULT_TYP
     assert update.message is not None
     assert update.effective_chat is not None
 
-    thinking_msg = await update.message.reply_text("… _Zapisuję IDEA..._", parse_mode="Markdown")
+    thinking_msg = await update.message.reply_text(MSG_BRAINSTORM_SAVING, parse_mode="Markdown")
 
     success, message, idea_content = await brainstorm_manager.finish(
         chat_id=update.effective_chat.id
     )
 
     if not success:
-        await thinking_msg.edit_text(f"✗ {message}", parse_mode="Markdown")
+        await thinking_msg.edit_text(f"\u2717 {message}", parse_mode="Markdown")
         return State.BRAINSTORMING
 
     # Show buttons for next action
     buttons = [
         [
-            InlineKeyboardButton("◇ Uruchom Plan", callback_data="brainstorm:plan"),
-            InlineKeyboardButton("· Zakończ", callback_data="brainstorm:end"),
+            InlineKeyboardButton(MSG_BRAINSTORM_RUN_PLAN_BTN, callback_data="brainstorm:plan"),
+            InlineKeyboardButton(MSG_BRAINSTORM_END_BTN, callback_data="brainstorm:end"),
         ]
     ]
     reply_markup = InlineKeyboardMarkup(buttons)
 
     await thinking_msg.edit_text(
-        f"✓ *{message}*\n\nCo chcesz zrobić dalej?",
+        MSG_BRAINSTORM_WHAT_NEXT.format(message=message),
         reply_markup=reply_markup,
         parse_mode="Markdown",
     )
@@ -847,7 +918,7 @@ async def handle_brainstorm_action(update: Update, context: ContextTypes.DEFAULT
 
     if action == "plan":
         if not project:
-            await query.edit_message_text("✗ Brak wybranego projektu")
+            await query.edit_message_text(MSG_NO_PROJECT_SELECTED)
             return ConversationHandler.END
 
         # Start plan mode with saved IDEA
@@ -855,14 +926,14 @@ async def handle_brainstorm_action(update: Update, context: ContextTypes.DEFAULT
         user_data["idea"] = None  # IDEA already saved to file, loop.sh will read it
 
         await query.edit_message_text(
-            f"▶ *Uruchamiam Plan dla {project.name}...*",
+            MSG_BRAINSTORM_STARTING_PLAN.format(project=project.name),
             parse_mode="Markdown",
         )
 
         return await show_iterations_menu(update, context)
 
     # action == "end"
-    await query.edit_message_text("✓ Sesja brainstorming zakończona.")
+    await query.edit_message_text(MSG_BRAINSTORM_SESSION_ENDED)
     return ConversationHandler.END
 
 
@@ -875,9 +946,9 @@ async def cancel_brainstorming(update: Update, context: ContextTypes.DEFAULT_TYP
     cancelled = brainstorm_manager.cancel(update.effective_chat.id)
 
     if cancelled:
-        await update.message.reply_text("✗ Brainstorming anulowany.")
+        await update.message.reply_text(MSG_BRAINSTORM_CANCELLED)
     else:
-        await update.message.reply_text("Brak aktywnej sesji brainstorming.")
+        await update.message.reply_text(MSG_BRAINSTORM_NO_ACTIVE)
 
     return ConversationHandler.END
 
@@ -886,7 +957,7 @@ async def cancel_brainstorming(update: Update, context: ContextTypes.DEFAULT_TYP
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancel current operation."""
     assert update.message is not None
-    await update.message.reply_text("Anulowano.")
+    await update.message.reply_text(MSG_CANCELLED)
     return ConversationHandler.END
 
 
@@ -895,27 +966,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     """Show bot usage instructions and available commands."""
     assert update.message is not None
 
-    text = (
-        "Jak dziala bot?\n"
-        "\n"
-        "1. Wybierz projekt z listy (/start)\n"
-        "2. Wybierz akcje: Plan, Build lub przejrzyj kolejke\n"
-        "3. Podaj opis zadania (opcjonalny w trybie Plan)\n"
-        "4. Wybierz liczbe iteracji\n"
-        "5. Bot uruchomi Claude w tle — sledz postep przez /status\n"
-        "\n"
-        "Mozesz tez rozpoczac sesje brainstormingu komenda /brainstorming.\n"
-        "\n"
-        "Komendy:\n"
-        "\n"
-        "/start — Pokaz liste projektow i wybierz projekt\n"
-        "/status — Pokaz aktywne taski i ich postep\n"
-        "/brainstorming <temat> — Rozpocznij sesje burzy mozgow z Claude\n"
-        "/cancel — Anuluj biezaca operacje\n"
-        "/skip — Pomin opis zadania (tryb Plan)\n"
-        "/done — Zakoncz brainstorming i zapisz wynik\n"
-        "/save — Alias dla /done"
-    )
+    text = MSG_HELP
 
     await update.message.reply_text(text)
     return None
@@ -931,19 +982,19 @@ def _format_completion_summary(
     icon = "◇" if task.mode == "plan" else "■"
     duration = task_manager.get_task_duration(task)
 
-    text = f"{icon} *{task.project}* — {task.mode.title()} zakończony\n\n"
-    text += f"Iteracje: {task.iterations}\n"
-    text += f"Czas: {duration}\n"
+    text = MSG_COMPLETION_TITLE.format(icon=icon, project=task.project, mode=task.mode.title())
+    text += MSG_COMPLETION_ITERATIONS.format(iterations=task.iterations)
+    text += MSG_COMPLETION_TIME.format(duration=duration)
 
     if diff_stats:
-        text += (
-            f"\nΔ *Zmiany:*\n"
-            f"  Pliki: {diff_stats['files_changed']}\n"
-            f"  Linie: +{diff_stats['insertions']} / -{diff_stats['deletions']}\n"
+        text += MSG_COMPLETION_CHANGES.format(
+            files=diff_stats['files_changed'],
+            ins=diff_stats['insertions'],
+            dels=diff_stats['deletions'],
         )
 
     if commits:
-        text += "\n→ *Commity:*\n"
+        text += MSG_COMPLETION_COMMITS
         for commit in commits:
             text += f"  `{commit}`\n"
 
@@ -952,7 +1003,7 @@ def _format_completion_summary(
         pct = int(done / total * 100) if total > 0 else 0
         bar_filled = pct // 10
         bar = "█" * bar_filled + "░" * (10 - bar_filled)
-        text += f"\n◇ *Plan:* {done}/{total} ({pct}%)\n  {bar}\n"
+        text += MSG_COMPLETION_PLAN.format(done=done, total=total, pct=pct, bar=bar)
 
     return text
 
@@ -986,13 +1037,13 @@ async def check_task_completion(context: ContextTypes.DEFAULT_TYPE) -> None:
             if diff_stats:
                 buttons.append(
                     InlineKeyboardButton(
-                        "Δ Podsumowanie zmian",
+                        MSG_DIFF_SUMMARY_BTN,
                         callback_data=f"completion:diff:{completed_task.project}",
                     )
                 )
             buttons.append(
                 InlineKeyboardButton(
-                    "▸ Projekt",
+                    MSG_PROJECT_BTN,
                     callback_data=f"project:{completed_task.project}",
                 )
             )
@@ -1008,9 +1059,11 @@ async def check_task_completion(context: ContextTypes.DEFAULT_TYPE) -> None:
         # Notify about queued task starting
         if next_task:
             icon = "≡" if next_task.mode == "plan" else "■"
-            text = (
-                f"▶ *Uruchomiono z kolejki:*\n"
-                f"{icon} {next_task.project} - {next_task.mode.title()} • {next_task.iterations} iteracji"
+            text = MSG_STARTED_FROM_QUEUE.format(
+                icon=icon,
+                project=next_task.project,
+                mode=next_task.mode.title(),
+                iterations=next_task.iterations,
             )
             await context.bot.send_message(
                 chat_id=TELEGRAM_CHAT_ID,
@@ -1042,7 +1095,7 @@ async def check_task_progress(context: ContextTypes.DEFAULT_TYPE) -> None:
             task.stale_warned = True
             await context.bot.send_message(
                 chat_id=TELEGRAM_CHAT_ID,
-                text=f"! *{task.project}* — brak postępu od 5 min",
+                text=MSG_STALE_PROGRESS.format(project=task.project),
                 parse_mode="Markdown",
             )
 
@@ -1055,7 +1108,7 @@ async def check_task_progress(context: ContextTypes.DEFAULT_TYPE) -> None:
 
         icon = "◇" if task.mode == "plan" else "■"
         elapsed = task_manager.get_task_duration(task)
-        text = f"{icon} *{task.project}* — Iteracja {current}/{task.iterations} ({elapsed})"
+        text = f"{icon} *{task.project}* \u2014 {MSG_ITERATION_LABEL} {current}/{task.iterations} ({elapsed})"
 
         if task.progress_message_id is None:
             msg = await context.bot.send_message(
@@ -1085,7 +1138,7 @@ async def handle_completion_diff(update: Update, context: ContextTypes.DEFAULT_T
     assert update.effective_chat is not None
 
     if update.effective_chat.id != TELEGRAM_CHAT_ID:
-        await query.answer("Unauthorized")
+        await query.answer(MSG_UNAUTHORIZED)
         return
 
     await query.answer()
@@ -1094,7 +1147,7 @@ async def handle_completion_diff(update: Update, context: ContextTypes.DEFAULT_T
     project = get_project(project_name)
 
     if not project:
-        await query.edit_message_text(f"Projekt {project_name} nie znaleziony.")
+        await query.edit_message_text(f"{MSG_PROJECT_NOT_FOUND}: {project_name}")
         return
 
     # Get git diff --stat for the project (last commit range)
@@ -1106,16 +1159,16 @@ async def handle_completion_diff(update: Update, context: ContextTypes.DEFAULT_T
             cwd=project.path,
             timeout=10,
         )
-        diff_text = result.stdout.strip() if result.returncode == 0 else "Brak danych"
+        diff_text = result.stdout.strip() if result.returncode == 0 else MSG_NO_DATA
     except (subprocess.TimeoutExpired, OSError):
-        diff_text = "Brak danych"
+        diff_text = MSG_NO_DATA
 
     # Truncate if too long for Telegram (max ~4096 chars)
     if len(diff_text) > 3500:
-        diff_text = diff_text[:3500] + "\n... (skrócono)"
+        diff_text = diff_text[:3500] + MSG_TRUNCATED
 
     await query.edit_message_text(
-        f"Δ *Zmiany w {project_name}:*\n\n```\n{diff_text}\n```",
+        MSG_DIFF_TITLE.format(project=project_name, diff=diff_text),
         parse_mode="Markdown",
     )
 

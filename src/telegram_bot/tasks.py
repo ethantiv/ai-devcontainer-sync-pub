@@ -17,6 +17,27 @@ from typing import Any
 
 from .config import PROJECTS_ROOT
 from .git_utils import get_commit_hash
+from .messages import (
+    ERR_NO_RESULT,
+    ERR_NO_SESSION,
+    ERR_NOT_READY,
+    ERR_SESSION_ACTIVE,
+    ERR_START_FAILED,
+    ERR_TIMEOUT,
+    MSG_BRAINSTORM_CLAUDE_THINKING,
+    MSG_BRAINSTORM_STARTING,
+    MSG_CLAUDE_ENDED_NO_RESPONSE,
+    MSG_CLAUDE_ENDED_NO_RESULT,
+    MSG_FAILED_TO_START_CLAUDE,
+    MSG_IDEA_SAVED,
+    MSG_NO_ACTIVE_BRAINSTORM,
+    MSG_QUEUE_FULL,
+    MSG_QUEUED_AT,
+    MSG_SESSION_ALREADY_ACTIVE,
+    MSG_SESSION_NOT_READY,
+    MSG_SUMMARY_PROMPT,
+    MSG_TIMEOUT_WAITING,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +158,7 @@ class TaskManager:
             with self._queue_lock:
                 queue = self.queues.setdefault(path_key, [])
                 if len(queue) >= MAX_QUEUE_SIZE:
-                    return False, f"Kolejka pełna ({MAX_QUEUE_SIZE} zadań)"
+                    return False, MSG_QUEUE_FULL.format(max_size=MAX_QUEUE_SIZE)
 
                 queue.append(QueuedTask(
                     id=str(uuid.uuid4())[:8],
@@ -147,7 +168,7 @@ class TaskManager:
                     iterations=iterations,
                     idea=idea,
                 ))
-            return True, f"Dodano do kolejki #{len(queue)}"
+            return True, MSG_QUEUED_AT.format(position=len(queue))
 
         return self._start_task_now(project, project_path, mode, iterations, idea)
 
@@ -510,7 +531,7 @@ class BrainstormManager:
         output_file: Path,
         tmux_name: str,
         timeout: float | None = None,
-    ) -> tuple[bool, str, str | None]:
+    ) -> tuple[str | None, str, str | None]:
         """Wait for Claude CLI to complete and parse response.
 
         Args:
@@ -519,7 +540,8 @@ class BrainstormManager:
             timeout: Optional timeout in seconds (default: MAX_WAIT)
 
         Returns:
-            (success, response_or_error, session_id)
+            (error_code_or_none, response_or_error_message, session_id)
+            error_code is None on success, otherwise an ERR_* constant.
         """
         timeout = timeout or self.MAX_WAIT
         start_time = time.time()
@@ -530,17 +552,17 @@ class BrainstormManager:
                 # Parse final result
                 found, response, session_id = self._parse_stream_json(output_file)
                 if found:
-                    return True, response, session_id
+                    return None, response, session_id
                 # Session ended but no result found - check for errors
                 if output_file.exists():
                     content = output_file.read_text().strip()
                     if content:
-                        return False, f"Claude zakończył bez wyniku:\n{content[-500:]}", None
-                return False, "Claude zakończył bez odpowiedzi", None
+                        return ERR_NO_RESULT, MSG_CLAUDE_ENDED_NO_RESULT.format(tail=content[-500:]), None
+                return ERR_NO_RESULT, MSG_CLAUDE_ENDED_NO_RESPONSE, None
 
             await asyncio.sleep(self.POLL_INTERVAL)
 
-        return False, "Timeout oczekiwania na odpowiedź Claude", None
+        return ERR_TIMEOUT, MSG_TIMEOUT_WAITING, None
 
     async def start(
         self,
@@ -548,15 +570,16 @@ class BrainstormManager:
         project: str,
         project_path: Path,
         prompt: str,
-    ) -> AsyncGenerator[tuple[str, bool], None]:
+    ) -> AsyncGenerator[tuple[str | None, str, bool], None]:
         """Start a new brainstorming session.
 
         Yields:
-            (status_message, is_final) tuples for progress updates.
+            (error_code, status_message, is_final) tuples for progress updates.
+            error_code is None for non-error updates, or an ERR_* constant on error.
             Final tuple contains Claude's response or error.
         """
         if chat_id in self.sessions:
-            yield "Sesja brainstorming już aktywna. Użyj /done lub /cancel.", True
+            yield ERR_SESSION_ACTIVE, MSG_SESSION_ALREADY_ACTIVE, True
             return
 
         tmux_name = self._tmux_session_name(chat_id)
@@ -575,7 +598,7 @@ class BrainstormManager:
         )
         self.sessions[chat_id] = session
 
-        yield "Uruchamiam Claude...", False
+        yield None, MSG_BRAINSTORM_STARTING, False
 
         # Start Claude in tmux with /brainstorming skill prefix and context
         brainstorm_context = (
@@ -588,18 +611,18 @@ class BrainstormManager:
         brainstorm_prompt = f"/brainstorming {brainstorm_context}{prompt}"
         if not self._start_claude_in_tmux(tmux_name, project_path, brainstorm_prompt, output_file):
             self._cleanup_session(chat_id)
-            yield "Nie udało się uruchomić Claude", True
+            yield ERR_START_FAILED, MSG_FAILED_TO_START_CLAUDE, True
             return
 
         session.status = "responding"
-        yield "Claude myśli...", False
+        yield None, MSG_BRAINSTORM_CLAUDE_THINKING, False
 
         # Wait for response
-        success, response, session_id = await self._wait_for_response(output_file, tmux_name)
+        error_code, response, session_id = await self._wait_for_response(output_file, tmux_name)
 
-        if not success:
+        if error_code is not None:
             self._cleanup_session(chat_id)
-            yield response, True
+            yield error_code, response, True
             return
 
         # Update session with response
@@ -608,25 +631,25 @@ class BrainstormManager:
         session.status = "ready"
         self._save_sessions()
 
-        yield response, True
+        yield None, response, True
 
     async def respond(
         self,
         chat_id: int,
         message: str,
-    ) -> AsyncGenerator[tuple[str, bool], None]:
+    ) -> AsyncGenerator[tuple[str | None, str, bool], None]:
         """Continue a brainstorming session with user message.
 
         Yields:
-            (status_message, is_final) tuples for progress updates.
+            (error_code, status_message, is_final) tuples for progress updates.
         """
         session = self.sessions.get(chat_id)
         if not session:
-            yield "Brak aktywnej sesji brainstorming. Użyj /brainstorming <prompt>.", True
+            yield ERR_NO_SESSION, MSG_NO_ACTIVE_BRAINSTORM, True
             return
 
         if not session.session_id:
-            yield "Sesja brainstorming nie jest gotowa.", True
+            yield ERR_NOT_READY, MSG_SESSION_NOT_READY, True
             return
 
         # Create new output file for this turn
@@ -636,7 +659,7 @@ class BrainstormManager:
 
         tmux_name = session.tmux_session
 
-        yield "Claude myśli...", False
+        yield None, MSG_BRAINSTORM_CLAUDE_THINKING, False
 
         # Start Claude with --resume
         if not self._start_claude_in_tmux(
@@ -647,15 +670,15 @@ class BrainstormManager:
             resume_session_id=session.session_id,
         ):
             session.status = "error"
-            yield "Nie udało się uruchomić Claude", True
+            yield ERR_START_FAILED, MSG_FAILED_TO_START_CLAUDE, True
             return
 
         # Wait for response
-        success, response, new_session_id = await self._wait_for_response(output_file, tmux_name)
+        error_code, response, new_session_id = await self._wait_for_response(output_file, tmux_name)
 
-        if not success:
+        if error_code is not None:
             session.status = "error"
-            yield response, True
+            yield error_code, response, True
             return
 
         # Update session
@@ -665,7 +688,7 @@ class BrainstormManager:
         session.status = "ready"
         self._save_sessions()
 
-        yield response, True
+        yield None, response, True
 
     async def finish(self, chat_id: int) -> tuple[bool, str, str | None]:
         """Finish brainstorming and save result to docs/ROADMAP.md.
@@ -678,18 +701,11 @@ class BrainstormManager:
         """
         session = self.sessions.get(chat_id)
         if not session:
-            return False, "Brak aktywnej sesji brainstorming.", None
+            return False, MSG_NO_ACTIVE_BRAINSTORM, None
 
         if not session.session_id:
             self._cleanup_session(chat_id)
-            return False, "Sesja brainstorming nie jest gotowa.", None
-
-        # Ask Claude to summarize as IDEA
-        summary_prompt = (
-            "Podsumuj nasze brainstorming jako specyfikację IDEA. "
-            "Format: '# User Idea\\n\\n[opis projektu]'. "
-            "Napisz tylko treść IDEA, bez dodatkowego tekstu."
-        )
+            return False, MSG_SESSION_NOT_READY, None
 
         output_file = self._output_file_path(chat_id)
         tmux_name = session.tmux_session
@@ -697,16 +713,16 @@ class BrainstormManager:
         if not self._start_claude_in_tmux(
             tmux_name,
             session.project_path,
-            summary_prompt,
+            MSG_SUMMARY_PROMPT,
             output_file,
             resume_session_id=session.session_id,
         ):
             self._cleanup_session(chat_id)
-            return False, "Nie udało się uruchomić Claude", None
+            return False, MSG_FAILED_TO_START_CLAUDE, None
 
-        success, response, _ = await self._wait_for_response(output_file, tmux_name)
+        error_code, response, _ = await self._wait_for_response(output_file, tmux_name)
 
-        if not success:
+        if error_code is not None:
             self._cleanup_session(chat_id)
             return False, response, None
 
@@ -721,7 +737,7 @@ class BrainstormManager:
         # Clean up session
         self._cleanup_session(chat_id)
 
-        return True, f"IDEA zapisana do {idea_file}", idea_content
+        return True, MSG_IDEA_SAVED.format(path=idea_file), idea_content
 
     def cancel(self, chat_id: int) -> bool:
         """Cancel a brainstorming session without saving.

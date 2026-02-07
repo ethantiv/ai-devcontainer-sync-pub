@@ -1,8 +1,8 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 0/31 (0%)
-**Verified:** 2026-02-07 (rev.3) — all line numbers, string counts, and LOC re-confirmed against current source
+**Progress:** 7/31 (23%)
+**Verified:** 2026-02-07 (rev.4) — Phase 1 complete
 
 ## Goal
 
@@ -10,7 +10,7 @@ Implement all proposals from ROADMAP.md across three priority tiers: P1 (Critica
 
 ## Current Phase
 
-Phase 1: English Localization (P1)
+Phase 2: Startup Validation (P1)
 
 ## Phases
 
@@ -18,14 +18,14 @@ Phase 1: English Localization (P1)
 
 Translate all user-facing Polish strings to English across the Telegram bot and shell scripts. Decouple error detection from language-specific string matching.
 
-- [ ] Create `src/telegram_bot/messages.py` — centralized string constants module with all user-facing messages as named constants (e.g. `MSG_NO_ACTIVE_SESSION = "No active brainstorming session."`)
-- [ ] Translate ~52 unique Polish strings (~65 with duplicates) in `src/telegram_bot/bot.py` — replace inline Polish text with imports from `messages.py`; includes button labels ("Klonuj repo" -> "Clone repo", "Powrót" -> "Back" x6, "Kolejka" -> "Queue", "Nowy worktree" -> "New worktree", "Podłącz" -> "Attach"), status messages ("W toku" -> "Running", "Wolny" -> "Free"), help text (lines 898-917), brainstorm flow text ("Claude myśli..." -> "Claude thinking...", "Zapisuję IDEA..." -> "Saving IDEA..."), error messages ("Brak wybranego projektu" -> "No project selected" x5), task completion messages (lines 934-955)
-- [ ] Translate 13 Polish strings in `src/telegram_bot/tasks.py` — replace inline Polish with imports from `messages.py`; includes queue messages ("Kolejka pełna" -> "Queue full", line 140), brainstorm status messages ("Claude myśli..." -> "Claude thinking...", lines 595/639, "Uruchamiam Claude..." -> "Starting Claude...", line 578), timeout and error messages ("Nie udało się uruchomić Claude" -> "Failed to start Claude", lines 591/650/705, "Timeout oczekiwania" -> "Timeout waiting for response", line 543, "Claude zakończył bez wyniku/odpowiedzi" -> lines 538-539), session messages ("Sesja brainstorming już aktywna" -> "Brainstorming session already active", line 559, "Brak aktywnej sesji" -> line 625), IDEA save prompt (lines 689-692)
-- [ ] Translate 5 Polish strings in `src/telegram_bot/projects.py` — "Utworzono {name} na branchu {suffix}" (line 130), "Katalog {name} already exists" (line 152), "Sklonowano {name}" (line 166), "Loop zainicjalizowany" (line 168), "Loop init nie powiodlo sie" (line 170)
-- [ ] Translate 10 Polish strings in `src/scripts/notify-telegram.sh` — status text: "Sukces" -> "Success" (line 38), "Ukończono iteracje" -> "Iterations completed" (line 39), "Przerwane" -> "Interrupted" (line 40), "Nieznany" -> "Unknown" (line 41); labels: "Zadanie zakończone" -> "Task completed" (line 55), "Tryb:" -> "Mode:" (line 57), "Status:" (line 58, keep), "Iteracje:" -> "Iterations:" (line 59), "Czas:" -> "Time:" (line 60), "Projekt:" -> "Project:" (line 61)
-- [ ] Translate 7 Polish button labels in `src/telegram_bot/COMMANDS.md` — "Klonuj repo" -> "Clone repo", "Nowy worktree" -> "New worktree", "Podłącz" -> "Attach", "Kolejka" -> "Queue", "Powrót" -> "Back", "Uruchom Plan" -> "Run Plan", "Zakończ" -> "Finish"
-- [ ] Refactor `_is_brainstorm_error()` in `bot.py` — replace Polish substring matching with error type constants or a structured return from `BrainstormManager` (e.g. return `(error_code, message)` tuples instead of plain Polish strings); update all 3 call sites (lines 530, 742, 783)
-- **Status:** pending
+- [x] Create `src/telegram_bot/messages.py` — centralized string constants module with all user-facing messages as named constants, plus error code constants (ERR_SESSION_ACTIVE, ERR_START_FAILED, etc.) and BRAINSTORM_ERROR_CODES frozenset
+- [x] Translate ~52 unique Polish strings (~65 with duplicates) in `src/telegram_bot/bot.py` — replaced all inline Polish text with imports from `messages.py`
+- [x] Translate 13 Polish strings in `src/telegram_bot/tasks.py` — replaced inline Polish with imports from `messages.py`; changed yield signature to `(error_code, status, is_final)` tuples
+- [x] Translate 5 Polish strings in `src/telegram_bot/projects.py` — all replaced with message constants
+- [x] Translate 10 Polish strings in `src/scripts/notify-telegram.sh` — all status text and labels translated to English
+- [x] Translate 7 Polish button labels in `src/telegram_bot/COMMANDS.md` — all translated to English
+- [x] Refactor `_is_brainstorm_error()` in `bot.py` — now checks error_code against BRAINSTORM_ERROR_CODES frozenset; BrainstormManager.start()/respond() yield `(error_code, status, is_final)` tuples; `_wait_for_response()` returns `(error_code, response, session_id)`
+- **Status:** complete
 
 ### Phase 2: Startup Validation (P1)
 

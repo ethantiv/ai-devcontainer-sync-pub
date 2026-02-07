@@ -21,7 +21,7 @@
 | `/cancel` | Cancel current operation and return to start |
 | `/skip` | Skip optional idea input when starting Plan mode |
 
-## Brainstorming (NEW)
+## Brainstorming
 
 | Command | Description |
 |---------|-------------|
@@ -37,22 +37,22 @@ The bot uses inline keyboard buttons for most interactions:
 - **▸ Project** - Standalone repo
 - **↳ Project** - Worktree
 - **◉ Project** - Running task
-- **↓ Klonuj repo** - Clone a git repository
+- **↓ Clone repo** - Clone a git repository
 
 ### Project Menu
 - **Plan** - Start planning mode
 - **Build** - Start build mode
 - **Brainstorm** - Start brainstorming session
-- **Nowy worktree** - Create new git worktree (any project)
+- **New worktree** - Create new git worktree (any project)
 - **Loop init** - Initialize loop in project (shown when loop not configured)
 - **Status** - Show task status
-- **Podlacz** - Get tmux attach command for running task
-- **Kolejka** - View queued tasks
-- **Powrot** - Go back to project list
+- **Attach** - Get tmux attach command for running task
+- **Queue** - View queued tasks
+- **Back** - Go back to project list
 
 ### After Brainstorming
-- **Uruchom Plan** - Start Plan mode with saved IDEA
-- **Zakoncz** - End session without running Plan
+- **Run Plan** - Start Plan mode with saved IDEA
+- **Finish** - End session without running Plan
 
 ## Usage Examples
 
@@ -70,7 +70,7 @@ The bot uses inline keyboard buttons for most interactions:
 /brainstorming Add user authentication with MFA
 → Answer Claude's questions
 → /done
-→ Click "Uruchom Plan" or "Zakoncz"
+→ Click "Run Plan" or "Finish"
 ```
 
 ### Check running tasks
@@ -82,6 +82,6 @@ The bot uses inline keyboard buttons for most interactions:
 ```
 /start
 → Select running project (◉ icon)
-→ Click "Podlacz"
+→ Click "Attach"
 → Copy tmux command
 ```
