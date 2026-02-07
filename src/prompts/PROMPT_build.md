@@ -16,7 +16,7 @@
    - Run validation (typecheck, lint).
    - If validation fails, fix before proceeding.
    - Invoke **Skill** tool: `Skill(skill="auto-revise-claude-md")` to update `Operational Notes`.
-   - After completing everything: `git add -A && git commit` then `git push`.
+   - After completing current phase: `git add -A && git commit` then `git push`.
 
 ## Important Rules
 

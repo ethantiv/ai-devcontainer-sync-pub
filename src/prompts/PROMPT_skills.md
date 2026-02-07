@@ -1,4 +1,4 @@
 - `agent-browser`
-- `frontend-design`
+<!-- - `frontend-design`
 - `web-design-guidelines`
-- `vercel-react-best-practices`
+- `vercel-react-best-practices` -->

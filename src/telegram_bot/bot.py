@@ -1,6 +1,9 @@
 """Telegram bot handlers and callbacks."""
 
 import logging
+import os
+import subprocess
+import time
 from enum import IntEnum, auto
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -15,8 +18,9 @@ from telegram.ext import (
 )
 
 from .config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+from .git_utils import get_diff_stats, get_plan_progress, get_recent_commits
 from .projects import clone_repo, create_worktree, get_project, list_projects
-from .tasks import brainstorm_manager, task_manager
+from .tasks import Task, brainstorm_manager, task_manager
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -166,6 +170,12 @@ async def show_project_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     queue = task_manager.get_queue(project.path)
     queue_count = len(queue)
 
+    # Check for active brainstorm session on this project
+    has_brainstorm = any(
+        s.project == project.name and s.status == "ready"
+        for s in brainstorm_manager.sessions.values()
+    )
+
     icon = "🔀" if project.is_worktree else "📁"
     status = "🔄 Zadanie w toku" if task else "🟢 Wolny"
     text = f"{icon} *{project.name}*\n"
@@ -175,6 +185,12 @@ async def show_project_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         text += f"\nParent: `{project.parent_repo}`"
     if queue_count > 0:
         text += f" ({queue_count} w kolejce)"
+    if has_brainstorm:
+        text += "\n🧠 Aktywna sesja brainstorming"
+
+    brainstorm_row = [InlineKeyboardButton("💡 Brainstorm", callback_data="action:brainstorm")]
+    if has_brainstorm:
+        brainstorm_row.append(InlineKeyboardButton("🔄 Wznów sesję", callback_data="action:resume_brainstorm"))
 
     if task:
         duration = task_manager.get_task_duration(task)
@@ -194,9 +210,7 @@ async def show_project_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
                 InlineKeyboardButton("🧐 Plan", callback_data="action:plan"),
                 InlineKeyboardButton("💪 Build", callback_data="action:build"),
             ],
-            [
-                InlineKeyboardButton("💡 Brainstorm", callback_data="action:brainstorm"),
-            ],
+            brainstorm_row,
             [InlineKeyboardButton("⬅️ Powrót", callback_data="action:back")],
         ]
     elif project.has_loop:
@@ -205,14 +219,12 @@ async def show_project_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
                 InlineKeyboardButton("🧐 Plan", callback_data="action:plan"),
                 InlineKeyboardButton("💪 Build", callback_data="action:build"),
             ],
+            brainstorm_row,
             [
-                InlineKeyboardButton("💡 Brainstorm", callback_data="action:brainstorm"),
                 InlineKeyboardButton("🔀 Nowy worktree", callback_data="action:worktree"),
-            ],
-            [
                 InlineKeyboardButton("📊 Status", callback_data="action:status"),
-                InlineKeyboardButton("⬅️ Powrót", callback_data="action:back"),
             ],
+            [InlineKeyboardButton("⬅️ Powrót", callback_data="action:back")],
         ]
     else:
         text += "\n\n⚠️ Loop not initialized (loop/loop.sh not found)"
@@ -330,6 +342,27 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             parse_mode="Markdown",
         )
         return State.ENTER_BRAINSTORM_PROMPT
+
+    if action == "resume_brainstorm":
+        if not project:
+            await query.edit_message_text("❌ Brak wybranego projektu.")
+            return ConversationHandler.END
+        # Find the session for this project
+        session = next(
+            (s for s in brainstorm_manager.sessions.values() if s.project == project.name),
+            None,
+        )
+        if not session:
+            await query.edit_message_text("❌ Brak aktywnej sesji brainstorming dla tego projektu.")
+            return ConversationHandler.END
+        await query.edit_message_text(
+            f"🧠 *Wznawiam sesję brainstorming*\n\n"
+            f"Projekt: `{project.name}`\n"
+            f"Rozpoczęta: {session.started_at.strftime('%H:%M %d.%m')}\n\n"
+            "_Kontynuuj dyskusję. Użyj /done aby zapisać, /cancel aby anulować._",
+            parse_mode="Markdown",
+        )
+        return State.BRAINSTORMING
 
     return State.PROJECT_MENU
 
@@ -888,23 +921,203 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     return None
 
 
+def _format_completion_summary(
+    task: Task,
+    diff_stats: dict | None,
+    commits: list[str],
+    plan_progress: tuple[int, int] | None,
+) -> str:
+    """Build a Markdown completion summary message."""
+    icon = "📋" if task.mode == "plan" else "🔨"
+    duration = task_manager.get_task_duration(task)
+
+    text = f"{icon} *{task.project}* — {task.mode.title()} zakończony\n\n"
+    text += f"Iteracje: {task.iterations}\n"
+    text += f"Czas: {duration}\n"
+
+    if diff_stats:
+        text += (
+            f"\n📊 *Zmiany:*\n"
+            f"  Pliki: {diff_stats['files_changed']}\n"
+            f"  Linie: +{diff_stats['insertions']} / -{diff_stats['deletions']}\n"
+        )
+
+    if commits:
+        text += "\n📝 *Commity:*\n"
+        for commit in commits:
+            text += f"  `{commit}`\n"
+
+    if plan_progress:
+        done, total = plan_progress
+        pct = int(done / total * 100) if total > 0 else 0
+        bar_filled = pct // 10
+        bar = "█" * bar_filled + "░" * (10 - bar_filled)
+        text += f"\n📋 *Plan:* {done}/{total} ({pct}%)\n  {bar}\n"
+
+    return text
+
+
 async def check_task_completion(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Job that checks for completed tasks and starts queued ones."""
     results = task_manager.process_completed_tasks()
 
-    for _, next_task in results:
-        if not next_task:
+    for completed_task, next_task in results:
+        # Send completion summary for finished task
+        if completed_task:
+            diff_stats = None
+            commits: list[str] = []
+            plan_progress = None
+
+            if completed_task.start_commit:
+                diff_stats = get_diff_stats(
+                    completed_task.project_path, completed_task.start_commit
+                )
+                commits = get_recent_commits(
+                    completed_task.project_path, completed_task.start_commit
+                )
+
+            plan_progress = get_plan_progress(completed_task.project_path)
+
+            summary = _format_completion_summary(
+                completed_task, diff_stats, commits, plan_progress
+            )
+
+            buttons = []
+            if diff_stats:
+                buttons.append(
+                    InlineKeyboardButton(
+                        "📊 Podsumowanie zmian",
+                        callback_data=f"completion:diff:{completed_task.project}",
+                    )
+                )
+            buttons.append(
+                InlineKeyboardButton(
+                    "📂 Projekt",
+                    callback_data=f"project:{completed_task.project}",
+                )
+            )
+            reply_markup = InlineKeyboardMarkup([buttons])
+
+            await context.bot.send_message(
+                chat_id=TELEGRAM_CHAT_ID,
+                text=summary,
+                parse_mode="Markdown",
+                reply_markup=reply_markup,
+            )
+
+        # Notify about queued task starting
+        if next_task:
+            icon = "📋" if next_task.mode == "plan" else "🔨"
+            text = (
+                f"▶️ *Uruchomiono z kolejki:*\n"
+                f"{icon} {next_task.project} - {next_task.mode.title()} • {next_task.iterations} iteracji"
+            )
+            await context.bot.send_message(
+                chat_id=TELEGRAM_CHAT_ID,
+                text=text,
+                parse_mode="Markdown",
+            )
+
+
+async def check_task_progress(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Job that sends/edits Telegram messages with iteration progress for active tasks."""
+    for task in list(task_manager.active_tasks.values()):
+        current = task_manager.get_current_iteration(task)
+        if current is None:
             continue
-        icon = "📋" if next_task.mode == "plan" else "🔨"
-        text = (
-            f"▶️ *Uruchomiono z kolejki:*\n"
-            f"{icon} {next_task.project} - {next_task.mode.title()} • {next_task.iterations} iteracji"
+
+        # Stale detection: .progress file unchanged for >5 minutes while tmux alive
+        progress_file = task.project_path / "loop" / "logs" / ".progress"
+        try:
+            mtime = os.path.getmtime(progress_file)
+            stale_seconds = time.time() - mtime
+        except OSError:
+            stale_seconds = 0
+
+        if (
+            stale_seconds > 300
+            and not task.stale_warned
+            and task_manager._is_session_running(task.session_name)
+        ):
+            task.stale_warned = True
+            await context.bot.send_message(
+                chat_id=TELEGRAM_CHAT_ID,
+                text=f"⚠️ *{task.project}* — brak postępu od 5 min",
+                parse_mode="Markdown",
+            )
+
+        # Only update on iteration change
+        if current == task.last_reported_iteration:
+            continue
+
+        task.last_reported_iteration = current
+        task.stale_warned = False  # Reset stale warning on progress
+
+        icon = "📋" if task.mode == "plan" else "🔨"
+        elapsed = task_manager.get_task_duration(task)
+        text = f"{icon} *{task.project}* — Iteracja {current}/{task.iterations} ({elapsed})"
+
+        if task.progress_message_id is None:
+            msg = await context.bot.send_message(
+                chat_id=TELEGRAM_CHAT_ID,
+                text=text,
+                parse_mode="Markdown",
+            )
+            task.progress_message_id = msg.message_id
+        else:
+            try:
+                await context.bot.edit_message_text(
+                    chat_id=TELEGRAM_CHAT_ID,
+                    message_id=task.progress_message_id,
+                    text=text,
+                    parse_mode="Markdown",
+                )
+            except Exception:
+                # Message may have been deleted or is unchanged
+                logger.debug(f"Could not edit progress message for {task.project}")
+
+
+async def handle_completion_diff(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle 'Podsumowanie zmian' button from completion summary."""
+    query = update.callback_query
+    assert query is not None
+    assert query.data is not None
+    assert update.effective_chat is not None
+
+    if update.effective_chat.id != TELEGRAM_CHAT_ID:
+        await query.answer("Unauthorized")
+        return
+
+    await query.answer()
+
+    project_name = query.data.replace("completion:diff:", "")
+    project = get_project(project_name)
+
+    if not project:
+        await query.edit_message_text(f"Projekt {project_name} nie znaleziony.")
+        return
+
+    # Get git diff --stat for the project (last commit range)
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--stat", "HEAD~5..HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=project.path,
+            timeout=10,
         )
-        await context.bot.send_message(
-            chat_id=TELEGRAM_CHAT_ID,
-            text=text,
-            parse_mode="Markdown",
-        )
+        diff_text = result.stdout.strip() if result.returncode == 0 else "Brak danych"
+    except (subprocess.TimeoutExpired, OSError):
+        diff_text = "Brak danych"
+
+    # Truncate if too long for Telegram (max ~4096 chars)
+    if len(diff_text) > 3500:
+        diff_text = diff_text[:3500] + "\n... (skrócono)"
+
+    await query.edit_message_text(
+        f"📊 *Zmiany w {project_name}:*\n\n```\n{diff_text}\n```",
+        parse_mode="Markdown",
+    )
 
 
 def create_application() -> Application:
@@ -967,10 +1180,14 @@ def create_application() -> Application:
 
     app.add_handler(conv_handler)
 
+    # Standalone handler for completion summary buttons (sent outside conversation)
+    app.add_handler(CallbackQueryHandler(handle_completion_diff, pattern=r"^completion:diff:"))
+
     # Job to check for completed tasks every 30 seconds
     if app.job_queue:
         app.job_queue.run_repeating(check_task_completion, interval=30, first=10)
-        logger.info("JobQueue registered: check_task_completion every 30s")
+        app.job_queue.run_repeating(check_task_progress, interval=15, first=15)
+        logger.info("JobQueue registered: check_task_completion every 30s, check_task_progress every 15s")
     else:
         logger.warning(
             "JobQueue is None! Queue processing disabled. "

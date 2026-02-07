@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import os
 import shlex
 import subprocess
 import threading
@@ -13,6 +14,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from .config import PROJECTS_ROOT
+from .git_utils import get_commit_hash
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +37,10 @@ class Task:
     iterations: int
     idea: str | None
     session_name: str
+    start_commit: str | None = None  # HEAD hash at task start for diff calculation
+    last_reported_iteration: int = 0  # Last iteration number sent to Telegram
+    progress_message_id: int | None = None  # Telegram message ID for progress edits
+    stale_warned: bool = False  # Whether stale-progress warning was already sent
     started_at: datetime = field(default_factory=datetime.now)
     status: str = "running"  # "running" | "completed" | "failed"
 
@@ -155,6 +163,9 @@ class TaskManager:
         session_name = self._session_name(project)
         loop_script = self._get_loop_script(project_path)
 
+        # Capture HEAD before task starts for completion diff
+        start_commit = get_commit_hash(project_path)
+
         # Build command
         cmd_parts = [loop_script, "-a", "-i", str(iterations)]
         if mode == "plan":
@@ -182,6 +193,7 @@ class TaskManager:
             iterations=iterations,
             idea=idea,
             session_name=session_name,
+            start_commit=start_commit,
         )
         self.active_tasks[str(project_path)] = task
 
@@ -334,6 +346,67 @@ class BrainstormManager:
 
     def __init__(self) -> None:
         self.sessions: dict[int, BrainstormSession] = {}
+        self._load_sessions()
+
+    def _sessions_file(self) -> Path:
+        """Path to persistent sessions file (survives container restarts)."""
+        return Path(PROJECTS_ROOT) / ".brainstorm_sessions.json"
+
+    def _save_sessions(self) -> None:
+        """Serialize active sessions to JSON for persistence across restarts."""
+        data = []
+        for session in self.sessions.values():
+            data.append({
+                "chat_id": session.chat_id,
+                "project": session.project,
+                "project_path": str(session.project_path),
+                "session_id": session.session_id,
+                "tmux_session": session.tmux_session,
+                "initial_prompt": session.initial_prompt,
+                "started_at": session.started_at.isoformat(),
+                "status": session.status,
+            })
+        path = self._sessions_file()
+        tmp_path = path.with_suffix(".tmp")
+        try:
+            tmp_path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+            os.replace(tmp_path, path)
+        except OSError:
+            logger.warning("Failed to save brainstorm sessions to %s", path)
+
+    def _load_sessions(self) -> None:
+        """Restore sessions from JSON, validating tmux sessions exist."""
+        path = self._sessions_file()
+        if not path.exists():
+            return
+
+        try:
+            data = json.loads(path.read_text())
+        except (json.JSONDecodeError, OSError):
+            logger.warning("Failed to load brainstorm sessions from %s", path)
+            return
+
+        for entry in data:
+            tmux_name = entry.get("tmux_session", "")
+            if not self._is_session_running(tmux_name):
+                continue
+
+            session = BrainstormSession(
+                chat_id=entry["chat_id"],
+                project=entry["project"],
+                project_path=Path(entry["project_path"]),
+                session_id=entry.get("session_id"),
+                tmux_session=tmux_name,
+                output_file=self._output_file_path(entry["chat_id"]),
+                initial_prompt=entry.get("initial_prompt", ""),
+                started_at=datetime.fromisoformat(entry["started_at"]),
+                status=entry.get("status", "ready"),
+            )
+            self.sessions[session.chat_id] = session
+            logger.info("Restored brainstorm session for chat %d, project %s", session.chat_id, session.project)
+
+        # Save cleaned state (without stale entries)
+        self._save_sessions()
 
     def _tmux_session_name(self, chat_id: int) -> str:
         """Generate tmux session name for a brainstorm session."""
@@ -383,7 +456,7 @@ class BrainstormManager:
         return result.returncode == 0
 
     def _cleanup_session(self, chat_id: int) -> None:
-        """Clean up session resources (tmux, temp files)."""
+        """Clean up session resources (tmux, temp files) and persist state."""
         session = self.sessions.pop(chat_id, None)
         if not session:
             return
@@ -399,6 +472,8 @@ class BrainstormManager:
             session.output_file.unlink(missing_ok=True)
         except OSError:
             pass
+
+        self._save_sessions()
 
     def _parse_stream_json(self, output_file: Path) -> tuple[bool, str, str | None]:
         """Parse stream-json output file for final result.
@@ -531,6 +606,7 @@ class BrainstormManager:
         session.session_id = session_id
         session.last_response = response
         session.status = "ready"
+        self._save_sessions()
 
         yield response, True
 
@@ -587,6 +663,7 @@ class BrainstormManager:
             session.session_id = new_session_id
         session.last_response = response
         session.status = "ready"
+        self._save_sessions()
 
         yield response, True
 
