@@ -2,6 +2,7 @@
 
 **Status:** IN_PROGRESS
 **Progress:** 0/31 (0%)
+**Verified:** 2026-02-07 — all line numbers, string counts, and LOC confirmed against current source
 
 ## Goal
 
@@ -127,7 +128,7 @@ Create a dedicated requirements file for Telegram bot Python dependencies.
 
 | Finding | Details |
 |---------|---------|
-| Polish string count | ~100 strings across bot.py (~60), tasks.py (18), projects.py (5), notify-telegram.sh (10), COMMANDS.md (7 button labels) |
+| Polish string count | ~88 strings across bot.py (48 unique, ~60 with duplicates like 6x "Powrót"), tasks.py (18), projects.py (5), notify-telegram.sh (10: 4 status + 6 labels), COMMANDS.md (7 button labels) — verified 2026-02-07 |
 | Error detection coupling | `_is_brainstorm_error()` at bot.py:98 checks 5 Polish substrings ("Sesja brainstorming już", "Nie udało", "Timeout", "Brak aktywnej", "nie jest gotowa") + "error" (English); used at lines 530, 742, 783 — translation requires coordinated refactor with tasks.py BrainstormManager return values |
 | Missing i18n infrastructure | No messages.py, strings.py, or any translation system exists |
 | Test coverage | Zero — no test files, no pytest/jest config, no test scripts in package.json |
@@ -166,8 +167,10 @@ Create a dedicated requirements file for Telegram bot Python dependencies.
 ### Resources
 
 - ROADMAP: `docs/ROADMAP.md` — 8 proposals across P1/P2/P3
-- Source: `src/telegram_bot/` — Python bot (bot.py 1198 LOC, tasks.py 743 LOC, projects.py 188 LOC, git_utils.py 117 LOC, config.py 19 LOC, run.py 31 LOC)
+- Source: `src/telegram_bot/` — Python bot (bot.py 1197 LOC, tasks.py 742 LOC, projects.py 187 LOC, git_utils.py 116 LOC, config.py 18 LOC, run.py 30 LOC)
 - Source: `src/lib/` — Node.js modules (summary.js 192 LOC, init.js, run.js, cleanup.js)
-- Source: `src/scripts/` — Shell scripts (loop.sh 286 LOC, notify-telegram.sh 70 LOC, cleanup.sh 13 LOC)
-- Existing timeout pattern: `src/telegram_bot/git_utils.py` lines 14-24 (timeout=10, try/except)
-- Existing persistence pattern: `src/telegram_bot/tasks.py` lines 351-410 (atomic JSON writes)
+- Source: `src/scripts/` — Shell scripts (loop.sh 286 LOC, notify-telegram.sh 69 LOC, cleanup.sh 13 LOC)
+- Existing timeout pattern: `src/telegram_bot/git_utils.py` lines 14-24 (timeout=10, try/except `(TimeoutExpired, OSError)`, return None/[])
+- Existing persistence pattern: `src/telegram_bot/tasks.py` lines 351-410 (atomic JSON writes via `os.replace()`)
+- git_utils.py exports: `get_commit_hash()`, `get_diff_stats()`, `get_recent_commits()`, `get_plan_progress()` — all with timeout=10
+- summary.js exports: `generateSummary`, `parseLog`, `findLatestLog`, `formatSummary` — `extractTestResults` is private (test via `parseLog` or rewire)
