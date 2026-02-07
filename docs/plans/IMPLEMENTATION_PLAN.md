@@ -2,7 +2,7 @@
 
 **Status:** IN_PROGRESS
 **Progress:** 0/31 (0%)
-**Verified:** 2026-02-07 (rev.2) — all line numbers, string counts, and LOC re-confirmed against current source
+**Verified:** 2026-02-07 (rev.3) — all line numbers, string counts, and LOC re-confirmed against current source
 
 ## Goal
 
@@ -167,9 +167,9 @@ Create a dedicated requirements file for Telegram bot Python dependencies.
 ### Resources
 
 - ROADMAP: `docs/ROADMAP.md` — 8 proposals across P1/P2/P3
-- Source: `src/telegram_bot/` — Python bot (bot.py 1197 LOC, tasks.py 742 LOC, projects.py 187 LOC, git_utils.py 116 LOC, config.py 18 LOC, run.py 30 LOC)
-- Source: `src/lib/` — Node.js modules (summary.js 192 LOC, init.js, run.js, cleanup.js)
-- Source: `src/scripts/` — Shell scripts (loop.sh 285 LOC, notify-telegram.sh 69 LOC, cleanup.sh 12 LOC)
+- Source: `src/telegram_bot/` — Python bot (bot.py 1197 LOC, tasks.py 743 LOC, projects.py 188 LOC, git_utils.py 116 LOC, config.py 18 LOC, run.py 30 LOC)
+- Source: `src/lib/` — Node.js modules (summary.js 193 LOC, init.js, run.js, cleanup.js)
+- Source: `src/scripts/` — Shell scripts (loop.sh 285 LOC, notify-telegram.sh 70 LOC, cleanup.sh 12 LOC)
 - Existing timeout pattern: `src/telegram_bot/git_utils.py` lines 14-24 (timeout=10, try/except `(TimeoutExpired, OSError)`, return None/[])
 - Existing persistence pattern: `src/telegram_bot/tasks.py` lines 351-410 (atomic JSON writes via `os.replace()`)
 - git_utils.py exports: `get_commit_hash()`, `get_diff_stats()`, `get_recent_commits()`, `get_plan_progress()` — all with timeout=10
