@@ -22,6 +22,10 @@ EXIT_STATUS="interrupted"
 cleanup() {
     local duration=$(($(date +%s) - START_TIME))
 
+    # Generate run summary to file (best-effort, uses Node.js JSONL parser)
+    node -e "require('$LOOP_ROOT/lib/summary').generateSummary('$LOG_DIR').then(s => process.stdout.write(s))" \
+        > "$LOG_DIR/summary-latest.txt" 2>/dev/null || true
+
     # Send Telegram notification
     "$LOOP_SCRIPTS_DIR/notify-telegram.sh" \
         --mode "$SCRIPT_NAME" \

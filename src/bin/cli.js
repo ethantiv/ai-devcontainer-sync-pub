@@ -4,6 +4,7 @@ const { program } = require('commander');
 const { init } = require('../lib/init');
 const { runPlan, runBuild, runCombined } = require('../lib/run');
 const { cleanup } = require('../lib/cleanup');
+const { generateSummary } = require('../lib/summary');
 
 function addLoopOptions(cmd) {
   return cmd
@@ -60,6 +61,15 @@ program
   .action(() => cleanup());
 
 program
+  .command('summary')
+  .description('Show summary of last loop run')
+  .option('--log-dir <dir>', 'Log directory', './loop/logs')
+  .action(async (opts) => {
+    const report = await generateSummary(opts.logDir);
+    console.log(report);
+  });
+
+program
   .command('update')
   .description('Re-create symlinks from package to project (after npm update)')
   .action(() => init({ force: true, symlinkOnly: true }));
@@ -72,6 +82,7 @@ Examples:
   $ loop build -i 10        Build mode with 10 iterations
   $ loop run                Plan then build (3+5 iterations)
   $ loop run -I "Add auth"  Plan with seed idea, then build
+  $ loop summary            Show summary of last loop run
   $ loop cleanup            Kill dev server processes
   $ loop update             Refresh symlinks after package update`);
 

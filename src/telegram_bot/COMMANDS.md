@@ -34,10 +34,10 @@
 The bot uses inline keyboard buttons for most interactions:
 
 ### Project List
-- **📁 Project** - Standalone repo
-- **🔀 Project** - Worktree
-- **🔄 Project** - Running task
-- **➕ Klonuj repo** - Clone a git repository
+- **▸ Project** - Standalone repo
+- **↳ Project** - Worktree
+- **◉ Project** - Running task
+- **↓ Klonuj repo** - Clone a git repository
 
 ### Project Menu
 - **Plan** - Start planning mode
@@ -81,7 +81,7 @@ The bot uses inline keyboard buttons for most interactions:
 ### Attach to running session
 ```
 /start
-→ Select running project (🔄 icon)
+→ Select running project (◉ icon)
 → Click "Podlacz"
 → Copy tmux command
 ```

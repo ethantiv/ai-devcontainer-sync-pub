@@ -18,6 +18,13 @@ claude mcp list                    # Verify MCP servers
 claude plugin marketplace list     # List installed plugins
 ```
 
+### Test Output Guidelines
+
+- Keep test stdout minimal: summary line with pass/fail counts
+- Pipe full output to `loop/logs/test-output.log` (e.g., `npm test 2>&1 | tee loop/logs/test-output.log`)
+- Use ERROR prefix on failure summary lines for grep: `ERROR: 3 tests failed out of 47`
+- On failure, log 3-line diagnostic: which test, error message, root cause hypothesis
+
 ## Custom Slash Commands
 
 Available as local marketplace plugins (`dev-marketplace`):
@@ -70,6 +77,7 @@ loop init               # Initialize loop config in current project (symlinks sc
 loop plan               # Run planning phase (default: 3 iterations)
 loop build              # Run build phase (default: 5 iterations)
 loop run                # Plan then build (3+5 iterations)
+loop summary            # Show summary of last loop run (tool usage, files, tokens)
 loop cleanup            # Clean up loop artifacts
 loop update             # Refresh symlinks after update
 ```
@@ -181,3 +189,4 @@ Loop CLI changes (flags, defaults) require edits across 4 files: `src/bin/cli.js
 - **Setup scripts must be non-fatal**: In Docker/Coolify containers, `~/.bashrc` may not be writable. All writes to user dotfiles in setup scripts should use `|| warn` / `|| true` instead of relying on `set -e`. Critical setup (plugins, MCP servers) must not be blocked by non-essential operations.
 - **Loop `init` for external projects**: `loop init` creates symlinks from `/opt/loop/scripts/` and `/opt/loop/prompts/` into project's `loop/` directory. Templates are copied (not symlinked) so they can be customized per project.
 - **Brainstorm session persistence**: `BrainstormManager` persists sessions to `PROJECTS_ROOT/.brainstorm_sessions.json` via atomic writes (`os.replace`). `_save_sessions()` is called via `_cleanup_session()` (covers `finish()`/`cancel()`) and after `start()`/`respond()`. Sessions are restored in `__init__()` via `_load_sessions()`, which validates tmux sessions exist and removes stale entries.
+- **Loop run summary**: `src/lib/summary.js` parses JSONL log files for tool usage counts, files modified (Edit/Write), token usage, and test results. `loop summary` CLI command reads from `./loop/logs/` by default. `loop.sh` cleanup trap auto-generates `summary-latest.txt` in log dir on each run completion. Uses `$LOOP_ROOT/lib/summary` path (resolved via `readlink -f`) so it works in both Docker (`/opt/loop`) and local dev.
