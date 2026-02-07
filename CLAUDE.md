@@ -86,6 +86,8 @@ loop update             # Refresh symlinks after update
 
 **Telegram bot**: Starts automatically in Docker if `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` env vars are set. Runs from `/opt/loop/telegram_bot/` via entrypoint.sh.
 
+**Post-iteration auto-commit**: `ensure_committed()` in `loop.sh` auto-commits and pushes after each iteration if the agent skipped git. Auto-commits use the `chore(loop):` prefix — absence of these in `git log` means the prompt fix is working.
+
 ### Adding New Global npm Tools
 
 Requires changes in 4 files:

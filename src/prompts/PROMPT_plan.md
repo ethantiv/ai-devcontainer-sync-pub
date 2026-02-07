@@ -16,7 +16,7 @@
    - Document findings in **Findings & Decisions** section
    - Update phase **Status**: pending → in_progress → complete
 
-2. After updating plan: `git add -A && git commit` then `git push`.
+2. **Commit and push.** After updating the plan: `git add -A && git commit` then `git push`. You MUST commit your plan updates before the session ends.
 
 ## Important Rules
 

@@ -84,6 +84,25 @@ check_completion() {
     [[ "$incomplete" -eq 0 && "$complete_marker" -gt 0 ]]
 }
 
+# Post-iteration git safety net — auto-commit if agent skipped git
+ensure_committed() {
+    git rev-parse --is-inside-work-tree &>/dev/null || return 0
+    if ! git diff --quiet HEAD 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+        echo -e "\n[LOOP] Uncommitted changes detected after iteration — auto-committing..."
+        git add -A
+        git commit -m "chore(loop): auto-commit after iteration (agent skipped commit)" || true
+        git push 2>/dev/null || true
+    fi
+    local untracked
+    untracked=$(git ls-files --others --exclude-standard 2>/dev/null | head -1)
+    if [[ -n "$untracked" ]]; then
+        echo -e "\n[LOOP] Untracked files detected after iteration — auto-committing..."
+        git add -A
+        git commit -m "chore(loop): auto-commit untracked files after iteration" || true
+        git push 2>/dev/null || true
+    fi
+}
+
 # ANSI color codes
 C_RESET='\033[0m'
 C_BOLD='\033[1m'
@@ -238,6 +257,7 @@ if [[ "$AUTONOMOUS" == true ]]; then
 
         claude -p --verbose --output-format stream-json < "$PROMPT_FILE" | tee -a "$LOG_FILE" | format_stream
         ((COMPLETED_ITERATIONS++))
+        ensure_committed
 
         [[ $i -lt $ITERATIONS ]] && sleep 10
     done
@@ -259,6 +279,7 @@ else
         clear
         claude < "$PROMPT_FILE"
         ((COMPLETED_ITERATIONS++))
+        ensure_committed
         sleep 10
     done
 fi

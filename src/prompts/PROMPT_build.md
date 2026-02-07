@@ -6,17 +6,17 @@
 
 0d. For reference: source code is in @src/.
 
-1. Your task is to implement functionality per the specifications using parallel subagents. Follow @docs/plans/IMPLEMENTATION_PLAN.md and choose the most important item to address. Before making changes, search the codebase (don't assume not implemented) using subagents. You may use up to 10 parallel **Haiku** subagents for searches/reads. Use **Opus** subagents when complex reasoning is needed (debugging, architectural decisions).
+1. **Pick a task and search.** Follow @docs/plans/IMPLEMENTATION_PLAN.md and choose the most important unchecked item to address. Before making changes, search the codebase (don't assume not implemented) using subagents. You may use up to 10 parallel **Haiku** subagents for searches/reads. Use **Opus** subagents when complex reasoning is needed (debugging, architectural decisions). Complete implementation - no placeholders or stubs.
 
-2. Test-Driven Development (following the "Red-Green-Refactor" cycle): Write failing test first → implement → run tests → must pass before step 3. Complete implementation - no placeholders or stubs.
+2. **Test-Driven Development.** Follow the Red-Green-Refactor cycle: write a failing test first, implement until it passes, then refactor. You MUST have a passing test run before proceeding to step 3. If the project has no test framework set up, set one up first.
 
-3. After implementing:
-   - Update @docs/plans/IMPLEMENTATION_PLAN.md IMMEDIATELY (mark tasks, update **Current Phase**, change phase **Status**).
-   - If @docs/plans/IMPLEMENTATION_PLAN.md exceeds 800 lines, trim completed content. Remove: completed tasks `[x]`, phases with status `complete`, resolved Issues rows. Keep: pending tasks `[ ]`, active phases, Technical Decisions. Git history = full audit trail.
-   - Run validation (typecheck, lint).
-   - If validation fails, fix before proceeding.
-   - Invoke **Skill** tool: `Skill(skill="auto-revise-claude-md")` to update `Operational Notes`.
-   - After completing current phase: `git add -A && git commit` then `git push`.
+3. **Update the plan.** Update @docs/plans/IMPLEMENTATION_PLAN.md IMMEDIATELY — mark completed tasks `[x]`, update **Current Phase**, change phase **Status**. If the file exceeds 800 lines, trim completed content: remove `[x]` tasks, phases with status `complete`, resolved Issues rows. Keep pending tasks, active phases, Technical Decisions. Git history = full audit trail.
+
+4. **Run validation.** Run the project's validation commands (typecheck, lint, tests) as defined in @CLAUDE.md. You MUST NOT skip this step. If validation fails, fix all errors before proceeding to step 5.
+
+5. **Update CLAUDE.md.** Invoke **Skill** tool: `Skill(skill="auto-revise-claude-md")` to update `Operational Notes`.
+
+6. **Commit and push.** Run `git add -A && git commit` with a descriptive message, then `git push`. Every iteration MUST end with a git push. Do NOT skip this step or defer it to a later iteration.
 
 ## Important Rules
 
