@@ -30,8 +30,7 @@ def brainstorm_manager(tmp_path):
     ):
         from src.telegram_bot.tasks import BrainstormManager
         bm = BrainstormManager()
-        bm.TMP_DIR = tmp_path / "tmp"
-        bm.TMP_DIR.mkdir()
+        # TMP_DIR is now auto-created as tmp_path/.brainstorm by __init__
         return bm
 
 
@@ -187,6 +186,54 @@ class TestTaskManagerIteration:
         progress_dir.mkdir(parents=True)
         (progress_dir / ".progress").write_text("not a number")
         assert task_manager.get_current_iteration(task) is None
+
+
+class TestBrainstormManagerTmpDir:
+    """Tests for BrainstormManager.TMP_DIR — persistent brainstorm output dir."""
+
+    def test_tmp_dir_under_projects_root(self, tmp_path):
+        """TMP_DIR should be PROJECTS_ROOT/.brainstorm (not /tmp)."""
+        with (
+            patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)),
+            patch("src.telegram_bot.tasks.BrainstormManager._is_session_running", return_value=False),
+        ):
+            from src.telegram_bot.tasks import BrainstormManager
+            bm = BrainstormManager()
+        assert bm.TMP_DIR == tmp_path / ".brainstorm"
+
+    def test_tmp_dir_created_on_init(self, tmp_path):
+        """__init__ creates .brainstorm directory if it doesn't exist."""
+        with (
+            patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)),
+            patch("src.telegram_bot.tasks.BrainstormManager._is_session_running", return_value=False),
+        ):
+            from src.telegram_bot.tasks import BrainstormManager
+            bm = BrainstormManager()
+        assert bm.TMP_DIR.is_dir()
+
+    def test_tmp_dir_survives_existing_directory(self, tmp_path):
+        """__init__ succeeds if .brainstorm already exists (exist_ok=True)."""
+        (tmp_path / ".brainstorm").mkdir()
+        with (
+            patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)),
+            patch("src.telegram_bot.tasks.BrainstormManager._is_session_running", return_value=False),
+        ):
+            from src.telegram_bot.tasks import BrainstormManager
+            bm = BrainstormManager()
+        assert bm.TMP_DIR.is_dir()
+
+    def test_output_files_go_to_brainstorm_dir(self, tmp_path):
+        """_output_file_path() returns a path under .brainstorm directory."""
+        with (
+            patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)),
+            patch("src.telegram_bot.tasks.BrainstormManager._is_session_running", return_value=False),
+        ):
+            from src.telegram_bot.tasks import BrainstormManager
+            bm = BrainstormManager()
+        path = bm._output_file_path(12345)
+        assert path.parent == tmp_path / ".brainstorm"
+        assert "brainstorm_12345_" in path.name
+        assert path.suffix == ".jsonl"
 
 
 class TestBrainstormManagerSessionPersistence:

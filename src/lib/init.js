@@ -104,19 +104,20 @@ function init({ force = false, symlinkOnly = false } = {}) {
     console.log(`  linked ${dest}`);
   }
 
-  // Add loop/logs/ to .gitignore
+  // Add loop artifacts to .gitignore
   const gitignorePath = path.join(projectRoot, '.gitignore');
-  const entry = 'loop/logs/';
+  const entries = ['loop/logs/', '.brainstorm/'];
 
   if (fs.existsSync(gitignorePath)) {
     const content = fs.readFileSync(gitignorePath, 'utf-8');
-    if (!content.includes(entry)) {
-      fs.appendFileSync(gitignorePath, `\n${entry}\n`);
-      console.log('  added loop/logs/ to .gitignore');
+    const missing = entries.filter(e => !content.includes(e));
+    if (missing.length) {
+      fs.appendFileSync(gitignorePath, `\n${missing.join('\n')}\n`);
+      console.log(`  added ${missing.join(', ')} to .gitignore`);
     }
   } else {
-    fs.writeFileSync(gitignorePath, `${entry}\n`);
-    console.log('  created .gitignore with loop/logs/');
+    fs.writeFileSync(gitignorePath, `${entries.join('\n')}\n`);
+    console.log('  created .gitignore with loop entries');
   }
 
   console.log('\nDone! Run: loop plan');

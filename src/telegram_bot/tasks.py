@@ -363,9 +363,15 @@ class BrainstormManager:
     # Configuration
     POLL_INTERVAL = 0.5  # seconds between polling
     MAX_WAIT = 300  # 5 minutes max wait for response
-    TMP_DIR = Path("/tmp")
 
     def __init__(self) -> None:
+        self.TMP_DIR = Path(PROJECTS_ROOT) / ".brainstorm"
+        try:
+            self.TMP_DIR.mkdir(exist_ok=True)
+        except OSError:
+            # PROJECTS_ROOT may not exist yet (e.g. during testing or early startup);
+            # output_file_path() will still work once the dir is created later
+            logger.warning("Could not create brainstorm dir: %s", self.TMP_DIR)
         self.sessions: dict[int, BrainstormSession] = {}
         self._load_sessions()
 

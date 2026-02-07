@@ -1,8 +1,8 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 17/31 (55%)
-**Verified:** 2026-02-07 (rev.6) — Phase 3 complete
+**Progress:** 19/31 (61%)
+**Verified:** 2026-02-07 (rev.7) — Phase 4 complete
 
 ## Goal
 
@@ -10,7 +10,7 @@ Implement all proposals from ROADMAP.md across three priority tiers: P1 (Critica
 
 ## Current Phase
 
-Phase 4: Brainstorm Temp Files (P2)
+Phase 5: Subprocess Timeouts (P2)
 
 ## Phases
 
@@ -53,9 +53,9 @@ Add pytest and Jest test infrastructure and unit tests for pure functions.
 
 Move brainstorm output files from `/tmp` to a persistent location under `PROJECTS_ROOT`.
 
-- [ ] Change `TMP_DIR` in `src/telegram_bot/tasks.py` (line 345) from `Path("/tmp")` to `Path(PROJECTS_ROOT) / ".brainstorm"`; add `self.TMP_DIR.mkdir(exist_ok=True)` in `BrainstormManager.__init__()`
-- [ ] Add `.brainstorm/` to `.gitignore` template in `src/templates/` if projects are initialized under PROJECTS_ROOT
-- **Status:** pending
+- [x] Change `TMP_DIR` in `src/telegram_bot/tasks.py` from `Path("/tmp")` to `Path(PROJECTS_ROOT) / ".brainstorm"`; added `self.TMP_DIR.mkdir(exist_ok=True)` in `BrainstormManager.__init__()` with OSError fallback for missing PROJECTS_ROOT; added 4 unit tests (TestBrainstormManagerTmpDir)
+- [x] Add `.brainstorm/` to `.gitignore` via `src/lib/init.js` — `loop init` now adds both `loop/logs/` and `.brainstorm/` entries
+- **Status:** complete
 
 ### Phase 5: Subprocess Timeouts (P2)
 
@@ -131,10 +131,10 @@ Create a dedicated requirements file for Telegram bot Python dependencies.
 | Polish string count | ~87 strings across bot.py (~52 unique, ~65 with duplicates like 6x "Powrót", 5x "Brak wybranego projektu"), tasks.py (13), projects.py (5+1 mixed "Projekt {name} already exists"), notify-telegram.sh (10: 4 status + 6 labels), COMMANDS.md (7 button labels in ASCII-only spelling) — re-verified 2026-02-07 |
 | Error detection coupling | `_is_brainstorm_error()` at bot.py:98 checks 5 Polish substrings ("Sesja brainstorming już", "Nie udało", "Timeout", "Brak aktywnej", "nie jest gotowa") + "error" (English); used at lines 530, 742, 783 — translation requires coordinated refactor with tasks.py BrainstormManager return values |
 | Missing i18n infrastructure | No messages.py, strings.py, or any translation system exists |
-| Test coverage | Zero — no test files, no pytest/jest config, no test scripts in package.json |
+| Test coverage | 93 Python tests (pytest) + 20 JS tests (Jest) — full coverage for pure functions |
 | Env var validation gaps | PROJECTS_ROOT not validated at all; Claude CLI not checked; TELEGRAM_CHAT_ID accepts 0 silently |
 | Subprocess timeout gaps | 4 calls in projects.py lack timeouts (lines 87, 120, 154, 181); git_utils.py has correct pattern (timeout=10, `except (subprocess.TimeoutExpired, OSError)`, return None/[]) |
-| Brainstorm /tmp usage | Single reference: `TMP_DIR = Path("/tmp")` in tasks.py line 345; used only for brainstorm output JSONL files |
+| Brainstorm /tmp usage | **Resolved Phase 4**: `TMP_DIR` now uses `PROJECTS_ROOT/.brainstorm/`, created in `__init__()` with OSError fallback |
 | Task persistence gap | TaskManager is memory-only; BrainstormManager has full persistence with atomic writes — pattern ready to reuse |
 | requirements.txt missing | `python-telegram-bot[job-queue]` installed inline in docker/Dockerfile only |
 | COMMANDS.md location | `src/telegram_bot/COMMANDS.md` — contains 7 Polish button labels in reference table |
@@ -162,7 +162,7 @@ Create a dedicated requirements file for Telegram bot Python dependencies.
 | `_is_brainstorm_error()` uses Polish substring matching | Plan refactor in Phase 1: return structured `(error_code, message)` from BrainstormManager |
 | `config.py` defaults mask missing env vars | Phase 2: add `validate()` function that checks all required vars before bot starts |
 | No test infrastructure exists | Phase 3: create test directories, add pytest/jest config, add test commands to CLAUDE.md |
-| Cross-filesystem rename risk with /tmp | Phase 4: move to PROJECTS_ROOT/.brainstorm/ (same volume) |
+| Cross-filesystem rename risk with /tmp | **Resolved Phase 4**: moved to PROJECTS_ROOT/.brainstorm/ (same volume) |
 
 ### Resources
 
