@@ -4,8 +4,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     image: claude-code:latest
-    container_name: claude-code
-    hostname: claude-code
+    container_name: ${APP_NAME:-claude-code}
+    hostname: ${APP_NAME:-claude-code}
     env_file:
       - .env
     volumes:
