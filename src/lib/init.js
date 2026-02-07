@@ -8,7 +8,6 @@ const CORE_FILES = [
   { src: 'scripts/loop.sh', dest: 'loop/loop.sh' },
   { src: 'prompts/PROMPT_plan.md', dest: 'loop/PROMPT_plan.md' },
   { src: 'prompts/PROMPT_build.md', dest: 'loop/PROMPT_build.md' },
-  { src: 'prompts/PROMPT_skills.md', dest: 'loop/PROMPT_skills.md' },
   { src: 'scripts/cleanup.sh', dest: 'loop/cleanup.sh' },
   { src: 'scripts/notify-telegram.sh', dest: 'loop/notify-telegram.sh' },
 ];
@@ -20,6 +19,7 @@ const TEMPLATES = [
   { src: 'templates/ROADMAP_template.md', dest: 'docs/ROADMAP_template.md' },
   { src: '.claude/settings.json', dest: '.claude/settings.json' },
   { src: '.claude/skills/auto-revise-claude-md/SKILL.md', dest: '.claude/skills/auto-revise-claude-md/SKILL.md' },
+  { src: 'prompts/PROMPT_skills.md', dest: 'loop/PROMPT_skills.md' },
 ];
 
 const DIRS = ['docs/plans', 'loop/logs', '.claude/skills/auto-revise-claude-md'];
