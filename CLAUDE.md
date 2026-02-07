@@ -16,8 +16,14 @@ Re-sync configuration after changes:
 ```bash
 claude mcp list                    # Verify MCP servers
 claude plugin marketplace list     # List installed plugins
-python3 -m pytest src/telegram_bot/tests/ -v  # Run Telegram bot tests
-npm test --prefix src              # Run JS tests (summary.js)
+python3 -m pytest src/telegram_bot/tests/ -v  # Run Telegram bot tests (134 tests)
+npm install --prefix src && npm test --prefix src  # Run JS tests (20 tests, requires install)
+```
+
+Run a single Python test file or test:
+```bash
+python3 -m pytest src/telegram_bot/tests/test_config.py -v
+python3 -m pytest src/telegram_bot/tests/test_tasks.py::TestTaskManager::test_start_task -v
 ```
 
 ## Custom Slash Commands
@@ -84,7 +90,7 @@ loop update             # Refresh symlinks after update
 
 **Structure**: `src/scripts/` (shell), `src/prompts/` (Claude prompts), `src/templates/` (project templates), `src/telegram_bot/` (Python bot), `src/bin/` + `src/lib/` (Node.js CLI).
 
-**Telegram bot**: Starts automatically in Docker if `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` env vars are set. Runs from `/opt/loop/telegram_bot/` via entrypoint.sh.
+**Telegram bot**: Starts automatically in Docker if `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` env vars are set. Runs from `/opt/loop/telegram_bot/` via entrypoint.sh. Command reference: `src/telegram_bot/COMMANDS.md`.
 
 **Post-iteration auto-commit**: `ensure_committed()` in `loop.sh` auto-commits and pushes after each iteration if the agent skipped git. Auto-commits use the `chore(loop):` prefix — absence of these in `git log` means the prompt fix is working.
 
@@ -138,6 +144,13 @@ Loop system changes require parallel updates across:
 - `docker/entrypoint.sh` — Telegram bot startup path
 
 Loop CLI changes (flags, defaults) require edits across 4 files: `src/bin/cli.js` (Commander option), `src/lib/run.js` (JS→shell bridge), `src/scripts/loop.sh` (bash implementation), and optionally `src/lib/init.js` (suggested commands).
+
+### Planning Workflow
+
+Feature development uses structured planning documents:
+- `docs/ROADMAP.md` — feature requests and proposals (managed via `/roadmap` slash command)
+- `docs/plans/IMPLEMENTATION_PLAN.md` — active implementation plan with phases and status tracking
+- Templates in `src/templates/` — `ROADMAP_template.md`, `IMPLEMENTATION_PLAN_template.md` (copied by `loop init`)
 
 ### Setup Flow
 
@@ -194,7 +207,7 @@ Loop CLI changes (flags, defaults) require edits across 4 files: `src/bin/cli.js
 - **Loop run summary**: `src/lib/summary.js` parses JSONL log files for tool usage counts, files modified (Edit/Write), token usage, and test results. `loop summary` CLI command reads from `./loop/logs/` by default. `loop.sh` cleanup trap auto-generates `summary-latest.txt` in log dir on each run completion. Uses `$LOOP_ROOT/lib/summary` path (resolved via `readlink -f`) so it works in both Docker (`/opt/loop`) and local dev.
 - **Telegram bot string localization**: All user-facing strings live in `src/telegram_bot/messages.py` as named constants (e.g. `MSG_NO_PROJECT_SELECTED`). `bot.py`, `tasks.py`, `projects.py` import from `messages.py` — no inline strings. Error codes (`ERR_SESSION_ACTIVE`, `ERR_START_FAILED`, etc.) decouple error detection from display language. `BrainstormManager.start()`/`respond()` yield `(error_code, status, is_final)` tuples; `_is_brainstorm_error()` checks `error_code in BRAINSTORM_ERROR_CODES`.
 - **Telegram bot startup validation**: `config.validate()` returns `(errors, warnings)` tuple. Fatal checks: TELEGRAM_BOT_TOKEN non-empty, TELEGRAM_CHAT_ID non-zero integer, PROJECTS_ROOT exists/is-dir/writable. Warning checks: Claude CLI in PATH or `~/.claude/bin/claude`, tmux in PATH, loop script at `/opt/loop/scripts/loop.sh` or `loop` in PATH. `run.py` calls `validate()` before `create_application()` — exits on errors, prints warnings.
-- **Test infrastructure**: Python tests use pytest + pytest-asyncio at `src/telegram_bot/tests/` (134 tests across config, git_utils, projects, tasks). JS tests use Jest at `src/lib/__tests__/` (20 tests for summary.js). Python tests patch `PROJECTS_ROOT` in module namespace (`patch("src.telegram_bot.projects.PROJECTS_ROOT", ...)`), not via env vars. Async generator tests (BrainstormManager.start/respond) require `@pytest.mark.asyncio`. Fixtures that patch module-level constants must use `yield` (not `return`) to keep patches active during tests.
+- **Test infrastructure**: Python tests use pytest + pytest-asyncio at `src/telegram_bot/tests/` (134 tests across config, git_utils, projects, tasks). JS tests use Jest at `src/lib/__tests__/` (20 tests for summary.js). Shared pytest fixtures in `src/telegram_bot/tests/conftest.py` (`tmp_projects_root`, `env_with_valid_config`). Python tests patch `PROJECTS_ROOT` in module namespace (`patch("src.telegram_bot.projects.PROJECTS_ROOT", ...)`), not via env vars. Async generator tests (BrainstormManager.start/respond) require `@pytest.mark.asyncio`. Fixtures that patch module-level constants must use `yield` (not `return`) to keep patches active during tests.
 - **Subprocess timeout pattern**: All `subprocess.run()` calls in both `git_utils.py` and `projects.py` use `timeout` parameter + `try/except (subprocess.TimeoutExpired, OSError)`. Timeouts: `_get_branch()` 10s, `create_worktree()` 30s, `clone_repo()` 60s (network), `_run_loop_init()` 30s. On failure: `_get_branch()` returns `"unknown"`, `_run_loop_init()` returns `False`, others return `(False, message)` tuple.
 - **Configurable thresholds**: 5 hardcoded values extracted to `config.py` as env-var-overridable constants: `STALE_THRESHOLD` (LOOP_STALE_THRESHOLD, default 300), `BRAINSTORM_POLL_INTERVAL` (LOOP_BRAINSTORM_POLL_INTERVAL, default 0.5), `BRAINSTORM_TIMEOUT` (LOOP_BRAINSTORM_TIMEOUT, default 300), `MAX_QUEUE_SIZE` (LOOP_MAX_QUEUE_SIZE, default 10), `GIT_DIFF_RANGE` (LOOP_GIT_DIFF_RANGE, default HEAD~5..HEAD). Uses `_safe_int()` and `_safe_float()` helpers for graceful fallback on invalid values. `bot.py` imports `STALE_THRESHOLD` and `GIT_DIFF_RANGE`; `tasks.py` imports `BRAINSTORM_POLL_INTERVAL`, `BRAINSTORM_TIMEOUT`, and `MAX_QUEUE_SIZE`.
 - **Task state persistence**: `TaskManager` persists active tasks and queues to `PROJECTS_ROOT/.tasks.json` via atomic writes (`os.replace`), same pattern as `BrainstormManager`. `_save_tasks()` is called after `_start_task_now()`, queue additions, `process_completed_tasks()`, and `cancel_queued_task()`. `_load_tasks()` runs in `__init__()`, validates tmux sessions exist via `_is_session_running()`, removes stale active tasks, and always restores queues. Deadlock prevention: `_save_tasks()` acquires `_queue_lock` internally, so callers must NOT hold the lock when calling it.

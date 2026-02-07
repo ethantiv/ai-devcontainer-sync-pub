@@ -1,7 +1,7 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 0/8 (0%)
+**Progress:** 0/10 (0%)
 
 ## Goal
 
@@ -14,17 +14,19 @@ Phase 1: Implementation
 ## Phases
 
 ### Phase 1: Implementation
-- [ ] Add `DEV_MODE` config variable to `src/telegram_bot/config.py`
-- [ ] Add dev mode check to `src/telegram_bot/run.py` — exit gracefully with info message when `DEV_MODE=true`
-- [ ] Add `DEV_MODE` check to `docker/entrypoint.sh` `start_telegram_bot()` — skip bot startup with info message
-- [ ] Add `MSG_DEV_MODE_SKIP` message constant to `src/telegram_bot/messages.py`
-- [ ] Document `DEV_MODE` env var in `CLAUDE.md` environment variables table
-- [ ] Document `DEV_MODE` env var in `README.md` environment variables section
+- [ ] Add `_is_truthy()` helper and `DEV_MODE` config variable to `src/telegram_bot/config.py` (after line 39, alongside other env vars)
+- [ ] Add dev mode warning to `validate()` in `src/telegram_bot/config.py` (in warning checks section, after line 97)
+- [ ] Add `MSG_DEV_MODE_SKIP` message constant to `src/telegram_bot/messages.py` (new section after error codes, ~line 27)
+- [ ] Add dev mode check to `src/telegram_bot/run.py` — after `validate()` call (line 12), before `create_application()` (line 25): if `DEV_MODE` is true, print info message and `return 0`
+- [ ] Add `DEV_MODE` check to `docker/entrypoint.sh` `start_telegram_bot()` — at top of function (after line 130), before token check: if `DEV_MODE` matches `true|1|yes` (case-insensitive), print skip message and `return 0`
+- [ ] Document `DEV_MODE` env var in `CLAUDE.md` environment variables table (line ~53, after `TELEGRAM_CHAT_ID`)
+- [ ] Document `DEV_MODE` env var in `README.md` environment variables section (line ~170, after `TELEGRAM_CHAT_ID`)
 - **Status:** pending
 
 ### Phase 2: Testing
-- [ ] Add tests for `DEV_MODE` in `test_config.py` — verify the variable is read correctly (true/false/unset/invalid values)
-- [ ] Add test in `test_config.py` — verify `validate()` returns a warning when `DEV_MODE` is active
+- [ ] Add tests for `_is_truthy()` in `test_config.py` — verify `true`/`1`/`yes`/`TRUE`/`Yes` return True; `false`/`0`/empty/unset return False
+- [ ] Add tests for `DEV_MODE` in `test_config.py` — verify the variable is read correctly via `importlib.reload()` pattern (matching existing `TestConfigurableThresholds` style, line 249+)
+- [ ] Add test in `test_config.py` — verify `validate()` returns a warning (not error) when `DEV_MODE` is active
 - **Status:** pending
 
 ## Key Questions
@@ -54,27 +56,41 @@ Phase 1: Implementation
 ### Research Findings
 
 **Current bot startup flow (two entry points):**
-1. `docker/entrypoint.sh` → `start_telegram_bot()` — checks TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID, spawns `python3 -m loop.telegram_bot.run &`
-2. `src/telegram_bot/run.py` → `main()` — calls `config.validate()`, creates application, starts polling
+1. `docker/entrypoint.sh:130-145` → `start_telegram_bot()` — checks TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (line 131), spawns `python3 -m loop.telegram_bot.run &` (line 143)
+2. `src/telegram_bot/run.py:10-28` → `main()` — calls `validate()` (line 12), prints warnings (14-15), exits on errors (17-20), creates application (25), starts polling (26)
 
 **Current code has zero dev mode handling:**
-- No `DEV_MODE`, `DEBUG`, `DEVELOPER_MODE` variables anywhere in codebase
-- No TODO/FIXME/HACK comments in any analyzed file
+- No `DEV_MODE`, `DEBUG`, `DEVELOPER_MODE` variables anywhere in codebase (confirmed via full codebase grep)
+- Only references exist in `docs/plans/IMPLEMENTATION_PLAN.md` (this file)
 - 134 Python + 20 JS = 154 tests, all passing, none skipped
 
-**Existing env var patterns in `config.py`:**
-- String vars: `environ.get("VAR", default)`
-- Int vars: `_safe_int(environ.get("VAR"), default)`
+**Existing env var patterns in `config.py` (110 lines):**
+- String vars: `environ.get("VAR", default)` — lines 28, 30, 39
+- Int vars: `_safe_int(environ.get("VAR"), default)` — lines 29, 33, 37, 38
+- Float vars: `_safe_float(environ.get("VAR"), default)` — lines 34-36
 - Boolean pattern not yet used — will add `_is_truthy()` helper
+- `validate()` at lines 42-99 returns `(errors, warnings)` tuple
+- Warning checks section starts at line 78
 
-**Files requiring changes:**
-1. `src/telegram_bot/config.py` — add `DEV_MODE` variable + `_is_truthy()` helper
-2. `src/telegram_bot/run.py` — add dev mode check before `create_application()`
+**Existing message patterns in `messages.py` (231 lines):**
+- All constants use `MSG_` prefix
+- Error codes use `ERR_` prefix (lines 8-26)
+- Messages grouped by module: bot.py (28-204), tasks.py (206-222), projects.py (224-230)
+- New `MSG_DEV_MODE_SKIP` should go in a dedicated section
+
+**Existing test patterns in `test_config.py` (409 lines, 34 tests, 7 classes):**
+- Uses `_reload_and_validate()` helper (lines 16-25) with `patch.dict(os.environ)` + `importlib.reload()`
+- `TestConfigurableThresholds` (lines 249-380) tests env var parsing with 3 tests per var: default, from env, invalid fallback
+- Fixtures: `tmp_projects_root`, `env_with_valid_config` (in conftest.py)
+
+**Files requiring changes (7 files, 10 tasks):**
+1. `src/telegram_bot/config.py` — add `_is_truthy()` helper + `DEV_MODE` variable + warning in `validate()`
+2. `src/telegram_bot/run.py` — add dev mode early exit between validate() and create_application()
 3. `src/telegram_bot/messages.py` — add `MSG_DEV_MODE_SKIP` constant
-4. `docker/entrypoint.sh` — add `DEV_MODE` check in `start_telegram_bot()`
-5. `CLAUDE.md` — document env var
-6. `README.md` — document env var
-7. `src/telegram_bot/tests/test_config.py` — add dev mode tests
+4. `docker/entrypoint.sh` — add `DEV_MODE` check at top of `start_telegram_bot()`
+5. `CLAUDE.md` — add `DEV_MODE` row to env vars table (line ~53)
+6. `README.md` — add `DEV_MODE` row to env vars table (line ~170)
+7. `src/telegram_bot/tests/test_config.py` — add `_is_truthy()` tests + `DEV_MODE` parsing tests + `validate()` warning test
 
 ### Technical Decisions
 
