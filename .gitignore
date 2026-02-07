@@ -1,5 +1,15 @@
-.env
+# OS
 .DS_Store
-__pycache__/
+
+# Environment
+.env
+
+# Dependencies
 node_modules/
+src/package-lock.json
+
+# Python
+__pycache__/
+
+# Logs
 src/logs/
