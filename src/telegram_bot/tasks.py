@@ -591,10 +591,10 @@ class BrainstormManager:
         yield response, True
 
     async def finish(self, chat_id: int) -> tuple[bool, str, str | None]:
-        """Finish brainstorming and save result to docs/IDEA.md.
+        """Finish brainstorming and save result to docs/ROADMAP.md.
 
         Sends a final prompt to Claude to summarize the brainstorming,
-        then writes the result to the project's docs/IDEA.md.
+        then writes the result to the project's docs/ROADMAP.md.
 
         Returns:
             (success, message, idea_content_if_success)
@@ -635,10 +635,10 @@ class BrainstormManager:
 
         idea_content = response
 
-        # Write to docs/IDEA.md
+        # Write to docs/ROADMAP.md
         docs_dir = session.project_path / "docs"
         docs_dir.mkdir(exist_ok=True)
-        idea_file = docs_dir / "IDEA.md"
+        idea_file = docs_dir / "ROADMAP.md"
         idea_file.write_text(idea_content)
 
         # Clean up session

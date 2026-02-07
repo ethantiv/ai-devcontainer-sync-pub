@@ -21,7 +21,7 @@ program
   .description('Run Claude in autonomous loop (default: build mode, 5 iterations)')
   .option('-p, --plan', 'plan mode instead of build (default: 3 iterations)')
   .option('-i, --iterations <n>', 'Number of iterations (default: 5 build, 3 plan)')
-  .option('-I, --idea <text>', 'seed idea written to docs/IDEA.md before start')
+  .option('-I, --idea <text>', 'seed idea written to docs/ROADMAP.md before start')
   .option('--interactive', 'run interactively instead of autonomous')
   .option('-e, --no-early-exit', 'disable early exit when plan is complete')
   .addHelpText('after', `

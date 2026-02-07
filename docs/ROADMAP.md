@@ -1,3 +1,9 @@
+# Roadmap
+
+## Completed Features
+
+## Proposals
+
 ### P1 - Critical
 
 #### Telegram: Task completion summary with actionable next steps

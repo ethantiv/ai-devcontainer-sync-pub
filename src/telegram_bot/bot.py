@@ -713,7 +713,7 @@ async def start_brainstorming(update: Update, context: ContextTypes.DEFAULT_TYPE
             await thinking_msg.delete()
             await update.message.reply_text(
                 f"🤖 *Claude:*\n\n{status}\n\n"
-                "_Odpowiedz, aby kontynuować. Użyj /done lub /save aby zapisać do IDEA.md, "
+                "_Odpowiedz, aby kontynuować. Użyj /done lub /save aby zapisać do ROADMAP.md, "
                 "lub /cancel aby anulować._",
                 parse_mode="Markdown",
             )
@@ -767,7 +767,7 @@ async def handle_brainstorm_message(update: Update, context: ContextTypes.DEFAUL
 
 @authorized
 async def finish_brainstorming(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle /done and /save commands to finish brainstorming and save to IDEA.md."""
+    """Handle /done and /save commands to finish brainstorming and save to ROADMAP.md."""
     assert update.message is not None
     assert update.effective_chat is not None
 

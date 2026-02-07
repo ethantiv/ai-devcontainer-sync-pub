@@ -26,7 +26,7 @@
 | Command | Description |
 |---------|-------------|
 | `/brainstorming <prompt>` | Start interactive brainstorming session with Claude |
-| `/done` | Finish brainstorming and save result to `docs/IDEA.md` |
+| `/done` | Finish brainstorming and save result to `docs/ROADMAP.md` |
 | `/save` | Same as `/done` |
 
 ## Interactive Buttons

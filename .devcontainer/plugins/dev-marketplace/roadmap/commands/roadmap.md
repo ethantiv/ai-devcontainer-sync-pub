@@ -1,15 +1,15 @@
 ---
-description: Generate or update ROADMAP.md with completed features and future proposals
+description: Generate or update docs/ROADMAP.md with completed features and future proposals
 ---
 
-# ROADMAP.md Generator
+# docs/ROADMAP.md Generator
 
 <context>
-You are managing a project roadmap file that tracks completed features and proposes future development directions. The ROADMAP.md file serves as a living document for project planning and progress visibility.
+You are managing a project roadmap file that tracks completed features and proposes future development directions. The docs/ROADMAP.md file serves as a living document for project planning and progress visibility.
 
 This command operates in two modes:
-- **CREATE**: When ROADMAP.md doesn't exist, analyze the project and generate initial proposals
-- **UPDATE**: When ROADMAP.md exists, optionally add a completed feature and refresh proposals
+- **CREATE**: When docs/ROADMAP.md doesn't exist, analyze the project and generate initial proposals
+- **UPDATE**: When docs/ROADMAP.md exists, optionally add a completed feature and refresh proposals
 </context>
 
 <project_analysis>
@@ -62,10 +62,10 @@ The insights from exploration should directly inform the proposals - suggesting 
 </codebase_exploration>
 
 <flow_detection>
-First, check if ROADMAP.md exists in the current working directory:
+First, check if docs/ROADMAP.md exists:
 
 ```bash
-test -f ROADMAP.md && echo "EXISTS" || echo "NOT_EXISTS"
+test -f docs/ROADMAP.md && echo "EXISTS" || echo "NOT_EXISTS"
 ```
 
 - If **NOT_EXISTS** → Execute CREATE flow
@@ -73,18 +73,18 @@ test -f ROADMAP.md && echo "EXISTS" || echo "NOT_EXISTS"
 </flow_detection>
 
 <create_flow>
-When creating a new ROADMAP.md:
+When creating a new docs/ROADMAP.md:
 
 1. Analyze the project using steps from `<project_analysis>`
 2. Generate 3-5 proposals across different priorities
-3. Create ROADMAP.md with empty Completed Features section
+3. Create docs/ROADMAP.md with empty Completed Features section
 4. Display summary of generated proposals
 </create_flow>
 
 <update_flow>
-When updating an existing ROADMAP.md:
+When updating an existing docs/ROADMAP.md:
 
-1. Read the current ROADMAP.md file
+1. Read the current docs/ROADMAP.md file
 2. Ask the user: "Would you like to mark a feature as completed? If yes, describe the feature. If no, just press Enter."
 3. If user provides a feature description:
    - Generate a unique ID (increment from highest existing ID, or start at "001")
@@ -92,7 +92,7 @@ When updating an existing ROADMAP.md:
    - Remove any related proposal if it matches the completed feature
 4. Re-analyze the project to refresh proposals based on current state
 5. Update proposals while preserving any that are still relevant
-6. Save updated ROADMAP.md
+6. Save updated docs/ROADMAP.md
 </update_flow>
 
 <proposal_generation>
@@ -113,7 +113,7 @@ Generate 3-5 proposals distributed across priorities:
 </proposal_generation>
 
 <output_format>
-The ROADMAP.md must follow this exact structure:
+The docs/ROADMAP.md must follow this exact structure:
 
 ```markdown
 # Roadmap
@@ -156,19 +156,19 @@ The ROADMAP.md must follow this exact structure:
 <execution>
 Execute in this order:
 
-1. **Detect mode**: Check if ROADMAP.md exists
+1. **Detect mode**: Check if docs/ROADMAP.md exists
 2. **Basic analysis**: Gather context from package.json, README, git log, directory structure
 3. **Deep exploration**: Launch 2-3 Explore agents in parallel to analyze architecture, features, and tech stack
 4. **Synthesize findings**: Combine agent results into actionable insights
 5. **Execute appropriate flow**:
    - CREATE: Generate fresh proposals based on exploration, create file
    - UPDATE: Ask about completed feature, refresh proposals using exploration insights, update file
-6. **Write ROADMAP.md**: Use the Write tool to save the file
+6. **Write docs/ROADMAP.md**: Use the Write tool to save the file
 7. **Display summary**: Show what was created/updated in a concise format
 
 After completion, display:
 - Mode executed (CREATE or UPDATE)
 - Number of completed features (total)
 - Number of proposals by priority
-- File path where ROADMAP.md was saved
+- File path where docs/ROADMAP.md was saved
 </execution>

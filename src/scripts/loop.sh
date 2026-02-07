@@ -55,7 +55,7 @@ usage() {
     echo "  -a              Autonomous mode (default: interactive)"
     echo "  -i iterations   Number of iterations (default: 5 build, 3 plan)"
     echo "  -e              Disable early exit (run all iterations)"
-    echo "  -I text         Seed idea written to docs/IDEA.md"
+    echo "  -I text         Seed idea written to docs/ROADMAP.md"
     echo "  -h              Show this help"
     echo ""
     echo "Note: When called via 'loop run', autonomous mode (-a) is the default."
@@ -146,17 +146,17 @@ format_stream() {
     done
 }
 
-# Write idea to docs/IDEA.md if provided
+# Write idea to docs/ROADMAP.md if provided
 write_idea() {
     [[ -z "$IDEA" ]] && return
 
     mkdir -p docs
-    cat > docs/IDEA.md << EOF
+    cat > docs/ROADMAP.md << EOF
 # User Idea
 
 $IDEA
 EOF
-    echo "Idea written to: docs/IDEA.md"
+    echo "Idea written to: docs/ROADMAP.md"
 }
 
 # Pre-process long options
