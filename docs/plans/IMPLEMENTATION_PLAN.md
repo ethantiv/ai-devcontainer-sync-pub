@@ -1,8 +1,8 @@
 # Implementation Plan
 
-**Status:** IN_PROGRESS
-**Progress:** 29/31 (94%)
-**Verified:** 2026-02-07 (rev.10) — Phase 7 complete
+**Status:** COMPLETE
+**Progress:** 31/31 (100%)
+**Verified:** 2026-02-07 (rev.11) — All phases complete
 
 ## Goal
 
@@ -10,7 +10,7 @@ Implement all proposals from ROADMAP.md across three priority tiers: P1 (Critica
 
 ## Current Phase
 
-Phase 8: Python requirements.txt (P3)
+All phases complete.
 
 ## Phases
 
@@ -89,9 +89,9 @@ Persist active task and queue state to disk, reusing the brainstorm session pers
 
 Create a dedicated requirements file for Telegram bot Python dependencies.
 
-- [ ] Create `src/telegram_bot/requirements.txt` with `python-telegram-bot[job-queue]>=21.0,<22.0`
-- [ ] Update `docker/Dockerfile` — line 23 (builder stage): remove `python-telegram-bot` from inline pip install (keep `uv`); line 54 (runtime stage): replace `pip3 install ... 'python-telegram-bot[job-queue]'` with `COPY src/telegram_bot/requirements.txt /tmp/requirements.txt` + `pip3 install --break-system-packages -r /tmp/requirements.txt`
-- **Status:** pending
+- [x] Create `src/telegram_bot/requirements.txt` with `python-telegram-bot[job-queue]>=21.0,<22.0`
+- [x] Update `docker/Dockerfile` — builder stage: removed `python-telegram-bot` from inline pip install (kept `uv`); runtime stage: replaced `pip3 install ... 'python-telegram-bot[job-queue]'` with `COPY src/telegram_bot/requirements.txt /tmp/requirements.txt` + `pip3 install --break-system-packages -r /tmp/requirements.txt`; added 3 tests (TestRequirementsTxt) verifying file existence, dependency declaration, and version pinning — 134 Python + 20 JS = 154 total tests
+- **Status:** complete
 
 ## Key Questions
 
@@ -131,16 +131,16 @@ Create a dedicated requirements file for Telegram bot Python dependencies.
 | Polish string count | ~87 strings across bot.py (~52 unique, ~65 with duplicates like 6x "Powrót", 5x "Brak wybranego projektu"), tasks.py (13), projects.py (5+1 mixed "Projekt {name} already exists"), notify-telegram.sh (10: 4 status + 6 labels), COMMANDS.md (7 button labels in ASCII-only spelling) — re-verified 2026-02-07 |
 | Error detection coupling | `_is_brainstorm_error()` at bot.py:98 checks 5 Polish substrings ("Sesja brainstorming już", "Nie udało", "Timeout", "Brak aktywnej", "nie jest gotowa") + "error" (English); used at lines 530, 742, 783 — translation requires coordinated refactor with tasks.py BrainstormManager return values |
 | Missing i18n infrastructure | No messages.py, strings.py, or any translation system exists |
-| Test coverage | 131 Python tests (pytest) + 20 JS tests (Jest) — full coverage for pure functions including configurable thresholds and task state persistence |
+| Test coverage | 134 Python tests (pytest) + 20 JS tests (Jest) = 154 total — full coverage for pure functions including configurable thresholds, task state persistence, and requirements.txt validation |
 | Env var validation gaps | PROJECTS_ROOT not validated at all; Claude CLI not checked; TELEGRAM_CHAT_ID accepts 0 silently |
 | Subprocess timeout gaps | **Resolved Phase 5**: all 4 calls in projects.py now have timeouts (10/30/60/30) and `try/except (TimeoutExpired, OSError)` matching git_utils.py pattern |
 | Brainstorm /tmp usage | **Resolved Phase 4**: `TMP_DIR` now uses `PROJECTS_ROOT/.brainstorm/`, created in `__init__()` with OSError fallback |
 | Task persistence gap | **Resolved Phase 7**: TaskManager persists to `PROJECTS_ROOT/.tasks.json` with atomic writes; loads on `__init__()` with tmux reconciliation; queues always restored |
-| requirements.txt missing | `python-telegram-bot[job-queue]` installed inline in docker/Dockerfile only |
+| requirements.txt missing | **Resolved Phase 8**: `src/telegram_bot/requirements.txt` created; Dockerfile updated to COPY and `pip install -r` |
 | COMMANDS.md location | `src/telegram_bot/COMMANDS.md` — contains 7 Polish button labels in reference table |
 | summary.js exports | `module.exports = { generateSummary, parseLog, findLatestLog, formatSummary }` — `extractTestResults` is private (not exported); test via `parseLog()` or use rewire |
 | projects.py language mix | Contains mix of English error messages (line 128, 146) and Polish success messages (lines 130, 152, 166, 168, 170) — all need English translation |
-| Dockerfile dual pip install | `python-telegram-bot` installed in builder (line 23, without extras) AND runtime (line 54, with `[job-queue]`); requirements.txt must replace both |
+| Dockerfile dual pip install | **Resolved Phase 8**: builder installs only `uv`; runtime uses `requirements.txt` for `python-telegram-bot[job-queue]` |
 | notify-telegram.sh scope | 10 Polish strings total: 4 status labels (lines 38-41) + 6 message template labels (lines 55-61) |
 
 ### Technical Decisions

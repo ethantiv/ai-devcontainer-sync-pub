@@ -377,3 +377,32 @@ class TestConfigurableThresholds:
         with patch.dict(os.environ, env, clear=True):
             config = _reload_config(env)
             assert config.GIT_DIFF_RANGE == "HEAD~10..HEAD"
+
+
+class TestRequirementsTxt:
+    """requirements.txt exists and declares python-telegram-bot dependency.
+
+    Ensures the requirements file used by Dockerfile is present and pins
+    the correct version range for python-telegram-bot with job-queue extra.
+    """
+
+    REQUIREMENTS_PATH = (
+        Path(__file__).resolve().parent.parent / "requirements.txt"
+    )
+
+    def test_file_exists(self):
+        """requirements.txt must exist alongside the telegram_bot package."""
+        assert self.REQUIREMENTS_PATH.is_file(), (
+            f"Missing {self.REQUIREMENTS_PATH}"
+        )
+
+    def test_contains_python_telegram_bot(self):
+        """requirements.txt must declare python-telegram-bot[job-queue]."""
+        content = self.REQUIREMENTS_PATH.read_text()
+        assert "python-telegram-bot[job-queue]" in content
+
+    def test_version_pinned(self):
+        """Version must be pinned to >=21.0,<22.0 to match v21 API."""
+        content = self.REQUIREMENTS_PATH.read_text()
+        assert ">=21.0" in content
+        assert "<22.0" in content

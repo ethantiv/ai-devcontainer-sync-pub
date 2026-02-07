@@ -20,7 +20,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
 
 RUN npm install -g @google/gemini-cli agent-browser
 
-RUN pip3 install --break-system-packages uv python-telegram-bot
+RUN pip3 install --break-system-packages uv
 
 RUN npx -y playwright install chromium --with-deps
 
@@ -51,7 +51,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Python packages for Telegram bot (job-queue extra includes APScheduler)
-RUN pip3 install --break-system-packages 'python-telegram-bot[job-queue]'
+COPY src/telegram_bot/requirements.txt /tmp/requirements.txt
+RUN pip3 install --break-system-packages -r /tmp/requirements.txt
 
 # Generate UTF-8 locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
