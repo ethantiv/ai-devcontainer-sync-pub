@@ -1,7 +1,7 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 0/28 (0%)
+**Progress:** 0/31 (0%)
 
 ## Goal
 
@@ -18,11 +18,11 @@ Phase 1: English Localization (P1)
 Translate all user-facing Polish strings to English across the Telegram bot and shell scripts. Decouple error detection from language-specific string matching.
 
 - [ ] Create `src/telegram_bot/messages.py` — centralized string constants module with all user-facing messages as named constants (e.g. `MSG_NO_ACTIVE_SESSION = "No active brainstorming session."`)
-- [ ] Translate 54 Polish strings in `src/telegram_bot/bot.py` — replace inline Polish text with imports from `messages.py`; includes button labels ("Klonuj repo" -> "Clone repo", "Powrot" -> "Back", "Kolejka" -> "Queue", "Wybierz" -> "Select", etc.), status messages, help text, error messages, and brainstorm flow text
-- [ ] Translate 17 Polish strings in `src/telegram_bot/tasks.py` — replace inline Polish with imports from `messages.py`; includes queue messages ("Kolejka pelna" -> "Queue full"), brainstorm status messages ("Claude mysli..." -> "Claude thinking..."), timeout and error messages
-- [ ] Translate 1 Polish string in `src/telegram_bot/projects.py` — replace inline messages with imports from `messages.py`
-- [ ] Translate 4 Polish strings in `src/scripts/notify-telegram.sh` — change status text: "Sukces" -> "Success", "Ukonczone iteracje" -> "Iterations completed", "Przerwane" -> "Interrupted"; change mode icons text
-- [ ] Translate Polish button labels in `src/telegram_bot/COMMANDS.md` — update reference table to match new English labels
+- [ ] Translate ~60 Polish strings in `src/telegram_bot/bot.py` — replace inline Polish text with imports from `messages.py`; includes button labels ("Klonuj repo" -> "Clone repo", "Powrót" -> "Back", "Kolejka" -> "Queue", "Nowy worktree" -> "New worktree", "Podłącz" -> "Attach"), status messages ("W toku" -> "Running", "Wolny" -> "Free"), help text (lines 899-917), brainstorm flow text ("Claude myśli..." -> "Claude thinking...", "Zapisuję IDEA..." -> "Saving IDEA..."), error messages ("Brak wybranego projektu" -> "No project selected"), task completion messages (lines 934-955)
+- [ ] Translate 18 Polish strings in `src/telegram_bot/tasks.py` — replace inline Polish with imports from `messages.py`; includes queue messages ("Kolejka pełna" -> "Queue full", line 140), brainstorm status messages ("Claude myśli..." -> "Claude thinking...", lines 595/639, "Uruchamiam Claude..." -> "Starting Claude...", lines 578/733), timeout and error messages ("Nie udało się uruchomić Claude" -> "Failed to start Claude", lines 591/650/705), session messages ("Sesja brainstorming już aktywna" -> "Brainstorming session already active", line 559), IDEA save prompt (lines 689-692)
+- [ ] Translate 5 Polish strings in `src/telegram_bot/projects.py` — "Utworzono {name} na branchu {suffix}" (line 130), "Katalog {name} already exists" (line 152), "Sklonowano {name}" (line 166), "Loop zainicjalizowany" (line 168), "Loop init nie powiodlo sie" (line 170)
+- [ ] Translate 10 Polish strings in `src/scripts/notify-telegram.sh` — status text: "Sukces" -> "Success" (line 38), "Ukończono iteracje" -> "Iterations completed" (line 39), "Przerwane" -> "Interrupted" (line 40), "Nieznany" -> "Unknown" (line 41); labels: "Zadanie zakończone" -> "Task completed" (line 55), "Tryb:" -> "Mode:" (line 57), "Status:" (line 58, keep), "Iteracje:" -> "Iterations:" (line 59), "Czas:" -> "Time:" (line 60), "Projekt:" -> "Project:" (line 61)
+- [ ] Translate 7 Polish button labels in `src/telegram_bot/COMMANDS.md` — "Klonuj repo" -> "Clone repo", "Nowy worktree" -> "New worktree", "Podłącz" -> "Attach", "Kolejka" -> "Queue", "Powrót" -> "Back", "Uruchom Plan" -> "Run Plan", "Zakończ" -> "Finish"
 - [ ] Refactor `_is_brainstorm_error()` in `bot.py` — replace Polish substring matching with error type constants or a structured return from `BrainstormManager` (e.g. return `(error_code, message)` tuples instead of plain Polish strings); update all 3 call sites (lines 530, 742, 783)
 - **Status:** pending
 
@@ -89,7 +89,7 @@ Persist active task and queue state to disk, reusing the brainstorm session pers
 Create a dedicated requirements file for Telegram bot Python dependencies.
 
 - [ ] Create `src/telegram_bot/requirements.txt` with `python-telegram-bot[job-queue]>=21.0,<22.0`
-- [ ] Update `docker/Dockerfile` — replace inline `pip3 install ... 'python-telegram-bot[job-queue]'` with `COPY src/telegram_bot/requirements.txt` and `pip3 install -r requirements.txt`
+- [ ] Update `docker/Dockerfile` — line 23 (builder stage): remove `python-telegram-bot` from inline pip install (keep `uv`); line 54 (runtime stage): replace `pip3 install ... 'python-telegram-bot[job-queue]'` with `COPY src/telegram_bot/requirements.txt /tmp/requirements.txt` + `pip3 install --break-system-packages -r /tmp/requirements.txt`
 - **Status:** pending
 
 ## Key Questions
@@ -108,7 +108,7 @@ Create a dedicated requirements file for Telegram bot Python dependencies.
 ### Requirements
 
 **Functional:**
-- All 73+ Polish strings across 4 files translated to English
+- All ~100 Polish strings across 5 files translated to English (bot.py, tasks.py, projects.py, notify-telegram.sh, COMMANDS.md)
 - Startup validation for 5 environment variables/tools with clear error messages
 - Unit tests for 4 modules (git_utils.py, projects.py, tasks.py, summary.js)
 - Brainstorm temp files relocated to persistent storage
@@ -127,16 +127,20 @@ Create a dedicated requirements file for Telegram bot Python dependencies.
 
 | Finding | Details |
 |---------|---------|
-| Polish string count | 73 strings across bot.py (54), tasks.py (17), projects.py (1), notify-telegram.sh (4), COMMANDS.md (7 button labels) |
-| Error detection coupling | `_is_brainstorm_error()` in bot.py checks 5 Polish substrings from tasks.py — translation requires coordinated refactor |
+| Polish string count | ~100 strings across bot.py (~60), tasks.py (18), projects.py (5), notify-telegram.sh (10), COMMANDS.md (7 button labels) |
+| Error detection coupling | `_is_brainstorm_error()` at bot.py:98 checks 5 Polish substrings ("Sesja brainstorming już", "Nie udało", "Timeout", "Brak aktywnej", "nie jest gotowa") + "error" (English); used at lines 530, 742, 783 — translation requires coordinated refactor with tasks.py BrainstormManager return values |
 | Missing i18n infrastructure | No messages.py, strings.py, or any translation system exists |
 | Test coverage | Zero — no test files, no pytest/jest config, no test scripts in package.json |
 | Env var validation gaps | PROJECTS_ROOT not validated at all; Claude CLI not checked; TELEGRAM_CHAT_ID accepts 0 silently |
-| Subprocess timeout gaps | 4 calls in projects.py lack timeouts; git_utils.py has correct pattern (timeout=10, try/except) |
+| Subprocess timeout gaps | 4 calls in projects.py lack timeouts (lines 87, 120, 154, 181); git_utils.py has correct pattern (timeout=10, `except (subprocess.TimeoutExpired, OSError)`, return None/[]) |
 | Brainstorm /tmp usage | Single reference: `TMP_DIR = Path("/tmp")` in tasks.py line 345; used only for brainstorm output JSONL files |
 | Task persistence gap | TaskManager is memory-only; BrainstormManager has full persistence with atomic writes — pattern ready to reuse |
 | requirements.txt missing | `python-telegram-bot[job-queue]` installed inline in docker/Dockerfile only |
-| COMMANDS.md location | `src/telegram_bot/COMMANDS.md` — contains Polish button labels in reference table |
+| COMMANDS.md location | `src/telegram_bot/COMMANDS.md` — contains 7 Polish button labels in reference table |
+| summary.js exports | `module.exports = { generateSummary, parseLog, findLatestLog, formatSummary }` — `extractTestResults` is private (not exported); test via `parseLog()` or use rewire |
+| projects.py language mix | Contains mix of English error messages (line 128, 146) and Polish success messages (lines 130, 152, 166, 168, 170) — all need English translation |
+| Dockerfile dual pip install | `python-telegram-bot` installed in builder (line 23, without extras) AND runtime (line 54, with `[job-queue]`); requirements.txt must replace both |
+| notify-telegram.sh scope | 10 Polish strings total: 4 status labels (lines 38-41) + 6 message template labels (lines 55-61) |
 
 ### Technical Decisions
 
