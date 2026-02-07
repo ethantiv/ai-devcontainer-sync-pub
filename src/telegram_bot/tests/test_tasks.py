@@ -12,12 +12,12 @@ from src.telegram_bot.messages import ERR_SESSION_ACTIVE, ERR_NO_SESSION, ERR_NO
 
 
 @pytest.fixture
-def task_manager():
+def task_manager(tmp_path):
     """Create a TaskManager with mocked tmux calls."""
-    with patch("src.telegram_bot.tasks.PROJECTS_ROOT", "/tmp/test-projects"):
+    with patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)):
         from src.telegram_bot.tasks import TaskManager
         tm = TaskManager()
-        return tm
+        yield tm
 
 
 @pytest.fixture
@@ -31,7 +31,7 @@ def brainstorm_manager(tmp_path):
         from src.telegram_bot.tasks import BrainstormManager
         bm = BrainstormManager()
         # TMP_DIR is now auto-created as tmp_path/.brainstorm by __init__
-        return bm
+        yield bm
 
 
 class TestTaskManagerQueue:
@@ -483,3 +483,273 @@ class TestBrainstormManagerRespondErrors:
         assert len(results) == 1
         assert results[0][0] == ERR_NOT_READY
         assert results[0][2] is True
+
+
+class TestTaskManagerPersistence:
+    """Tests for TaskManager task state persistence to disk."""
+
+    @pytest.fixture
+    def ptm(self, tmp_path):
+        """Create a TaskManager with PROJECTS_ROOT patched to tmp_path.
+
+        Uses a context manager-style fixture so the patch stays active
+        for the entire test method.
+        """
+        with patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)):
+            from src.telegram_bot.tasks import TaskManager
+            tm = TaskManager()
+            tm._tmp_path = tmp_path  # convenience ref for assertions
+            yield tm
+
+    def test_tasks_file_path(self, ptm):
+        """_tasks_file() returns PROJECTS_ROOT/.tasks.json."""
+        assert ptm._tasks_file() == ptm._tmp_path / ".tasks.json"
+
+    def test_save_and_load_active_task(self, tmp_path):
+        """Active tasks are persisted and restored on load."""
+        from src.telegram_bot.tasks import Task
+
+        with patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)):
+            from src.telegram_bot.tasks import TaskManager
+            tm = TaskManager()
+
+            task = Task(
+                project="proj",
+                project_path=Path("/tmp/proj"),
+                mode="build",
+                iterations=5,
+                idea="test idea",
+                session_name="loop-proj",
+                start_commit="abc123",
+                last_reported_iteration=2,
+                stale_warned=True,
+            )
+            tm.active_tasks["/tmp/proj"] = task
+            tm._save_tasks()
+
+            # Verify file written
+            assert (tmp_path / ".tasks.json").exists()
+
+            # Load into a new manager, with tmux session running
+            tm2 = TaskManager.__new__(TaskManager)
+            tm2.active_tasks = {}
+            tm2.queues = {}
+            tm2._queue_lock = __import__("threading").Lock()
+            with patch.object(tm2, "_is_session_running", return_value=True):
+                tm2._load_tasks()
+
+        restored = tm2.active_tasks.get("/tmp/proj")
+        assert restored is not None
+        assert restored.project == "proj"
+        assert restored.mode == "build"
+        assert restored.iterations == 5
+        assert restored.idea == "test idea"
+        assert restored.session_name == "loop-proj"
+        assert restored.start_commit == "abc123"
+
+    def test_save_and_load_queued_tasks(self, tmp_path):
+        """Queued tasks are persisted and restored."""
+        from src.telegram_bot.tasks import QueuedTask
+
+        with patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)):
+            from src.telegram_bot.tasks import TaskManager
+            tm = TaskManager()
+
+            tm.queues["/tmp/proj"] = [
+                QueuedTask(
+                    id="abc1",
+                    project="proj",
+                    project_path=Path("/tmp/proj"),
+                    mode="plan",
+                    iterations=3,
+                    idea="first idea",
+                ),
+                QueuedTask(
+                    id="abc2",
+                    project="proj",
+                    project_path=Path("/tmp/proj"),
+                    mode="build",
+                    iterations=5,
+                    idea=None,
+                ),
+            ]
+            tm._save_tasks()
+
+            tm2 = TaskManager.__new__(TaskManager)
+            tm2.active_tasks = {}
+            tm2.queues = {}
+            tm2._queue_lock = __import__("threading").Lock()
+            tm2._load_tasks()
+
+        queue = tm2.queues.get("/tmp/proj", [])
+        assert len(queue) == 2
+        assert queue[0].id == "abc1"
+        assert queue[0].mode == "plan"
+        assert queue[0].idea == "first idea"
+        assert queue[1].id == "abc2"
+        assert queue[1].idea is None
+
+    def test_load_removes_stale_tasks(self, tmp_path):
+        """Tasks whose tmux session no longer exists are removed on load."""
+        from src.telegram_bot.tasks import Task
+
+        with patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)):
+            from src.telegram_bot.tasks import TaskManager
+            tm = TaskManager()
+
+            task = Task(
+                project="stale-proj",
+                project_path=Path("/tmp/stale-proj"),
+                mode="build",
+                iterations=5,
+                idea=None,
+                session_name="loop-stale-proj",
+            )
+            tm.active_tasks["/tmp/stale-proj"] = task
+            tm._save_tasks()
+
+            # Load with tmux session NOT running — task should be removed
+            tm2 = TaskManager.__new__(TaskManager)
+            tm2.active_tasks = {}
+            tm2.queues = {}
+            tm2._queue_lock = __import__("threading").Lock()
+            with patch.object(tm2, "_is_session_running", return_value=False):
+                tm2._load_tasks()
+
+        assert "/tmp/stale-proj" not in tm2.active_tasks
+
+    def test_load_handles_missing_file(self, ptm):
+        """No crash when .tasks.json doesn't exist."""
+        ptm.active_tasks.clear()
+        ptm.queues.clear()
+        ptm._load_tasks()  # Should not raise
+        assert len(ptm.active_tasks) == 0
+
+    def test_load_handles_corrupt_json(self, tmp_path):
+        """Corrupt JSON is handled gracefully."""
+        (tmp_path / ".tasks.json").write_text("not valid {{{")
+        with patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)):
+            from src.telegram_bot.tasks import TaskManager
+            tm = TaskManager()
+        assert len(tm.active_tasks) == 0
+
+    def test_save_uses_atomic_write(self, ptm):
+        """Save uses temp file + os.replace for atomicity."""
+        ptm._save_tasks()
+
+        # After save, no .tmp file should remain
+        assert not (ptm._tmp_path / ".tasks.json.tmp").exists()
+        assert (ptm._tmp_path / ".tasks.json").exists()
+
+    def test_save_called_after_start_task(self, ptm):
+        """_save_tasks is called when a task starts successfully."""
+        with (
+            patch.object(ptm, "_is_session_running", return_value=False),
+            patch("src.telegram_bot.tasks.subprocess.run") as mock_run,
+            patch("src.telegram_bot.tasks.get_commit_hash", return_value="abc"),
+            patch.object(ptm, "_save_tasks") as mock_save,
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stderr="")
+            ptm.start_task("proj", Path("/tmp/proj"), "build", 5)
+        mock_save.assert_called()
+
+    def test_save_called_after_process_completed(self, ptm):
+        """_save_tasks is called when a task completes."""
+        from src.telegram_bot.tasks import Task
+        task = Task(
+            project="proj",
+            project_path=Path("/tmp/proj"),
+            mode="build",
+            iterations=5,
+            idea=None,
+            session_name="loop-proj",
+        )
+        ptm.active_tasks["/tmp/proj"] = task
+
+        with (
+            patch.object(ptm, "_is_session_running", return_value=False),
+            patch.object(ptm, "_save_tasks") as mock_save,
+        ):
+            ptm.process_completed_tasks()
+        mock_save.assert_called()
+
+    def test_save_called_after_cancel_queued(self, ptm):
+        """_save_tasks is called when a queued task is cancelled."""
+        with patch.object(ptm, "_is_session_running", return_value=True):
+            ptm.start_task("proj", Path("/tmp/proj"), "build", 5)
+
+        queue = ptm.get_queue(Path("/tmp/proj"))
+        task_id = queue[0].id
+
+        with patch.object(ptm, "_save_tasks") as mock_save:
+            ptm.cancel_queued_task(Path("/tmp/proj"), task_id)
+        mock_save.assert_called()
+
+    def test_load_on_init(self, tmp_path):
+        """TaskManager calls _load_tasks on __init__."""
+        from src.telegram_bot.tasks import QueuedTask
+
+        with patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)):
+            from src.telegram_bot.tasks import TaskManager
+            # Save some state first
+            tm = TaskManager()
+            tm.queues["/tmp/proj"] = [
+                QueuedTask(
+                    id="q1",
+                    project="proj",
+                    project_path=Path("/tmp/proj"),
+                    mode="build",
+                    iterations=5,
+                    idea=None,
+                ),
+            ]
+            tm._save_tasks()
+
+            # Create new manager — should auto-load
+            tm2 = TaskManager()
+            queue = tm2.queues.get("/tmp/proj", [])
+            assert len(queue) == 1
+            assert queue[0].id == "q1"
+
+    def test_completed_task_while_bot_down(self, tmp_path):
+        """Task that completed while bot was down is detected and cleaned up."""
+        from src.telegram_bot.tasks import Task, QueuedTask
+
+        with patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)):
+            from src.telegram_bot.tasks import TaskManager
+            tm = TaskManager()
+
+            task = Task(
+                project="proj",
+                project_path=Path("/tmp/proj"),
+                mode="build",
+                iterations=5,
+                idea=None,
+                session_name="loop-proj",
+                status="running",
+            )
+            tm.active_tasks["/tmp/proj"] = task
+            tm.queues["/tmp/proj"] = [
+                QueuedTask(
+                    id="q1",
+                    project="proj",
+                    project_path=Path("/tmp/proj"),
+                    mode="plan",
+                    iterations=3,
+                    idea=None,
+                ),
+            ]
+            tm._save_tasks()
+
+            # Load with tmux NOT running — stale task removed, queue preserved
+            tm2 = TaskManager.__new__(TaskManager)
+            tm2.active_tasks = {}
+            tm2.queues = {}
+            tm2._queue_lock = __import__("threading").Lock()
+            with patch.object(tm2, "_is_session_running", return_value=False):
+                tm2._load_tasks()
+
+        # Stale active task should be removed
+        assert "/tmp/proj" not in tm2.active_tasks
+        # Queue should still be present for process_completed_tasks to pick up
+        assert len(tm2.queues.get("/tmp/proj", [])) == 1

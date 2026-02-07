@@ -1,8 +1,8 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 25/31 (81%)
-**Verified:** 2026-02-07 (rev.9) — Phase 6 complete
+**Progress:** 29/31 (94%)
+**Verified:** 2026-02-07 (rev.10) — Phase 7 complete
 
 ## Goal
 
@@ -10,7 +10,7 @@ Implement all proposals from ROADMAP.md across three priority tiers: P1 (Critica
 
 ## Current Phase
 
-Phase 7: Task State Persistence (P3)
+Phase 8: Python requirements.txt (P3)
 
 ## Phases
 
@@ -79,11 +79,11 @@ Extract hardcoded timeout/threshold values to environment variables with sensibl
 
 Persist active task and queue state to disk, reusing the brainstorm session persistence pattern.
 
-- [ ] Add `_tasks_file()`, `_save_tasks()`, `_load_tasks()` methods to `TaskManager` in `src/telegram_bot/tasks.py` — persist to `PROJECTS_ROOT/.tasks.json` using atomic writes (temp file + `os.replace()`), same pattern as `BrainstormManager._save_sessions()`
-- [ ] Call `_save_tasks()` after state changes — in `_start_task_now()`, `process_completed_tasks()`, `cancel_queued_task()`, and queue operations
-- [ ] Add tmux session reconciliation in `_load_tasks()` — on startup, validate each restored task's tmux session exists via `_is_session_running()`; remove stale entries; restore queue ordering
-- [ ] Handle edge case: task completed while bot was down — if tmux session no longer exists for a tracked task, mark it as completed and trigger queue processing
-- **Status:** pending
+- [x] Add `_tasks_file()`, `_save_tasks()`, `_load_tasks()` methods to `TaskManager` in `src/telegram_bot/tasks.py` — persists to `PROJECTS_ROOT/.tasks.json` using atomic writes (temp file + `os.replace()`), same pattern as `BrainstormManager._save_sessions()`
+- [x] Call `_save_tasks()` after state changes — in `_start_task_now()`, `start_task()` (queue add), `process_completed_tasks()`, `cancel_queued_task()`, and `_load_tasks()` (cleanup save)
+- [x] Add tmux session reconciliation in `_load_tasks()` — on startup, validates each restored task's tmux session via `_is_session_running()`; removes stale entries; restores queue ordering; logs stale removals and active restorations
+- [x] Handle edge case: task completed while bot was down — `_load_tasks()` removes active tasks whose tmux session no longer exists; queues are always restored, enabling `process_completed_tasks()` to pick them up; 12 new tests (131 total Python tests) including deadlock-free `_save_tasks` with `_queue_lock`; also fixed `task_manager` and `brainstorm_manager` fixtures (`return` → `yield`) to keep patches active during tests
+- **Status:** complete
 
 ### Phase 8: Python requirements.txt (P3)
 
@@ -131,11 +131,11 @@ Create a dedicated requirements file for Telegram bot Python dependencies.
 | Polish string count | ~87 strings across bot.py (~52 unique, ~65 with duplicates like 6x "Powrót", 5x "Brak wybranego projektu"), tasks.py (13), projects.py (5+1 mixed "Projekt {name} already exists"), notify-telegram.sh (10: 4 status + 6 labels), COMMANDS.md (7 button labels in ASCII-only spelling) — re-verified 2026-02-07 |
 | Error detection coupling | `_is_brainstorm_error()` at bot.py:98 checks 5 Polish substrings ("Sesja brainstorming już", "Nie udało", "Timeout", "Brak aktywnej", "nie jest gotowa") + "error" (English); used at lines 530, 742, 783 — translation requires coordinated refactor with tasks.py BrainstormManager return values |
 | Missing i18n infrastructure | No messages.py, strings.py, or any translation system exists |
-| Test coverage | 119 Python tests (pytest) + 20 JS tests (Jest) — full coverage for pure functions including configurable thresholds |
+| Test coverage | 131 Python tests (pytest) + 20 JS tests (Jest) — full coverage for pure functions including configurable thresholds and task state persistence |
 | Env var validation gaps | PROJECTS_ROOT not validated at all; Claude CLI not checked; TELEGRAM_CHAT_ID accepts 0 silently |
 | Subprocess timeout gaps | **Resolved Phase 5**: all 4 calls in projects.py now have timeouts (10/30/60/30) and `try/except (TimeoutExpired, OSError)` matching git_utils.py pattern |
 | Brainstorm /tmp usage | **Resolved Phase 4**: `TMP_DIR` now uses `PROJECTS_ROOT/.brainstorm/`, created in `__init__()` with OSError fallback |
-| Task persistence gap | TaskManager is memory-only; BrainstormManager has full persistence with atomic writes — pattern ready to reuse |
+| Task persistence gap | **Resolved Phase 7**: TaskManager persists to `PROJECTS_ROOT/.tasks.json` with atomic writes; loads on `__init__()` with tmux reconciliation; queues always restored |
 | requirements.txt missing | `python-telegram-bot[job-queue]` installed inline in docker/Dockerfile only |
 | COMMANDS.md location | `src/telegram_bot/COMMANDS.md` — contains 7 Polish button labels in reference table |
 | summary.js exports | `module.exports = { generateSummary, parseLog, findLatestLog, formatSummary }` — `extractTestResults` is private (not exported); test via `parseLog()` or use rewire |

@@ -112,6 +112,107 @@ class TaskManager:
         self.active_tasks: dict[str, Task] = {}
         self.queues: dict[str, list[QueuedTask]] = {}
         self._queue_lock = threading.Lock()
+        self._load_tasks()
+
+    def _tasks_file(self) -> Path:
+        """Path to persistent tasks file (survives container restarts)."""
+        return Path(PROJECTS_ROOT) / ".tasks.json"
+
+    def _save_tasks(self) -> None:
+        """Serialize active tasks and queues to JSON for persistence across restarts."""
+        data: dict[str, Any] = {
+            "active_tasks": {},
+            "queues": {},
+        }
+        for path_key, task in self.active_tasks.items():
+            data["active_tasks"][path_key] = {
+                "project": task.project,
+                "project_path": str(task.project_path),
+                "mode": task.mode,
+                "iterations": task.iterations,
+                "idea": task.idea,
+                "session_name": task.session_name,
+                "start_commit": task.start_commit,
+                "last_reported_iteration": task.last_reported_iteration,
+                "stale_warned": task.stale_warned,
+                "started_at": task.started_at.isoformat(),
+                "status": task.status,
+            }
+        with self._queue_lock:
+            for path_key, queue in self.queues.items():
+                data["queues"][path_key] = [
+                    {
+                        "id": qt.id,
+                        "project": qt.project,
+                        "project_path": str(qt.project_path),
+                        "mode": qt.mode,
+                        "iterations": qt.iterations,
+                        "idea": qt.idea,
+                        "queued_at": qt.queued_at.isoformat(),
+                    }
+                    for qt in queue
+                ]
+        path = self._tasks_file()
+        tmp_path = path.with_suffix(".tmp")
+        try:
+            tmp_path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+            os.replace(tmp_path, path)
+        except OSError:
+            logger.warning("Failed to save tasks to %s", path)
+
+    def _load_tasks(self) -> None:
+        """Restore tasks from JSON, validating tmux sessions exist."""
+        path = self._tasks_file()
+        if not path.exists():
+            return
+
+        try:
+            data = json.loads(path.read_text())
+        except (json.JSONDecodeError, OSError):
+            logger.warning("Failed to load tasks from %s", path)
+            return
+
+        # Restore active tasks — only those with running tmux sessions
+        for path_key, entry in data.get("active_tasks", {}).items():
+            session_name = entry.get("session_name", "")
+            if not self._is_session_running(session_name):
+                logger.info("Stale task removed on load: %s (%s)", entry.get("project"), session_name)
+                continue
+
+            task = Task(
+                project=entry["project"],
+                project_path=Path(entry["project_path"]),
+                mode=entry["mode"],
+                iterations=entry["iterations"],
+                idea=entry.get("idea"),
+                session_name=session_name,
+                start_commit=entry.get("start_commit"),
+                last_reported_iteration=entry.get("last_reported_iteration", 0),
+                stale_warned=entry.get("stale_warned", False),
+                started_at=datetime.fromisoformat(entry["started_at"]),
+                status=entry.get("status", "running"),
+            )
+            self.active_tasks[path_key] = task
+            logger.info("Restored task: %s (%s)", task.project, task.mode)
+
+        # Restore queues — always restored regardless of tmux state
+        for path_key, queue_data in data.get("queues", {}).items():
+            restored_queue = []
+            for entry in queue_data:
+                restored_queue.append(QueuedTask(
+                    id=entry["id"],
+                    project=entry["project"],
+                    project_path=Path(entry["project_path"]),
+                    mode=entry["mode"],
+                    iterations=entry["iterations"],
+                    idea=entry.get("idea"),
+                    queued_at=datetime.fromisoformat(entry["queued_at"]),
+                ))
+            if restored_queue:
+                self.queues[path_key] = restored_queue
+
+        # Save cleaned state (stale active tasks removed)
+        self._save_tasks()
 
     def _session_name(self, project: str) -> str:
         """Generate tmux session name for a project."""
@@ -170,7 +271,9 @@ class TaskManager:
                     iterations=iterations,
                     idea=idea,
                 ))
-            return True, MSG_QUEUED_AT.format(position=len(queue))
+                position = len(queue)
+            self._save_tasks()
+            return True, MSG_QUEUED_AT.format(position=position)
 
         return self._start_task_now(project, project_path, mode, iterations, idea)
 
@@ -219,6 +322,7 @@ class TaskManager:
             start_commit=start_commit,
         )
         self.active_tasks[str(project_path)] = task
+        self._save_tasks()
 
         return True, f"Started {mode} ({iterations} iterations)"
 
@@ -267,13 +371,17 @@ class TaskManager:
     def cancel_queued_task(self, project_path: Path, task_id: str) -> bool:
         """Cancel a queued task by id. Returns True if found and removed."""
         path_key = str(project_path)
+        found = False
         with self._queue_lock:
             queue = self.queues.get(path_key, [])
             for i, task in enumerate(queue):
                 if task.id == task_id:
                     queue.pop(i)
-                    return True
-        return False
+                    found = True
+                    break
+        if found:
+            self._save_tasks()
+        return found
 
     def _start_next_in_queue(self, project_path: Path) -> Task | None:
         """Start the next task in queue if available. Returns started Task or None."""
@@ -321,6 +429,7 @@ class TaskManager:
             if not self._is_session_running(task.session_name):
                 logger.info(f"Task completed: {task.project} ({task.mode})")
                 completed_task = self.active_tasks.pop(path_key)
+                self._save_tasks()
 
                 queue_len = len(self.queues.get(path_key, []))
                 logger.info(f"Queue for {task.project}: {queue_len} items")
