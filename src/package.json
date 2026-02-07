@@ -1,6 +1,6 @@
 {
   "name": "dev-loop",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Autonomous development loop system powered by Claude CLI",
   "bin": {
     "loop": "./bin/cli.js"
