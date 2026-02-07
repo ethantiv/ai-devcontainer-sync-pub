@@ -1,0 +1,37 @@
+services:
+  dev-claude-code:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: ${APP_NAME:-dev-claude-code}:latest
+    container_name: ${APP_NAME:-dev-claude-code}
+    hostname: ${APP_NAME:-dev-claude-code}
+    env_file:
+      - .env
+    volumes:
+      # Persistent configuration
+      - claude-config:/home/developer/.claude
+      - agents-skills:/home/developer/.agents
+      - gemini-config:/home/developer/.gemini
+      # Projects directory
+      - projects:/home/developer/projects
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    working_dir: /home/developer/projects
+    healthcheck:
+      test: ["CMD", "node", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  claude-config:
+    name: ${APP_NAME:-dev-claude-code}-claude-config
+  agents-skills:
+    name: ${APP_NAME:-dev-claude-code}-agents-skills
+  gemini-config:
+    name: ${APP_NAME:-dev-claude-code}-gemini-config
+  projects:
+    name: ${APP_NAME:-dev-claude-code}-projects
