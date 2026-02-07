@@ -77,7 +77,7 @@ RUN ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini 
     && ln -sf ../lib/node_modules/agent-browser/bin/agent-browser.js /usr/bin/agent-browser
 
 # Install loop system (autonomous dev loop + Telegram bot + CLI)
-COPY loop /opt/loop
+COPY src /opt/loop
 RUN cd /opt/loop && npm install --omit=dev \
     && chmod +x /opt/loop/scripts/*.sh /opt/loop/bin/cli.js \
     && ln -sf /opt/loop/bin/cli.js /usr/bin/loop

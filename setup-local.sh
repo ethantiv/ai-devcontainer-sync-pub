@@ -171,14 +171,14 @@ install_agent_browser() {
 install_loop() {
     print_header "Loop CLI"
 
-    local loop_dir="$SCRIPT_DIR/loop"
+    local loop_dir="$SCRIPT_DIR/src"
 
     if [[ ! -d "$loop_dir" ]]; then
-        warn "loop/ directory not found"
+        warn "src/ directory not found"
         return 0
     fi
 
-    cd "$loop_dir" && npm install --omit=dev 2>/dev/null
+    (cd "$loop_dir" && npm install --omit=dev 2>/dev/null)
     chmod +x "$loop_dir/bin/cli.js" "$loop_dir/scripts/"*.sh
     sudo ln -sf "$loop_dir/bin/cli.js" /usr/local/bin/loop
 

@@ -134,14 +134,14 @@ setup_github_token() {
 install_loop_cli() {
     echo "📦 Installing loop CLI..."
 
-    local loop_dir="${WORKSPACE_FOLDER}/loop"
+    local loop_dir="${WORKSPACE_FOLDER}/src"
 
     if [[ ! -d "$loop_dir" ]]; then
-        warn "loop/ directory not found in workspace"
+        warn "src/ directory not found in workspace"
         return 0
     fi
 
-    cd "$loop_dir" && npm install --omit=dev 2>/dev/null
+    (cd "$loop_dir" && npm install --omit=dev 2>/dev/null)
     chmod +x "$loop_dir/bin/cli.js" "$loop_dir/scripts/"*.sh
     sudo ln -sf "$loop_dir/bin/cli.js" /usr/bin/loop
 
@@ -196,28 +196,6 @@ apply_claude_settings() {
 copy_claude_memory() {
     local source_file="$1/.devcontainer/configuration/CLAUDE.md.memory"
     [[ -f "$source_file" ]] && cp "$source_file" "$CLAUDE_DIR/CLAUDE.md" && ok "CLAUDE.md synced"
-}
-
-sync_claude_files() {
-    local source_dir="$1/.devcontainer/$2"
-    local target_dir="$CLAUDE_DIR/$2"
-
-    [[ -d "$source_dir" ]] || return 0
-
-    # Remove files that no longer exist in source
-    if [[ -d "$target_dir" ]]; then
-        for file in "$target_dir"/*.md; do
-            [[ -f "$file" ]] || continue
-            [[ -f "$source_dir/$(basename "$file")" ]] || rm -f "$file"
-        done 2>/dev/null
-    fi
-
-    # Copy all source files
-    local files=("$source_dir"/*.md)
-    if [[ -e "${files[0]}" ]]; then
-        cp "$source_dir"/*.md "$target_dir/"
-        ok "Synced ${#files[@]} $2"
-    fi
 }
 
 sync_claude_scripts() {

@@ -75,9 +75,26 @@ def authorized_callback(func):
 
 def get_user_data(chat_id: int) -> dict:
     """Get or create user data dict."""
-    if chat_id not in user_data_store:
-        user_data_store[chat_id] = {}
-    return user_data_store[chat_id]
+    return user_data_store.setdefault(chat_id, {})
+
+
+async def reply_text(update: Update, text: str, reply_markup=None, parse_mode="Markdown"):
+    """Send text via callback_query edit or message reply, depending on context."""
+    if update.callback_query:
+        await update.callback_query.edit_message_text(
+            text, reply_markup=reply_markup, parse_mode=parse_mode
+        )
+    else:
+        assert update.message is not None
+        await update.message.reply_text(
+            text, reply_markup=reply_markup, parse_mode=parse_mode
+        )
+
+
+def _is_brainstorm_error(status: str) -> bool:
+    """Check if a brainstorm status message indicates an error."""
+    error_markers = ("Sesja brainstorming już", "Nie udało", "Timeout", "Brak aktywnej", "nie jest gotowa")
+    return any(marker in status for marker in error_markers) or "error" in status.lower()
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -97,12 +114,7 @@ async def show_projects(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     projects = list_projects()
 
     if not projects:
-        text = "No projects found. Check PROJECTS_ROOT configuration."
-        if update.callback_query:
-            await update.callback_query.edit_message_text(text)
-        else:
-            assert update.message is not None
-            await update.message.reply_text(text)
+        await reply_text(update, "No projects found. Check PROJECTS_ROOT configuration.", parse_mode=None)
         return ConversationHandler.END
 
     buttons = []
@@ -123,17 +135,7 @@ async def show_projects(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     keyboard.append([InlineKeyboardButton("➕ Klonuj repo", callback_data="action:clone")])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    text = "📂 *Dostępne projekty:*"
-    if update.callback_query:
-        await update.callback_query.edit_message_text(
-            text, reply_markup=reply_markup, parse_mode="Markdown"
-        )
-    else:
-        assert update.message is not None
-        await update.message.reply_text(
-            text, reply_markup=reply_markup, parse_mode="Markdown"
-        )
-
+    await reply_text(update, "📂 *Dostępne projekty:*", reply_markup=reply_markup)
     return State.SELECT_PROJECT
 
 
@@ -483,7 +485,7 @@ async def handle_brainstorm_prompt(update: Update, context: ContextTypes.DEFAULT
         parse_mode="Markdown",
     )
 
-    last_status = "Uruchamiam Claude..."  # Track last status to avoid redundant edits
+    last_status = "Uruchamiam Claude..."
 
     async for status, is_final in brainstorm_manager.start(
         chat_id=update.effective_chat.id,
@@ -492,11 +494,10 @@ async def handle_brainstorm_prompt(update: Update, context: ContextTypes.DEFAULT
         prompt=prompt,
     ):
         if is_final:
-            if status.startswith("Sesja brainstorming już") or "Nie udało" in status or "Timeout" in status or "error" in status.lower():
+            if _is_brainstorm_error(status):
                 await thinking_msg.edit_text(f"❌ {status}", parse_mode="Markdown")
                 return ConversationHandler.END
 
-            # Success - delete thinking message and send response
             await thinking_msg.delete()
             await update.message.reply_text(
                 f"🤖 *Claude:*\n\n{status}\n\n"
@@ -504,14 +505,13 @@ async def handle_brainstorm_prompt(update: Update, context: ContextTypes.DEFAULT
                 parse_mode="Markdown",
             )
             return State.BRAINSTORMING
-        else:
-            # Update progress only if status changed (avoids "Message is not modified" error)
-            if status != last_status:
-                last_status = status
-                await thinking_msg.edit_text(
-                    f"🧠 *Brainstorming*\n\nProjekt: `{project.name}`\n_{status}_",
-                    parse_mode="Markdown",
-                )
+
+        if status != last_status:
+            last_status = status
+            await thinking_msg.edit_text(
+                f"🧠 *Brainstorming*\n\nProjekt: `{project.name}`\n_{status}_",
+                parse_mode="Markdown",
+            )
 
     return ConversationHandler.END
 
@@ -547,16 +547,7 @@ async def show_iterations_menu(update: Update, context: ContextTypes.DEFAULT_TYP
     project_name = project.name if project else "unknown"
     text = f"🔢 *Wybierz liczbę iteracji:*\n\nProjekt: `{project_name}`\nTryb: {mode}"
 
-    if update.callback_query:
-        await update.callback_query.edit_message_text(
-            text, reply_markup=reply_markup, parse_mode="Markdown"
-        )
-    else:
-        assert update.message is not None
-        await update.message.reply_text(
-            text, reply_markup=reply_markup, parse_mode="Markdown"
-        )
-
+    await reply_text(update, text, reply_markup=reply_markup)
     return State.SELECT_ITERATIONS
 
 
@@ -648,12 +639,7 @@ async def start_task(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     else:
         text = f"❌ *Błąd*\n\n{message}"
 
-    if update.callback_query:
-        await update.callback_query.edit_message_text(text, parse_mode="Markdown")
-    else:
-        assert update.message is not None
-        await update.message.reply_text(text, parse_mode="Markdown")
-
+    await reply_text(update, text)
     return ConversationHandler.END
 
 
@@ -672,19 +658,10 @@ async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
             current = task_manager.get_current_iteration(task) or "?"
             text += f"   {task.mode.title()} • Iteracja: {current}/{task.iterations} • {duration}\n\n"
 
-    buttons = [[InlineKeyboardButton("⬅️ Powrót", callback_data="action:back")]]
-    reply_markup = InlineKeyboardMarkup(buttons)
-
-    if update.callback_query:
-        await update.callback_query.edit_message_text(
-            text, reply_markup=reply_markup, parse_mode="Markdown"
-        )
-    else:
-        assert update.message is not None
-        await update.message.reply_text(
-            text, reply_markup=reply_markup, parse_mode="Markdown"
-        )
-
+    reply_markup = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("⬅️ Powrót", callback_data="action:back")]]
+    )
+    await reply_text(update, text, reply_markup=reply_markup)
     return State.PROJECT_MENU
 
 
@@ -720,9 +697,8 @@ async def start_brainstorming(update: Update, context: ContextTypes.DEFAULT_TYPE
         parse_mode="Markdown",
     )
 
-    last_status = "Uruchamiam Claude..."  # Track last status to avoid redundant edits
+    last_status = "Uruchamiam Claude..."
 
-    # Start brainstorming session with async generator
     async for status, is_final in brainstorm_manager.start(
         chat_id=update.effective_chat.id,
         project=project.name,
@@ -730,11 +706,10 @@ async def start_brainstorming(update: Update, context: ContextTypes.DEFAULT_TYPE
         prompt=prompt,
     ):
         if is_final:
-            if status.startswith("Sesja brainstorming już") or "Nie udało" in status or "Timeout" in status or "error" in status.lower():
+            if _is_brainstorm_error(status):
                 await thinking_msg.edit_text(f"❌ {status}", parse_mode="Markdown")
                 return ConversationHandler.END
 
-            # Success - delete thinking message and send response
             await thinking_msg.delete()
             await update.message.reply_text(
                 f"🤖 *Claude:*\n\n{status}\n\n"
@@ -743,14 +718,13 @@ async def start_brainstorming(update: Update, context: ContextTypes.DEFAULT_TYPE
                 parse_mode="Markdown",
             )
             return State.BRAINSTORMING
-        else:
-            # Update progress only if status changed (avoids "Message is not modified" error)
-            if status != last_status:
-                last_status = status
-                await thinking_msg.edit_text(
-                    f"🧠 *Brainstorming*\n\nProjekt: `{project.name}`\n_{status}_",
-                    parse_mode="Markdown",
-                )
+
+        if status != last_status:
+            last_status = status
+            await thinking_msg.edit_text(
+                f"🧠 *Brainstorming*\n\nProjekt: `{project.name}`\n_{status}_",
+                parse_mode="Markdown",
+            )
 
     return ConversationHandler.END
 
@@ -765,33 +739,28 @@ async def handle_brainstorm_message(update: Update, context: ContextTypes.DEFAUL
     if not message:
         return State.BRAINSTORMING
 
-    # Send "thinking" message that we'll update with progress
     thinking_msg = await update.message.reply_text("🤔 _Claude myśli..._", parse_mode="Markdown")
+    last_status = "Claude myśli..."
 
-    last_status = "Claude myśli..."  # Track last status to avoid redundant edits
-
-    # Send message to Claude with async generator
     async for status, is_final in brainstorm_manager.respond(
         chat_id=update.effective_chat.id,
         message=message,
     ):
         if is_final:
-            if "Brak aktywnej" in status or "nie jest gotowa" in status or "Nie udało" in status or "Timeout" in status or "error" in status.lower():
+            if _is_brainstorm_error(status):
                 await thinking_msg.edit_text(f"❌ {status}", parse_mode="Markdown")
                 return State.BRAINSTORMING
 
-            # Success - delete thinking message and send response
             await thinking_msg.delete()
             await update.message.reply_text(
                 f"🤖 *Claude:*\n\n{status}",
                 parse_mode="Markdown",
             )
             return State.BRAINSTORMING
-        else:
-            # Update progress only if status changed (avoids "Message is not modified" error)
-            if status != last_status:
-                last_status = status
-                await thinking_msg.edit_text(f"🤔 _{status}_", parse_mode="Markdown")
+
+        if status != last_status:
+            last_status = status
+            await thinking_msg.edit_text(f"🤔 _{status}_", parse_mode="Markdown")
 
     return State.BRAINSTORMING
 
@@ -921,26 +890,21 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def check_task_completion(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Job that checks for completed tasks and starts queued ones."""
-    logger.debug("check_task_completion running")
     results = task_manager.process_completed_tasks()
-    logger.debug(f"Processed {len(results)} task completions")
 
     for _, next_task in results:
-        text = ""
-
-        if next_task:
-            next_icon = "📋" if next_task.mode == "plan" else "🔨"
-            if text:
-                text += f"\n\n"
-            text += f"▶️ *Uruchomiono z kolejki:*\n"
-            text += f"{next_icon} {next_task.project} - {next_task.mode.title()} • {next_task.iterations} iteracji"
-
-        if text:
-            await context.bot.send_message(
-                chat_id=TELEGRAM_CHAT_ID,
-                text=text,
-                parse_mode="Markdown",
-            )
+        if not next_task:
+            continue
+        icon = "📋" if next_task.mode == "plan" else "🔨"
+        text = (
+            f"▶️ *Uruchomiono z kolejki:*\n"
+            f"{icon} {next_task.project} - {next_task.mode.title()} • {next_task.iterations} iteracji"
+        )
+        await context.bot.send_message(
+            chat_id=TELEGRAM_CHAT_ID,
+            text=text,
+            parse_mode="Markdown",
+        )
 
 
 def create_application() -> Application:

@@ -127,23 +127,19 @@ class TaskManager:
         # If session running, add to queue instead
         if self._is_session_running(session_name):
             with self._queue_lock:
-                queue = self.queues.get(path_key, [])
+                queue = self.queues.setdefault(path_key, [])
                 if len(queue) >= MAX_QUEUE_SIZE:
                     return False, f"Kolejka pełna ({MAX_QUEUE_SIZE} zadań)"
 
-                queued_task = QueuedTask(
+                queue.append(QueuedTask(
                     id=str(uuid.uuid4())[:8],
                     project=project,
                     project_path=project_path,
                     mode=mode,
                     iterations=iterations,
                     idea=idea,
-                )
-                if path_key not in self.queues:
-                    self.queues[path_key] = []
-                self.queues[path_key].append(queued_task)
-                queue_pos = len(self.queues[path_key])
-            return True, f"Dodano do kolejki #{queue_pos}"
+                ))
+            return True, f"Dodano do kolejki #{len(queue)}"
 
         return self._start_task_now(project, project_path, mode, iterations, idea)
 
@@ -267,9 +263,7 @@ class TaskManager:
 
         # Restore task to queue if start failed
         with self._queue_lock:
-            if path_key not in self.queues:
-                self.queues[path_key] = []
-            self.queues[path_key].insert(0, next_task)
+            self.queues.setdefault(path_key, []).insert(0, next_task)
 
         return None
 
@@ -390,29 +384,21 @@ class BrainstormManager:
 
     def _cleanup_session(self, chat_id: int) -> None:
         """Clean up session resources (tmux, temp files)."""
-        session = self.sessions.get(chat_id)
+        session = self.sessions.pop(chat_id, None)
         if not session:
             return
 
-        # Kill tmux session if running
-        tmux_name = session.tmux_session
-        if self._is_session_running(tmux_name):
+        if self._is_session_running(session.tmux_session):
             subprocess.run(
-                ["tmux", "kill-session", "-t", tmux_name],
+                ["tmux", "kill-session", "-t", session.tmux_session],
                 capture_output=True,
                 timeout=5,
             )
 
-        # Remove temp file
-        if session.output_file.exists():
-            try:
-                session.output_file.unlink()
-            except OSError:
-                pass
-
-        # Remove from sessions
-        if chat_id in self.sessions:
-            del self.sessions[chat_id]
+        try:
+            session.output_file.unlink(missing_ok=True)
+        except OSError:
+            pass
 
     def _parse_stream_json(self, output_file: Path) -> tuple[bool, str, str | None]:
         """Parse stream-json output file for final result.
@@ -427,26 +413,20 @@ class BrainstormManager:
         if not content:
             return False, "", None
 
-        lines = content.split("\n")
-        session_id = None
-        result_text = ""
-        is_error = False
-
-        for line in reversed(lines):
+        for line in reversed(content.split("\n")):
             if not line.strip():
                 continue
             try:
                 msg: dict[str, Any] = json.loads(line)
-                msg_type = msg.get("type")
-
-                if msg_type == "result":
-                    is_error = msg.get("is_error", False)
-                    result_text = msg.get("result", "")
-                    session_id = msg.get("session_id")
-                    return True, result_text if not is_error else f"Claude error: {result_text}", session_id
-
             except json.JSONDecodeError:
                 continue
+
+            if msg.get("type") == "result":
+                result_text = msg.get("result", "")
+                session_id = msg.get("session_id")
+                if msg.get("is_error", False):
+                    return True, f"Claude error: {result_text}", session_id
+                return True, result_text, session_id
 
         return False, "", None
 
@@ -676,14 +656,6 @@ class BrainstormManager:
             self._cleanup_session(chat_id)
             return True
         return False
-
-    def get_session(self, chat_id: int) -> BrainstormSession | None:
-        """Get active session for a chat."""
-        return self.sessions.get(chat_id)
-
-    def has_session(self, chat_id: int) -> bool:
-        """Check if chat has an active brainstorming session."""
-        return chat_id in self.sessions
 
 
 # Global task manager instance

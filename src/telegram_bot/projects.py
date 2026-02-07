@@ -174,15 +174,12 @@ def clone_repo(url: str) -> tuple[bool, str]:
 
 def _run_loop_init(project_path: Path) -> bool:
     """Run `loop init` in a project directory. Returns True on success."""
-    # Resolve loop binary — same logic as tasks.py
-    loop_cmd = "/opt/loop/scripts/loop.sh"
-    if not Path(loop_cmd).exists():
-        loop_cmd = str(project_path / "loop" / "loop.sh")
-        if not Path(loop_cmd).exists():
-            return False
+    loop_cli = "/usr/bin/loop"
+    if not Path(loop_cli).exists():
+        loop_cli = "loop"  # fall back to PATH
 
     result = subprocess.run(
-        ["bash", loop_cmd, "init"],
+        [loop_cli, "init"],
         cwd=project_path,
         capture_output=True,
         text=True,

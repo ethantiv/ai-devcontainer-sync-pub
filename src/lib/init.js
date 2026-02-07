@@ -69,46 +69,30 @@ function init({ force = false, symlinkOnly = false } = {}) {
       continue;
     }
 
-    // Ensure parent directory exists
     const destDir = path.dirname(destPath);
-    if (!fs.existsSync(destDir)) {
-      fs.mkdirSync(destDir, { recursive: true });
-    }
+    fs.mkdirSync(destDir, { recursive: true });
 
-    // Check if destination already exists (lstat doesn't follow symlinks)
-    let destStat = null;
-    try {
-      destStat = fs.lstatSync(destPath);
-    } catch {
-      // Doesn't exist - will create below
-    }
+    // lstat doesn't follow symlinks — catches broken symlinks that existsSync misses
+    let destStat;
+    try { destStat = fs.lstatSync(destPath); } catch { destStat = null; }
 
     if (destStat) {
-      if (destStat.isSymbolicLink()) {
-        if (force) {
-          fs.unlinkSync(destPath);
-        } else {
-          console.log(`  skip ${dest} (symlink exists)`);
-          continue;
-        }
-      } else {
-        // Real file - never overwrite
+      if (!destStat.isSymbolicLink()) {
         console.log(`  skip ${dest} (real file exists)`);
         continue;
       }
+      if (!force) {
+        console.log(`  skip ${dest} (symlink exists)`);
+        continue;
+      }
+      fs.unlinkSync(destPath);
     }
 
-    // Compute relative symlink target
     const relTarget = path.relative(destDir, srcPath);
     fs.symlinkSync(relTarget, destPath);
 
-    // Make shell scripts executable
     if (src.endsWith('.sh')) {
-      try {
-        fs.chmodSync(srcPath, 0o755);
-      } catch {
-        // Source file may be read-only (e.g. global npm install) - skip
-      }
+      try { fs.chmodSync(srcPath, 0o755); } catch { /* read-only source */ }
     }
 
     console.log(`  linked ${dest}`);

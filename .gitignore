@@ -1,4 +1,5 @@
 .env
 .DS_Store
-loop/node_modules/
-loop/logs/
+__pycache__/
+node_modules/
+src/logs/

@@ -17,7 +17,7 @@ def main() -> int:
         print("Error: TELEGRAM_CHAT_ID environment variable not set")
         return 1
 
-    print(f"Starting Telegram bot...")
+    print("Starting Telegram bot...")
     print(f"  Authorized chat ID: {TELEGRAM_CHAT_ID}")
 
     app = create_application()
