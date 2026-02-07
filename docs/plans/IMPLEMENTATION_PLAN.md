@@ -1,7 +1,8 @@
 # Implementation Plan
 
-**Status:** IN_PROGRESS
+**Status:** VERIFIED
 **Progress:** 0/14 (0%)
+**Last verified:** 2026-02-07 — all 14 tasks confirmed missing, plan matches ROADMAP.md scope
 
 ## Goal
 
@@ -124,6 +125,27 @@ Phase 1: Backend — `projects.py`
 | Fix empty-state to show buttons instead of ending conversation | Current behavior is a dead end — user cannot proceed. Showing Create/Clone buttons makes the bot usable from a fresh state. |
 | Add `GITHUB_CHOICE` state (not reuse `PROJECT_MENU`) | Cleaner state machine — GitHub choice is a distinct step in the creation flow, not part of the project menu. Prevents accidental state mixing. |
 | No `gh` availability check in `config.validate()` | `gh` is optional (GitHub integration is opt-in). Adding a warning would be noise for users who don't need GitHub features. Check availability inline in `create_github_repo()` instead. |
+
+### Code Verification (2026-02-07)
+
+Full codebase scan confirmed **all 14 planned tasks are missing** — nothing has been implemented yet:
+
+| Planned Element | Verification Result |
+|-----------------|-------------------|
+| `validate_project_name()` in `projects.py` | Not found — no function, no references |
+| `create_project()` in `projects.py` | Not found — only `create_worktree()` and `clone_repo()` exist |
+| `create_github_repo()` in `projects.py` | Not found — no `gh repo create` calls anywhere in src/ |
+| `ENTER_PROJECT_NAME` state in `bot.py` | Not found — State enum has 8 values, none for project name input |
+| `GITHUB_CHOICE` state in `bot.py` | Not found — no `github:` callback pattern anywhere |
+| `handle_project_name()` handler in `bot.py` | Not found — only `handle_name()` (worktree) and `handle_clone_url()` exist |
+| GitHub choice callback handler in `bot.py` | Not found — no `handle_github` or `github_choice` functions |
+| `MSG_CREATE_PROJECT_BTN` and related constants | Not found — none of the 12 planned MSG_* constants exist in `messages.py` |
+| Empty-state fix in `show_projects()` | Confirmed dead-end: line 210-212 sends text + returns `ConversationHandler.END`, no buttons |
+| Tests for `validate_project_name()` | Not found — no `TestValidateProjectName` class |
+| Tests for `create_project()` | Not found — no `TestCreateProject` class |
+| Tests for `create_github_repo()` | Not found — no `TestCreateGithubRepo` class |
+
+**Codebase state**: Clean (zero TODOs/FIXMEs), 151 Python + 20 JS tests passing, all existing subprocess calls follow timeout+try/except pattern consistently. `test_projects.py` has 44 tests across 6 classes including `TestSubprocessTimeouts` with 12 dedicated tests.
 
 ### Issues Encountered
 | Issue | Resolution |
