@@ -193,10 +193,7 @@ echo "  gemini --version    : $(NO_COLOR=1 gemini --version 2>/dev/null || echo 
 echo "  loop --version      : $(loop --version 2>/dev/null || echo 'not available')"
 echo ""
 echo "  Working directory   : $(pwd)"
-echo "  Config initialized  : $([ -f "$CONFIGURED_MARKER" ] && echo 'Yes' || echo 'No')"
-echo ""
-echo "  Loop CLI            : loop plan -i 5"
-echo "  Telegram bot        : $([ -n "$TELEGRAM_BOT_TOKEN" ] && echo 'running' || echo 'not configured')"
+echo "  Telegram bot        : $(if [[ "${DEV_MODE,,}" =~ ^(true|1|yes)$ ]]; then echo 'disabled (DEV_MODE)'; elif [ -n "$TELEGRAM_BOT_TOKEN" ]; then echo 'running'; else echo 'not configured'; fi)"
 echo ""
 
 # Execute command (default: bash)
