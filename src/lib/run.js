@@ -1,40 +1,66 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
 
-function run(opts) {
+function checkLoopScript() {
   const loopScript = './loop/loop.sh';
-
   if (!fs.existsSync(loopScript)) {
-    console.error('Error: loop/loop.sh not found. Run "npx loop init" first.');
+    console.error('Error: loop/loop.sh not found. Run "loop init" first.');
     process.exit(1);
   }
+  return loopScript;
+}
 
+function spawnLoop(opts, isPlan) {
+  const loopScript = checkLoopScript();
   const args = [];
 
-  // Mode
-  if (opts.plan) args.push('-p');
-
-  // Autonomous by default (unless --interactive)
+  if (isPlan) args.push('-p');
   if (!opts.interactive) args.push('-a');
 
-  // Iterations (default: 3 for plan, 5 for build)
-  const iterations = opts.iterations || (opts.plan ? '3' : '5');
+  const iterations = opts.iterations || (isPlan ? '3' : '5');
   args.push('-i', iterations);
 
-  // Idea
   if (opts.idea) args.push('-I', opts.idea);
-
-  // Early exit
   if (opts.earlyExit === false) args.push('-e');
 
-  const child = spawn(loopScript, args, {
-    stdio: 'inherit',
-    cwd: process.cwd(),
-  });
-
-  child.on('close', (code) => {
-    process.exit(code ?? 0);
+  return new Promise((resolve) => {
+    const child = spawn(loopScript, args, {
+      stdio: 'inherit',
+      cwd: process.cwd(),
+    });
+    child.on('close', (code) => resolve(code ?? 0));
   });
 }
 
-module.exports = { run };
+function runPlan(opts) {
+  spawnLoop(opts, true).then((code) => process.exit(code));
+}
+
+function runBuild(opts) {
+  spawnLoop(opts, false).then((code) => process.exit(code));
+}
+
+function runCombined(opts) {
+  // Plan phase: default iterations, pass --idea, ignore -i override
+  const planOpts = {
+    interactive: opts.interactive,
+    idea: opts.idea,
+  };
+
+  // Build phase: uses -i if given, no --idea (plan already wrote it to ROADMAP)
+  const buildOpts = {
+    interactive: opts.interactive,
+    earlyExit: opts.earlyExit,
+    iterations: opts.iterations,
+  };
+
+  spawnLoop(planOpts, true).then((planCode) => {
+    if (planCode !== 0) {
+      console.error(`Plan phase exited with code ${planCode}, skipping build.`);
+      process.exit(planCode);
+    }
+    spawnLoop(buildOpts, false).then((buildCode) => process.exit(buildCode));
+  });
+}
+
+module.exports = { runPlan, runBuild, runCombined };

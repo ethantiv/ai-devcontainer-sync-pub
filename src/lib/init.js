@@ -119,7 +119,7 @@ function init({ force = false, symlinkOnly = false } = {}) {
     console.log('  created .gitignore with loop/logs/');
   }
 
-  console.log('\nDone! Run: npx loop run --plan');
+  console.log('\nDone! Run: loop plan');
 }
 
 module.exports = { init };

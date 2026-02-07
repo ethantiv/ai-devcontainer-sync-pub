@@ -189,7 +189,7 @@ echo ""
 echo "  Working directory   : $(pwd)"
 echo "  Config initialized  : $([ -f "$CONFIGURED_MARKER" ] && echo 'Yes' || echo 'No')"
 echo ""
-echo "  Loop CLI            : loop run --plan -i 5"
+echo "  Loop CLI            : loop plan -i 5"
 echo "  Telegram bot        : $([ -n "$TELEGRAM_BOT_TOKEN" ] && echo 'running' || echo 'not configured')"
 echo ""
 

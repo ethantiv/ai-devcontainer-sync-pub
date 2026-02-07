@@ -211,7 +211,7 @@ should_exit_early() {
 print_config() {
     echo "Mode: $SCRIPT_NAME${1:+ ($1)}"
     [[ "$AUTONOMOUS" == true ]] && echo "Autonomous mode: $ITERATIONS iterations"
-    [[ "$AUTONOMOUS" == true ]] && echo "Early exit: $EARLY_EXIT"
+    [[ "$AUTONOMOUS" == true && "$SCRIPT_NAME" != "plan" ]] && echo "Early exit: $EARLY_EXIT"
     [[ -n "$IDEA" ]] && echo "Idea: $IDEA"
 }
 

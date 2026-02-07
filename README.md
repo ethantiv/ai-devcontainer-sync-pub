@@ -71,22 +71,28 @@ cd ~/projects/my-project
 loop init
 
 # Run planning (analyzes code, creates IMPLEMENTATION_PLAN.md)
-loop run --plan
+loop plan
 
 # Run build (implements tasks from the plan)
+loop build
+
+# Plan then build in one command (3 plan + 5 build iterations)
 loop run
 
 # Seed an idea before planning
-loop run --plan -I "Add user authentication"
+loop plan -I "Add user authentication"
 
-# Custom iteration count (default: 5 build, 3 plan)
+# Custom iteration count
+loop build -i 10
+
+# Combined with custom build iterations (plan stays at 3)
 loop run -i 10
 
 # Interactive mode (manual Claude session instead of autonomous)
-loop run --interactive
+loop build --interactive
 
 # Disable early exit (run all iterations even if plan is complete)
-loop run --no-early-exit
+loop build --no-early-exit
 
 # Re-create symlinks after updating the package
 loop update

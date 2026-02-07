@@ -67,8 +67,9 @@ Built-in autonomous development loop at `src/` in this repository. Includes CLI 
 ```bash
 loop --help             # Show available subcommands
 loop init               # Initialize loop config in current project (symlinks scripts/prompts)
-loop run --plan          # Run loop with planning (default: 3 iterations)
-loop run                 # Run build loop (default: 5 iterations)
+loop plan               # Run planning phase (default: 3 iterations)
+loop build              # Run build phase (default: 5 iterations)
+loop run                # Plan then build (3+5 iterations)
 loop cleanup            # Clean up loop artifacts
 loop update             # Refresh symlinks after update
 ```
