@@ -1,7 +1,7 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 0/14 (0%)
+**Progress:** 2/14 (14%)
 
 ## Goal
 
@@ -17,12 +17,14 @@ Phase 1: Docker & Compose Configuration
 ## Phases
 
 ### Phase 1: Docker & Compose Configuration
+- [x] Add `APP_NAME` to `container_name` and `hostname` in `docker-compose.yml` (lines 7-8) — done in commit `e35738e`
+- [x] Add `DEV_MODE` implementation: entrypoint.sh (line 130-135), config.py (line 53), run.py (lines 23-25), 6 tests — done in commit `4f3d756`
 - [ ] Parameterize image name in `docker-compose.yml` using `APP_NAME`: change `image: claude-code:latest` → `image: ${APP_NAME:-claude-code}:latest` (line 6)
 - [ ] Parameterize volume names in `docker-compose.yml` — both service-level mounts (lines 13-17) and top-level `name:` fields (lines 30-37) — to use `${APP_NAME:-claude-code}` prefix (e.g. `${APP_NAME:-claude-code}-claude-config`)
 - [ ] Add `APP_NAME=claude-code` to `docker/.env` (currently absent; needed for local `docker compose` usage)
 - [ ] Add `APP_NAME` to `docker/.env.example` with comment explaining dev vs prod values
 - [ ] Update README.md Docker Volumes table to reflect parameterized volume names
-- **Status:** pending
+- **Status:** in_progress
 - **Note:** Do NOT add `DEV_MODE` to `docker/.env` — it must only be set as a Coolify per-app env var to avoid branch conflicts
 
 ### Phase 2: Coolify Dev Application Deployment
@@ -40,7 +42,7 @@ Phase 1: Docker & Compose Configuration
 ### Phase 4: Documentation & Verification
 - [ ] Update CLAUDE.md: add dual deployment pattern, APP_NAME volume parameterization, dev app UUID, SSH aliases documentation
 - [ ] Update README.md: add dual deployment instructions in Coolify section, document `cc`/`dev-cc` SSH aliases
-- [ ] Run all tests (148 Python + 20 JS) to verify no regressions from compose changes
+- [ ] Run all tests (151 Python + 20 JS) to verify no regressions from compose changes
 - **Status:** pending
 
 ## Key Questions
@@ -101,11 +103,11 @@ From ROADMAP.md:
 - No network conflicts between dev and prod
 
 **Existing DEV_MODE Implementation** (already working, 6 tests in test_config.py):
-- `docker/entrypoint.sh:132` — bash-level check, skips Telegram bot
-- `src/telegram_bot/config.py:53` — Python-level `DEV_MODE` boolean
-- `src/telegram_bot/run.py:23-25` — graceful exit with code 0
+- `docker/entrypoint.sh:130-135` — bash-level check via `${DEV_MODE,,}` lowercase + regex, skips Telegram bot
+- `src/telegram_bot/config.py:53` — Python-level `DEV_MODE` boolean via `_is_truthy()`
+- `src/telegram_bot/run.py:23-25` — graceful exit with code 0, prints `MSG_DEV_MODE_SKIP`
 - Accepts `true`, `1`, `yes` (case-insensitive)
-- Tests: `TestDevMode` class (test_config.py:434-510) — 6 tests covering all truthy/falsy values and validation warnings
+- Tests: `TestDevMode` class (test_config.py) — 6 tests covering all truthy/falsy values and validation warnings
 
 **Existing APP_NAME Implementation** (partially working):
 - `docker-compose.yml:7-8` — `${APP_NAME:-claude-code}` for `container_name` and `hostname`
@@ -126,10 +128,10 @@ From ROADMAP.md:
 - No `dev-cc` alias exists anywhere
 - ROADMAP requires **host-level aliases** on RPi for `docker exec` into containers
 
-**Codebase Quality** (verified via code review):
+**Codebase Quality** (verified via code review, 2026-02-07):
 - No TODOs, FIXMEs, or placeholder implementations found in `src/` or `docker/`
 - No skipped or expected-failure tests
-- Test count: 148 Python tests (52 config + 20 git_utils + 33 projects + 43 tasks) + 20 JS tests = 168 total
+- Test count: 151 Python tests (52 config + 20 git_utils + 33 projects + 46 tasks) + 20 JS tests = 171 total
 - No existing tests for Coolify deployment configuration or APP_NAME parameterization
 
 ### Technical Decisions
