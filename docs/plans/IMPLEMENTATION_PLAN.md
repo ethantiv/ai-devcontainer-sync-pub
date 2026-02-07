@@ -1,8 +1,8 @@
 # Implementation Plan
 
-**Status:** VERIFIED
-**Progress:** 0/14 (0%)
-**Last verified:** 2026-02-07 — all 14 tasks confirmed missing, plan matches ROADMAP.md scope
+**Status:** IN PROGRESS
+**Progress:** 7/14 (50%)
+**Last updated:** 2026-02-07 — Phase 1, 2, 4 complete; Phase 3 pending
 
 ## Goal
 
@@ -14,22 +14,22 @@ This addresses the ROADMAP.md requirement: when no projects exist, the bot curre
 
 ## Current Phase
 
-Phase 1: Backend — `projects.py`
+Phase 3: Bot UI — `bot.py`
 
 ## Phases
 
 ### Phase 1: Backend — `projects.py`
-- [ ] Add `validate_project_name(name: str) -> tuple[bool, str]` function: validates project name against `[a-z0-9][a-z0-9-]*` regex (must start with alphanumeric), rejects reserved names (`.git`, `..`, `loop`), rejects names that already exist in PROJECTS_ROOT, rejects empty/too-long (>100 chars), auto-lowercases input
-- [ ] Add `create_project(name: str) -> tuple[bool, str]` function: calls `validate_project_name()`, creates `PROJECTS_ROOT/{name}/`, runs `git init` (10s timeout), creates empty initial commit `git commit --allow-empty -m "Initial commit"` (10s timeout), runs `_run_loop_init()` (30s timeout, non-fatal on failure), returns `(True, message)` or `(False, error)`
-- [ ] Add `create_github_repo(project_path: Path, name: str, private: bool) -> tuple[bool, str]` function: checks `shutil.which("gh")` availability first, runs `gh repo create {name} --private/--public --source=. --remote=origin --push` with 60s timeout, returns `(True, message)` or `(False, error)`
-- **Status:** pending
+- [x] Add `validate_project_name(name: str) -> tuple[bool, str]` function
+- [x] Add `create_project(name: str) -> tuple[bool, str]` function
+- [x] Add `create_github_repo(project_path: Path, name: str, private: bool) -> tuple[bool, str]` function
+- **Status:** complete
 
 ### Phase 2: Messages — `messages.py`
-- [ ] Add button label: `MSG_CREATE_PROJECT_BTN` (e.g. `"+ New project"`)
-- [ ] Add flow messages: `MSG_ENTER_PROJECT_NAME` (prompt with naming rules and /cancel hint), `MSG_CREATING_PROJECT` (progress indicator), `MSG_PROJECT_CREATED` (success with `{name}` template), `MSG_PROJECT_CREATE_FAILED` (error with `{message}` template)
-- [ ] Add GitHub choice messages: `MSG_GITHUB_CHOICE_PROMPT` (ask if user wants to create GitHub repo), `MSG_GITHUB_PRIVATE_BTN`, `MSG_GITHUB_PUBLIC_BTN`, `MSG_GITHUB_SKIP_BTN`, `MSG_GITHUB_CREATING` (progress), `MSG_GITHUB_CREATED` (success with `{name}` template), `MSG_GITHUB_FAILED` (error), `MSG_GH_NOT_AVAILABLE` (gh CLI not found)
-- [ ] Add validation error messages: `MSG_INVALID_PROJECT_NAME` (naming rules explanation), `MSG_PROJECT_EXISTS` (directory already exists with `{name}` template), `MSG_RESERVED_NAME` (reserved name with `{name}` template)
-- **Status:** pending
+- [x] Add button label: `MSG_CREATE_PROJECT_BTN`
+- [x] Add flow messages: `MSG_ENTER_PROJECT_NAME`, `MSG_CREATING_PROJECT`, `MSG_PROJECT_CREATED`, `MSG_PROJECT_CREATE_FAILED`
+- [x] Add GitHub choice messages: `MSG_GITHUB_CHOICE_PROMPT`, `MSG_GITHUB_PRIVATE_BTN`, `MSG_GITHUB_PUBLIC_BTN`, `MSG_GITHUB_SKIP_BTN`, `MSG_GITHUB_CREATING`, `MSG_GITHUB_CREATED`, `MSG_GITHUB_FAILED`, `MSG_GH_NOT_AVAILABLE`
+- [x] Add validation error messages: `MSG_INVALID_PROJECT_NAME`, `MSG_PROJECT_EXISTS`, `MSG_RESERVED_NAME`
+- **Status:** complete
 
 ### Phase 3: Bot UI — `bot.py`
 - [ ] Fix empty-state behavior in `show_projects()`: instead of sending plain text and returning `ConversationHandler.END`, show an inline keyboard with "Create project" and "Clone repo" buttons and return `State.SELECT_PROJECT` so the user can proceed
@@ -42,10 +42,10 @@ Phase 1: Backend — `projects.py`
 - **Status:** pending
 
 ### Phase 4: Tests
-- [ ] Add tests for `validate_project_name()` in `test_projects.py`: valid name, empty string, too long (>100 chars), starts with hyphen, reserved names (`.git`, `..`, `loop`), existing directory, uppercase normalization, special characters rejected
-- [ ] Add tests for `create_project()` in `test_projects.py`: success path (directory created + git init + initial commit + loop init), name validation delegation, git init failure, git commit failure, loop init failure (non-fatal), subprocess timeout and OSError handling
-- [ ] Add tests for `create_github_repo()` in `test_projects.py`: success path (private and public), `gh` not available (`shutil.which` returns None), `gh repo create` failure (non-zero exit), subprocess timeout, OSError handling
-- **Status:** pending
+- [x] Add tests for `validate_project_name()` in `test_projects.py` (12 tests)
+- [x] Add tests for `create_project()` in `test_projects.py` (6 tests)
+- [x] Add tests for `create_github_repo()` in `test_projects.py` (5 tests + 6 timeout/OSError tests in TestSubprocessTimeouts)
+- **Status:** complete
 
 ## Key Questions
 
@@ -126,26 +126,24 @@ Phase 1: Backend — `projects.py`
 | Add `GITHUB_CHOICE` state (not reuse `PROJECT_MENU`) | Cleaner state machine — GitHub choice is a distinct step in the creation flow, not part of the project menu. Prevents accidental state mixing. |
 | No `gh` availability check in `config.validate()` | `gh` is optional (GitHub integration is opt-in). Adding a warning would be noise for users who don't need GitHub features. Check availability inline in `create_github_repo()` instead. |
 
-### Code Verification (2026-02-07)
+### Code Verification (2026-02-07, updated)
 
-Full codebase scan confirmed **all 14 planned tasks are missing** — nothing has been implemented yet:
+| Planned Element | Status |
+|-----------------|--------|
+| `validate_project_name()` in `projects.py` | Done — regex `[a-z0-9][a-z0-9-]*`, reserved names, PROJECTS_ROOT check |
+| `create_project()` in `projects.py` | Done — git init + initial commit + loop init (non-fatal) |
+| `create_github_repo()` in `projects.py` | Done — `shutil.which("gh")` + `gh repo create` with 60s timeout |
+| `ENTER_PROJECT_NAME` state in `bot.py` | Pending — Phase 3 |
+| `GITHUB_CHOICE` state in `bot.py` | Pending — Phase 3 |
+| `handle_project_name()` handler in `bot.py` | Pending — Phase 3 |
+| GitHub choice callback handler in `bot.py` | Pending — Phase 3 |
+| `MSG_CREATE_PROJECT_BTN` and related constants | Done — 16 new constants in `messages.py` |
+| Empty-state fix in `show_projects()` | Pending — Phase 3 |
+| Tests for `validate_project_name()` | Done — 12 tests in `TestValidateProjectName` |
+| Tests for `create_project()` | Done — 6 tests in `TestCreateProject` |
+| Tests for `create_github_repo()` | Done — 5 tests in `TestCreateGithubRepo` + 6 in `TestSubprocessTimeouts` |
 
-| Planned Element | Verification Result |
-|-----------------|-------------------|
-| `validate_project_name()` in `projects.py` | Not found — no function, no references |
-| `create_project()` in `projects.py` | Not found — only `create_worktree()` and `clone_repo()` exist |
-| `create_github_repo()` in `projects.py` | Not found — no `gh repo create` calls anywhere in src/ |
-| `ENTER_PROJECT_NAME` state in `bot.py` | Not found — State enum has 8 values, none for project name input |
-| `GITHUB_CHOICE` state in `bot.py` | Not found — no `github:` callback pattern anywhere |
-| `handle_project_name()` handler in `bot.py` | Not found — only `handle_name()` (worktree) and `handle_clone_url()` exist |
-| GitHub choice callback handler in `bot.py` | Not found — no `handle_github` or `github_choice` functions |
-| `MSG_CREATE_PROJECT_BTN` and related constants | Not found — none of the 12 planned MSG_* constants exist in `messages.py` |
-| Empty-state fix in `show_projects()` | Confirmed dead-end: line 210-212 sends text + returns `ConversationHandler.END`, no buttons |
-| Tests for `validate_project_name()` | Not found — no `TestValidateProjectName` class |
-| Tests for `create_project()` | Not found — no `TestCreateProject` class |
-| Tests for `create_github_repo()` | Not found — no `TestCreateGithubRepo` class |
-
-**Codebase state**: Clean (zero TODOs/FIXMEs), 151 Python + 20 JS tests passing, all existing subprocess calls follow timeout+try/except pattern consistently. `test_projects.py` has 44 tests across 6 classes including `TestSubprocessTimeouts` with 12 dedicated tests.
+**Codebase state**: 180 Python + 20 JS tests passing. `test_projects.py` has 62 tests across 9 classes.
 
 ### Issues Encountered
 | Issue | Resolution |

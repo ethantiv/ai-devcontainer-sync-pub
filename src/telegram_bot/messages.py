@@ -232,3 +232,33 @@ MSG_DIR_ALREADY_EXISTS = "{name} already exists"
 MSG_CLONED = "Cloned {name}"
 MSG_LOOP_INITIALIZED = "Loop initialized."
 MSG_LOOP_INIT_FAILED = "Loop init failed \u2014 run `loop init` manually."
+
+# Project creation flow
+MSG_CREATE_PROJECT_BTN = "+ New project"
+MSG_ENTER_PROJECT_NAME = (
+    "*Enter project name:*\n\n"
+    "Use lowercase letters, digits and hyphens (e.g. `my-app`).\n"
+    "Must start with a letter or digit.\n\n"
+    "Send /cancel to cancel."
+)
+MSG_CREATING_PROJECT = "\u2026 Creating project..."
+MSG_PROJECT_CREATED = "\u2713 Project *{name}* created"
+MSG_PROJECT_CREATE_FAILED = "\u2717 Failed to create project: {message}"
+
+# Project name validation errors
+MSG_INVALID_PROJECT_NAME = (
+    "\u2717 Invalid project name.\n"
+    "Use lowercase letters, digits and hyphens. Must start with a letter or digit."
+)
+MSG_PROJECT_EXISTS = "\u2717 Project *{name}* already exists."
+MSG_RESERVED_NAME = "\u2717 *{name}* is a reserved name."
+
+# GitHub repo creation flow
+MSG_GITHUB_CHOICE_PROMPT = "\u2713 Project created locally.\n\nCreate a GitHub repository?"
+MSG_GITHUB_PRIVATE_BTN = "\U0001f512 Private"
+MSG_GITHUB_PUBLIC_BTN = "\U0001f310 Public"
+MSG_GITHUB_SKIP_BTN = "\u2192 Skip"
+MSG_GITHUB_CREATING = "\u2026 Creating GitHub repository..."
+MSG_GITHUB_CREATED = "\u2713 GitHub repository *{name}* created"
+MSG_GITHUB_FAILED = "\u2717 GitHub repo creation failed: {message}"
+MSG_GH_NOT_AVAILABLE = "\u2717 `gh` CLI not available \u2014 skipping GitHub integration."

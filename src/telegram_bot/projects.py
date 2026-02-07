@@ -1,5 +1,7 @@
 """Project and worktree management."""
 
+import re
+import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -8,10 +10,20 @@ from .config import PROJECTS_ROOT
 from .messages import (
     MSG_CLONED,
     MSG_DIR_ALREADY_EXISTS,
+    MSG_GH_NOT_AVAILABLE,
+    MSG_GITHUB_CREATED,
+    MSG_GITHUB_FAILED,
+    MSG_INVALID_PROJECT_NAME,
     MSG_LOOP_INIT_FAILED,
     MSG_LOOP_INITIALIZED,
+    MSG_PROJECT_CREATED,
+    MSG_PROJECT_EXISTS,
+    MSG_RESERVED_NAME,
     MSG_WORKTREE_CREATED,
 )
+
+_PROJECT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+_RESERVED_NAMES = frozenset({".git", "..", "loop"})
 
 
 @dataclass
@@ -193,6 +205,126 @@ def clone_repo(url: str) -> tuple[bool, str]:
         msg += ". " + MSG_LOOP_INIT_FAILED
 
     return True, msg
+
+
+def validate_project_name(name: str) -> tuple[bool, str]:
+    """Validate a project name for creation.
+
+    Rules: lowercase alphanumeric + hyphens, must start with alphanumeric,
+    no reserved names, no duplicates in PROJECTS_ROOT.
+    Auto-lowercases input.
+
+    Returns:
+        (valid, message) — message explains the rejection reason on failure.
+    """
+    name = name.strip().lower()
+    if not name or len(name) > 100:
+        return False, MSG_INVALID_PROJECT_NAME
+    if name in _RESERVED_NAMES:
+        return False, MSG_RESERVED_NAME.format(name=name)
+    if not _PROJECT_NAME_RE.match(name):
+        return False, MSG_INVALID_PROJECT_NAME
+    target = Path(PROJECTS_ROOT) / name
+    if target.exists():
+        return False, MSG_PROJECT_EXISTS.format(name=name)
+    return True, name
+
+
+def create_project(name: str) -> tuple[bool, str]:
+    """Create a new project: directory + git init + initial commit + loop init.
+
+    Returns:
+        (success, message)
+    """
+    valid, result = validate_project_name(name)
+    if not valid:
+        return False, result
+    name = result  # normalized name from validation
+
+    projects_root = Path(PROJECTS_ROOT)
+    project_path = projects_root / name
+    project_path.mkdir(parents=True, exist_ok=True)
+
+    try:
+        git_init = subprocess.run(
+            ["git", "init"],
+            cwd=project_path,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except subprocess.TimeoutExpired:
+        return False, "Timeout during git init"
+    except OSError as e:
+        return False, f"git init failed: {e}"
+
+    if git_init.returncode != 0:
+        return False, f"git init failed: {git_init.stderr}"
+
+    try:
+        git_commit = subprocess.run(
+            ["git", "commit", "--allow-empty", "-m", "Initial commit"],
+            cwd=project_path,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except subprocess.TimeoutExpired:
+        return False, "Timeout during initial commit"
+    except OSError as e:
+        return False, f"Initial commit failed: {e}"
+
+    if git_commit.returncode != 0:
+        return False, f"Initial commit failed: {git_commit.stderr}"
+
+    loop_init = _run_loop_init(project_path)
+
+    msg = MSG_PROJECT_CREATED.format(name=name)
+    if loop_init:
+        msg += ". " + MSG_LOOP_INITIALIZED
+    else:
+        msg += ". " + MSG_LOOP_INIT_FAILED
+
+    return True, msg
+
+
+def create_github_repo(
+    project_path: Path, name: str, private: bool
+) -> tuple[bool, str]:
+    """Create a GitHub repository from an existing local project.
+
+    Uses `gh repo create` with --source=. --remote=origin --push.
+
+    Returns:
+        (success, message)
+    """
+    if not shutil.which("gh"):
+        return False, MSG_GH_NOT_AVAILABLE
+
+    visibility = "--private" if private else "--public"
+    try:
+        result = subprocess.run(
+            [
+                "gh", "repo", "create", name,
+                visibility,
+                "--source=.",
+                "--remote=origin",
+                "--push",
+            ],
+            cwd=project_path,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except subprocess.TimeoutExpired:
+        return False, "Timeout creating GitHub repository"
+    except OSError as e:
+        return False, f"gh repo create failed: {e}"
+
+    if result.returncode != 0:
+        return False, MSG_GITHUB_FAILED.format(message=result.stderr.strip())
+
+    return True, MSG_GITHUB_CREATED.format(name=name)
 
 
 def _run_loop_init(project_path: Path) -> bool:

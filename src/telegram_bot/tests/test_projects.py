@@ -1,5 +1,7 @@
-"""Tests for projects module — directory scanning, worktrees, cloning."""
+"""Tests for projects module — directory scanning, worktrees, cloning, project creation."""
 
+import re
+import shutil
 import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch, call
@@ -367,3 +369,292 @@ class TestSubprocessTimeouts:
                     side_effect=OSError("No such file")):
             result = _run_loop_init(tmp_path)
         assert result is False
+
+    def test_create_project_git_init_has_timeout(self, tmp_projects_root):
+        """create_project() passes timeout to git init subprocess."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import create_project
+            mock_result = MagicMock(returncode=0, stdout="", stderr="")
+            with (
+                patch("src.telegram_bot.projects.subprocess.run", return_value=mock_result) as m,
+                patch("src.telegram_bot.projects._run_loop_init", return_value=True),
+            ):
+                create_project("test-proj")
+            # Both git init and git commit calls should have timeout
+            for c in m.call_args_list:
+                assert c.kwargs.get("timeout") is not None, \
+                    "create_project() must pass timeout to all subprocess.run() calls"
+
+    def test_create_project_timeout_returns_failure(self, tmp_projects_root):
+        """create_project() returns (False, message) on git init timeout."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import create_project
+            with patch("src.telegram_bot.projects.subprocess.run",
+                        side_effect=subprocess.TimeoutExpired("git", 10)):
+                success, msg = create_project("test-proj")
+            assert success is False
+
+    def test_create_project_oserror_returns_failure(self, tmp_projects_root):
+        """create_project() returns (False, message) on OSError."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import create_project
+            with patch("src.telegram_bot.projects.subprocess.run",
+                        side_effect=OSError("git not found")):
+                success, msg = create_project("test-proj")
+            assert success is False
+
+    def test_create_github_repo_has_timeout(self, tmp_path):
+        """create_github_repo() passes timeout to subprocess.run()."""
+        from src.telegram_bot.projects import create_github_repo
+        mock_result = MagicMock(returncode=0, stdout="", stderr="")
+        with (
+            patch("src.telegram_bot.projects.subprocess.run", return_value=mock_result) as m,
+            patch("src.telegram_bot.projects.shutil.which", return_value="/usr/bin/gh"),
+        ):
+            create_github_repo(tmp_path, "test-repo", private=True)
+        assert m.call_args.kwargs.get("timeout") is not None, \
+            "create_github_repo() must pass timeout to subprocess.run()"
+
+    def test_create_github_repo_timeout_returns_failure(self, tmp_path):
+        """create_github_repo() returns (False, message) on timeout."""
+        from src.telegram_bot.projects import create_github_repo
+        with (
+            patch("src.telegram_bot.projects.subprocess.run",
+                    side_effect=subprocess.TimeoutExpired("gh", 60)),
+            patch("src.telegram_bot.projects.shutil.which", return_value="/usr/bin/gh"),
+        ):
+            success, msg = create_github_repo(tmp_path, "test-repo", private=True)
+        assert success is False
+
+    def test_create_github_repo_oserror_returns_failure(self, tmp_path):
+        """create_github_repo() returns (False, message) on OSError."""
+        from src.telegram_bot.projects import create_github_repo
+        with (
+            patch("src.telegram_bot.projects.subprocess.run",
+                    side_effect=OSError("gh not found")),
+            patch("src.telegram_bot.projects.shutil.which", return_value="/usr/bin/gh"),
+        ):
+            success, msg = create_github_repo(tmp_path, "test-repo", private=True)
+        assert success is False
+
+
+class TestValidateProjectName:
+    """Tests for validate_project_name() — name validation for new projects."""
+
+    def test_valid_name(self, tmp_projects_root):
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import validate_project_name
+            valid, msg = validate_project_name("my-app")
+        assert valid is True
+
+    def test_valid_name_with_digits(self, tmp_projects_root):
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import validate_project_name
+            valid, msg = validate_project_name("app2")
+        assert valid is True
+
+    def test_empty_string(self, tmp_projects_root):
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import validate_project_name
+            valid, msg = validate_project_name("")
+        assert valid is False
+
+    def test_too_long(self, tmp_projects_root):
+        """Names over 100 characters are rejected."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import validate_project_name
+            valid, msg = validate_project_name("a" * 101)
+        assert valid is False
+
+    def test_starts_with_hyphen(self, tmp_projects_root):
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import validate_project_name
+            valid, msg = validate_project_name("-bad-name")
+        assert valid is False
+
+    def test_reserved_name_git(self, tmp_projects_root):
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import validate_project_name
+            valid, msg = validate_project_name(".git")
+        assert valid is False
+
+    def test_reserved_name_dotdot(self, tmp_projects_root):
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import validate_project_name
+            valid, msg = validate_project_name("..")
+        assert valid is False
+
+    def test_reserved_name_loop(self, tmp_projects_root):
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import validate_project_name
+            valid, msg = validate_project_name("loop")
+        assert valid is False
+
+    def test_existing_directory(self, tmp_projects_root):
+        """Rejects name if directory already exists in PROJECTS_ROOT."""
+        (tmp_projects_root / "existing-project").mkdir()
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import validate_project_name
+            valid, msg = validate_project_name("existing-project")
+        assert valid is False
+        assert "exists" in msg.lower()
+
+    def test_uppercase_normalized(self, tmp_projects_root):
+        """Uppercase input is auto-lowercased and accepted."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import validate_project_name
+            valid, msg = validate_project_name("My-App")
+        assert valid is True
+
+    def test_special_characters_rejected(self, tmp_projects_root):
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import validate_project_name
+            valid, msg = validate_project_name("my app!")
+        assert valid is False
+
+    def test_underscore_rejected(self, tmp_projects_root):
+        """Underscores not allowed (stricter than worktree naming, GitHub convention)."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import validate_project_name
+            valid, msg = validate_project_name("my_app")
+        assert valid is False
+
+
+class TestCreateProject:
+    """Tests for create_project() — directory creation + git init + loop init."""
+
+    def test_success_creates_project(self, tmp_projects_root):
+        """Full success path: dir created, git init, initial commit, loop init."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import create_project
+            git_init = MagicMock(returncode=0, stdout="", stderr="")
+            git_commit = MagicMock(returncode=0, stdout="", stderr="")
+            with (
+                patch("src.telegram_bot.projects.subprocess.run",
+                      side_effect=[git_init, git_commit]),
+                patch("src.telegram_bot.projects._run_loop_init", return_value=True),
+            ):
+                success, msg = create_project("new-project")
+            assert success is True
+            assert "new-project" in msg
+            assert (tmp_projects_root / "new-project").is_dir()
+
+    def test_validates_name_first(self, tmp_projects_root):
+        """create_project() delegates to validate_project_name() and fails on invalid name."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import create_project
+            success, msg = create_project(".git")
+        assert success is False
+
+    def test_git_init_failure(self, tmp_projects_root):
+        """Returns failure when git init fails."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import create_project
+            git_init = MagicMock(returncode=128, stderr="fatal: error")
+            with patch("src.telegram_bot.projects.subprocess.run",
+                        return_value=git_init):
+                success, msg = create_project("new-project")
+            assert success is False
+            assert "git init" in msg.lower() or "failed" in msg.lower()
+
+    def test_git_commit_failure(self, tmp_projects_root):
+        """Returns failure when initial commit fails."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import create_project
+            git_init = MagicMock(returncode=0, stdout="", stderr="")
+            git_commit = MagicMock(returncode=1, stderr="commit error")
+            with patch("src.telegram_bot.projects.subprocess.run",
+                        side_effect=[git_init, git_commit]):
+                success, msg = create_project("new-project")
+            assert success is False
+
+    def test_loop_init_failure_nonfatal(self, tmp_projects_root):
+        """Loop init failure doesn't fail project creation — project still created."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import create_project
+            git_init = MagicMock(returncode=0, stdout="", stderr="")
+            git_commit = MagicMock(returncode=0, stdout="", stderr="")
+            with (
+                patch("src.telegram_bot.projects.subprocess.run",
+                      side_effect=[git_init, git_commit]),
+                patch("src.telegram_bot.projects._run_loop_init", return_value=False),
+            ):
+                success, msg = create_project("new-project")
+            assert success is True
+            assert "failed" in msg.lower() or "manually" in msg.lower()
+
+    def test_creates_directory(self, tmp_projects_root):
+        """Verify directory is created in PROJECTS_ROOT."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import create_project
+            mock_result = MagicMock(returncode=0, stdout="", stderr="")
+            with (
+                patch("src.telegram_bot.projects.subprocess.run",
+                      return_value=mock_result),
+                patch("src.telegram_bot.projects._run_loop_init", return_value=True),
+            ):
+                create_project("my-new-project")
+            assert (tmp_projects_root / "my-new-project").is_dir()
+
+
+class TestCreateGithubRepo:
+    """Tests for create_github_repo() — gh repo create integration."""
+
+    def test_success_private(self, tmp_path):
+        """Creates a private GitHub repo successfully."""
+        from src.telegram_bot.projects import create_github_repo
+        mock_result = MagicMock(returncode=0, stdout="", stderr="")
+        with (
+            patch("src.telegram_bot.projects.subprocess.run", return_value=mock_result) as m,
+            patch("src.telegram_bot.projects.shutil.which", return_value="/usr/bin/gh"),
+        ):
+            success, msg = create_github_repo(tmp_path, "my-repo", private=True)
+        assert success is True
+        args = m.call_args[0][0]
+        assert "--private" in args
+
+    def test_success_public(self, tmp_path):
+        """Creates a public GitHub repo successfully."""
+        from src.telegram_bot.projects import create_github_repo
+        mock_result = MagicMock(returncode=0, stdout="", stderr="")
+        with (
+            patch("src.telegram_bot.projects.subprocess.run", return_value=mock_result) as m,
+            patch("src.telegram_bot.projects.shutil.which", return_value="/usr/bin/gh"),
+        ):
+            success, msg = create_github_repo(tmp_path, "my-repo", private=False)
+        assert success is True
+        args = m.call_args[0][0]
+        assert "--public" in args
+
+    def test_gh_not_available(self, tmp_path):
+        """Returns failure when gh CLI is not installed."""
+        from src.telegram_bot.projects import create_github_repo
+        with patch("src.telegram_bot.projects.shutil.which", return_value=None):
+            success, msg = create_github_repo(tmp_path, "my-repo", private=True)
+        assert success is False
+        assert "not available" in msg.lower() or "gh" in msg.lower()
+
+    def test_gh_command_failure(self, tmp_path):
+        """Returns failure when gh repo create exits non-zero."""
+        from src.telegram_bot.projects import create_github_repo
+        mock_result = MagicMock(returncode=1, stderr="error: repo already exists")
+        with (
+            patch("src.telegram_bot.projects.subprocess.run", return_value=mock_result),
+            patch("src.telegram_bot.projects.shutil.which", return_value="/usr/bin/gh"),
+        ):
+            success, msg = create_github_repo(tmp_path, "my-repo", private=True)
+        assert success is False
+
+    def test_uses_source_remote_push_flags(self, tmp_path):
+        """Verify gh repo create uses --source=. --remote=origin --push."""
+        from src.telegram_bot.projects import create_github_repo
+        mock_result = MagicMock(returncode=0, stdout="", stderr="")
+        with (
+            patch("src.telegram_bot.projects.subprocess.run", return_value=mock_result) as m,
+            patch("src.telegram_bot.projects.shutil.which", return_value="/usr/bin/gh"),
+        ):
+            create_github_repo(tmp_path, "my-repo", private=True)
+        args = m.call_args[0][0]
+        assert "--source=." in args
+        assert "--remote=origin" in args
+        assert "--push" in args
