@@ -2,7 +2,7 @@
 
 **Status:** IN_PROGRESS
 **Progress:** 0/31 (0%)
-**Verified:** 2026-02-07 — all line numbers, string counts, and LOC confirmed against current source
+**Verified:** 2026-02-07 (rev.2) — all line numbers, string counts, and LOC re-confirmed against current source
 
 ## Goal
 
@@ -19,8 +19,8 @@ Phase 1: English Localization (P1)
 Translate all user-facing Polish strings to English across the Telegram bot and shell scripts. Decouple error detection from language-specific string matching.
 
 - [ ] Create `src/telegram_bot/messages.py` — centralized string constants module with all user-facing messages as named constants (e.g. `MSG_NO_ACTIVE_SESSION = "No active brainstorming session."`)
-- [ ] Translate ~60 Polish strings in `src/telegram_bot/bot.py` — replace inline Polish text with imports from `messages.py`; includes button labels ("Klonuj repo" -> "Clone repo", "Powrót" -> "Back", "Kolejka" -> "Queue", "Nowy worktree" -> "New worktree", "Podłącz" -> "Attach"), status messages ("W toku" -> "Running", "Wolny" -> "Free"), help text (lines 899-917), brainstorm flow text ("Claude myśli..." -> "Claude thinking...", "Zapisuję IDEA..." -> "Saving IDEA..."), error messages ("Brak wybranego projektu" -> "No project selected"), task completion messages (lines 934-955)
-- [ ] Translate 18 Polish strings in `src/telegram_bot/tasks.py` — replace inline Polish with imports from `messages.py`; includes queue messages ("Kolejka pełna" -> "Queue full", line 140), brainstorm status messages ("Claude myśli..." -> "Claude thinking...", lines 595/639, "Uruchamiam Claude..." -> "Starting Claude...", lines 578/733), timeout and error messages ("Nie udało się uruchomić Claude" -> "Failed to start Claude", lines 591/650/705), session messages ("Sesja brainstorming już aktywna" -> "Brainstorming session already active", line 559), IDEA save prompt (lines 689-692)
+- [ ] Translate ~52 unique Polish strings (~65 with duplicates) in `src/telegram_bot/bot.py` — replace inline Polish text with imports from `messages.py`; includes button labels ("Klonuj repo" -> "Clone repo", "Powrót" -> "Back" x6, "Kolejka" -> "Queue", "Nowy worktree" -> "New worktree", "Podłącz" -> "Attach"), status messages ("W toku" -> "Running", "Wolny" -> "Free"), help text (lines 898-917), brainstorm flow text ("Claude myśli..." -> "Claude thinking...", "Zapisuję IDEA..." -> "Saving IDEA..."), error messages ("Brak wybranego projektu" -> "No project selected" x5), task completion messages (lines 934-955)
+- [ ] Translate 13 Polish strings in `src/telegram_bot/tasks.py` — replace inline Polish with imports from `messages.py`; includes queue messages ("Kolejka pełna" -> "Queue full", line 140), brainstorm status messages ("Claude myśli..." -> "Claude thinking...", lines 595/639, "Uruchamiam Claude..." -> "Starting Claude...", line 578), timeout and error messages ("Nie udało się uruchomić Claude" -> "Failed to start Claude", lines 591/650/705, "Timeout oczekiwania" -> "Timeout waiting for response", line 543, "Claude zakończył bez wyniku/odpowiedzi" -> lines 538-539), session messages ("Sesja brainstorming już aktywna" -> "Brainstorming session already active", line 559, "Brak aktywnej sesji" -> line 625), IDEA save prompt (lines 689-692)
 - [ ] Translate 5 Polish strings in `src/telegram_bot/projects.py` — "Utworzono {name} na branchu {suffix}" (line 130), "Katalog {name} already exists" (line 152), "Sklonowano {name}" (line 166), "Loop zainicjalizowany" (line 168), "Loop init nie powiodlo sie" (line 170)
 - [ ] Translate 10 Polish strings in `src/scripts/notify-telegram.sh` — status text: "Sukces" -> "Success" (line 38), "Ukończono iteracje" -> "Iterations completed" (line 39), "Przerwane" -> "Interrupted" (line 40), "Nieznany" -> "Unknown" (line 41); labels: "Zadanie zakończone" -> "Task completed" (line 55), "Tryb:" -> "Mode:" (line 57), "Status:" (line 58, keep), "Iteracje:" -> "Iterations:" (line 59), "Czas:" -> "Time:" (line 60), "Projekt:" -> "Project:" (line 61)
 - [ ] Translate 7 Polish button labels in `src/telegram_bot/COMMANDS.md` — "Klonuj repo" -> "Clone repo", "Nowy worktree" -> "New worktree", "Podłącz" -> "Attach", "Kolejka" -> "Queue", "Powrót" -> "Back", "Uruchom Plan" -> "Run Plan", "Zakończ" -> "Finish"
@@ -128,7 +128,7 @@ Create a dedicated requirements file for Telegram bot Python dependencies.
 
 | Finding | Details |
 |---------|---------|
-| Polish string count | ~88 strings across bot.py (48 unique, ~60 with duplicates like 6x "Powrót"), tasks.py (18), projects.py (5), notify-telegram.sh (10: 4 status + 6 labels), COMMANDS.md (7 button labels) — verified 2026-02-07 |
+| Polish string count | ~87 strings across bot.py (~52 unique, ~65 with duplicates like 6x "Powrót", 5x "Brak wybranego projektu"), tasks.py (13), projects.py (5+1 mixed "Projekt {name} already exists"), notify-telegram.sh (10: 4 status + 6 labels), COMMANDS.md (7 button labels in ASCII-only spelling) — re-verified 2026-02-07 |
 | Error detection coupling | `_is_brainstorm_error()` at bot.py:98 checks 5 Polish substrings ("Sesja brainstorming już", "Nie udało", "Timeout", "Brak aktywnej", "nie jest gotowa") + "error" (English); used at lines 530, 742, 783 — translation requires coordinated refactor with tasks.py BrainstormManager return values |
 | Missing i18n infrastructure | No messages.py, strings.py, or any translation system exists |
 | Test coverage | Zero — no test files, no pytest/jest config, no test scripts in package.json |
@@ -169,7 +169,7 @@ Create a dedicated requirements file for Telegram bot Python dependencies.
 - ROADMAP: `docs/ROADMAP.md` — 8 proposals across P1/P2/P3
 - Source: `src/telegram_bot/` — Python bot (bot.py 1197 LOC, tasks.py 742 LOC, projects.py 187 LOC, git_utils.py 116 LOC, config.py 18 LOC, run.py 30 LOC)
 - Source: `src/lib/` — Node.js modules (summary.js 192 LOC, init.js, run.js, cleanup.js)
-- Source: `src/scripts/` — Shell scripts (loop.sh 286 LOC, notify-telegram.sh 69 LOC, cleanup.sh 13 LOC)
+- Source: `src/scripts/` — Shell scripts (loop.sh 285 LOC, notify-telegram.sh 69 LOC, cleanup.sh 12 LOC)
 - Existing timeout pattern: `src/telegram_bot/git_utils.py` lines 14-24 (timeout=10, try/except `(TimeoutExpired, OSError)`, return None/[])
 - Existing persistence pattern: `src/telegram_bot/tasks.py` lines 351-410 (atomic JSON writes via `os.replace()`)
 - git_utils.py exports: `get_commit_hash()`, `get_diff_stats()`, `get_recent_commits()`, `get_plan_progress()` — all with timeout=10
