@@ -16,7 +16,6 @@ const CORE_FILES = [
 const TEMPLATES = [
   { src: 'templates/CLAUDE_template.md', dest: 'CLAUDE_template.md' },
   { src: 'templates/IMPLEMENTATION_PLAN_template.md', dest: 'docs/plans/IMPLEMENTATION_PLAN_template.md' },
-  { src: 'templates/ROADMAP_template.md', dest: 'docs/ROADMAP_template.md' },
   { src: '.claude/settings.json', dest: '.claude/settings.json' },
   { src: '.claude/skills/auto-revise-claude-md/SKILL.md', dest: '.claude/skills/auto-revise-claude-md/SKILL.md' },
   { src: 'prompts/PROMPT_skills.md', dest: 'loop/PROMPT_skills.md' },

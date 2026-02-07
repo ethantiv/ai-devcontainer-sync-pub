@@ -30,10 +30,10 @@ python3 -m pytest src/telegram_bot/tests/test_tasks.py::TestTaskManager::test_st
 
 Available as local marketplace plugins (`dev-marketplace`):
 - `/code-review` - parallel code review with multiple agents
-- `/design-system` - generate HTML design system templates
 - `/roadmap` - manage ROADMAP.md with features and proposals
 - `/git-worktree:create <name>` - create worktree with naming convention `{project}-{name}`
 - `/git-worktree:delete <name>` - delete worktree and its branch
+- `/loop-analyzer` - analyze autonomous loop logs with 5 parallel subagents
 
 ## Operational Notes
 
@@ -152,7 +152,7 @@ Loop CLI changes (flags, defaults) require edits across 4 files: `src/bin/cli.js
 Feature development uses structured planning documents:
 - `docs/ROADMAP.md` — feature requests and proposals (managed via `/roadmap` slash command)
 - `docs/plans/IMPLEMENTATION_PLAN.md` — active implementation plan with phases and status tracking
-- Templates in `src/templates/` — `ROADMAP_template.md`, `IMPLEMENTATION_PLAN_template.md` (copied by `loop init`)
+- Templates in `src/templates/` — `IMPLEMENTATION_PLAN_template.md`, `CLAUDE_template.md` (copied by `loop init`)
 
 ### Setup Flow
 
