@@ -168,6 +168,7 @@ Set these in `.devcontainer/.env` (DevContainer) or `docker/.env` (Docker).
 | `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |
 | `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for remote loop control |
 | `TELEGRAM_CHAT_ID` | No | Authorized Telegram chat ID |
+| `DEV_MODE` | No | Disable Telegram bot in dev containers (true/1/yes) |
 | `LOOP_STALE_THRESHOLD` | No | Stale progress detection in seconds (default: 300) |
 | `LOOP_BRAINSTORM_POLL_INTERVAL` | No | Brainstorm polling interval in seconds (default: 0.5) |
 | `LOOP_BRAINSTORM_TIMEOUT` | No | Brainstorm max wait in seconds (default: 300) |

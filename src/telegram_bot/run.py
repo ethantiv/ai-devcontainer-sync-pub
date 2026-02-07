@@ -4,7 +4,8 @@
 import sys
 
 from .bot import create_application
-from .config import TELEGRAM_CHAT_ID, validate
+from .config import DEV_MODE, TELEGRAM_CHAT_ID, validate
+from .messages import MSG_DEV_MODE_SKIP
 
 
 def main() -> int:
@@ -18,6 +19,10 @@ def main() -> int:
         for error in errors:
             print(f"Error: {error}")
         return 1
+
+    if DEV_MODE:
+        print(MSG_DEV_MODE_SKIP)
+        return 0
 
     print("Starting Telegram bot...")
     print(f"  Authorized chat ID: {TELEGRAM_CHAT_ID}")

@@ -25,6 +25,17 @@ def _safe_float(value: str | None, default: float) -> float:
         return default
 
 
+def _is_truthy(value: str | None) -> bool:
+    """Parse a boolean environment variable value.
+
+    Returns True for 'true', '1', 'yes' (case-insensitive).
+    Everything else (including empty string and None) returns False.
+    """
+    if value is None:
+        return False
+    return value.strip().lower() in ("true", "1", "yes")
+
+
 TELEGRAM_BOT_TOKEN = environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = _safe_int(environ.get("TELEGRAM_CHAT_ID"), 0)
 PROJECTS_ROOT = environ.get("PROJECTS_ROOT", "/home/developer/projects")
@@ -37,6 +48,9 @@ BRAINSTORM_POLL_INTERVAL = _safe_float(
 BRAINSTORM_TIMEOUT = _safe_int(environ.get("LOOP_BRAINSTORM_TIMEOUT"), 300)
 MAX_QUEUE_SIZE = _safe_int(environ.get("LOOP_MAX_QUEUE_SIZE"), 10)
 GIT_DIFF_RANGE = environ.get("LOOP_GIT_DIFF_RANGE", "HEAD~5..HEAD")
+
+# Developer mode — disables Telegram bot in dev containers
+DEV_MODE = _is_truthy(environ.get("DEV_MODE"))
 
 
 def validate() -> tuple[list[str], list[str]]:
@@ -76,6 +90,11 @@ def validate() -> tuple[list[str], list[str]]:
         errors.append(f"PROJECTS_ROOT is not writable: {PROJECTS_ROOT}")
 
     # --- Warning checks (non-fatal) ---
+
+    if DEV_MODE:
+        warnings.append(
+            "DEV_MODE is active — Telegram bot will not start"
+        )
 
     claude_home = Path.home() / ".claude" / "bin" / "claude"
     if not shutil.which("claude") and not claude_home.exists():

@@ -128,6 +128,12 @@ fi
 # =============================================================================
 
 start_telegram_bot() {
+    # Skip bot in dev mode — prevents dev container from stealing production commands
+    if [[ "${DEV_MODE,,}" =~ ^(true|1|yes)$ ]]; then
+        echo "  ✔︎ DEV_MODE active — skipping Telegram bot"
+        return 0
+    fi
+
     if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]]; then
         return 0
     fi

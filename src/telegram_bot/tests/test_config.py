@@ -379,6 +379,136 @@ class TestConfigurableThresholds:
             assert config.GIT_DIFF_RANGE == "HEAD~10..HEAD"
 
 
+class TestIsTruthy:
+    """_is_truthy() helper — parses boolean env var values.
+
+    Accepts 'true', '1', 'yes' (case-insensitive) as True.
+    Everything else (including empty string and None) is False.
+    """
+
+    def test_true_lowercase(self):
+        from src.telegram_bot.config import _is_truthy
+        assert _is_truthy("true") is True
+
+    def test_true_uppercase(self):
+        from src.telegram_bot.config import _is_truthy
+        assert _is_truthy("TRUE") is True
+
+    def test_true_mixed_case(self):
+        from src.telegram_bot.config import _is_truthy
+        assert _is_truthy("True") is True
+
+    def test_one(self):
+        from src.telegram_bot.config import _is_truthy
+        assert _is_truthy("1") is True
+
+    def test_yes_lowercase(self):
+        from src.telegram_bot.config import _is_truthy
+        assert _is_truthy("yes") is True
+
+    def test_yes_mixed_case(self):
+        from src.telegram_bot.config import _is_truthy
+        assert _is_truthy("Yes") is True
+
+    def test_false_lowercase(self):
+        from src.telegram_bot.config import _is_truthy
+        assert _is_truthy("false") is False
+
+    def test_zero(self):
+        from src.telegram_bot.config import _is_truthy
+        assert _is_truthy("0") is False
+
+    def test_empty_string(self):
+        from src.telegram_bot.config import _is_truthy
+        assert _is_truthy("") is False
+
+    def test_none(self):
+        from src.telegram_bot.config import _is_truthy
+        assert _is_truthy(None) is False
+
+    def test_random_string(self):
+        from src.telegram_bot.config import _is_truthy
+        assert _is_truthy("banana") is False
+
+
+class TestDevMode:
+    """DEV_MODE config variable — disables Telegram bot in dev containers.
+
+    When DEV_MODE is set to a truthy value (true/1/yes), the bot should
+    not start. validate() should include a warning about dev mode.
+    """
+
+    def test_dev_mode_default_false(self, tmp_projects_root):
+        """DEV_MODE defaults to False when env var is not set."""
+        env = {"PROJECTS_ROOT": str(tmp_projects_root)}
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.DEV_MODE is False
+
+    def test_dev_mode_true_from_env(self, tmp_projects_root):
+        """DEV_MODE is True when DEV_MODE=true is set."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "DEV_MODE": "true",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.DEV_MODE is True
+
+    def test_dev_mode_one_from_env(self, tmp_projects_root):
+        """DEV_MODE is True when DEV_MODE=1 is set."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "DEV_MODE": "1",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.DEV_MODE is True
+
+    def test_dev_mode_false_from_env(self, tmp_projects_root):
+        """DEV_MODE is False when DEV_MODE=false is set."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "DEV_MODE": "false",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.DEV_MODE is False
+
+    def test_dev_mode_validate_warning(self, tmp_projects_root):
+        """validate() returns a warning when DEV_MODE is active."""
+        env = {
+            "TELEGRAM_BOT_TOKEN": "123:ABC",
+            "TELEGRAM_CHAT_ID": "123",
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "DEV_MODE": "true",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            with patch.object(config.shutil, "which",
+                              side_effect=lambda x: f"/usr/bin/{x}"), \
+                 patch.object(Path, "exists", return_value=True):
+                errors, warnings = config.validate()
+        assert any("DEV_MODE" in w for w in warnings)
+        # Dev mode is a warning, not an error
+        assert not any("DEV_MODE" in e for e in errors)
+
+    def test_dev_mode_off_no_warning(self, tmp_projects_root):
+        """validate() has no DEV_MODE warning when it's not set."""
+        env = {
+            "TELEGRAM_BOT_TOKEN": "123:ABC",
+            "TELEGRAM_CHAT_ID": "123",
+            "PROJECTS_ROOT": str(tmp_projects_root),
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            with patch.object(config.shutil, "which",
+                              side_effect=lambda x: f"/usr/bin/{x}"), \
+                 patch.object(Path, "exists", return_value=True):
+                errors, warnings = config.validate()
+        assert not any("DEV_MODE" in w for w in warnings)
+
+
 class TestRequirementsTxt:
     """requirements.txt exists and declares python-telegram-bot dependency.
 

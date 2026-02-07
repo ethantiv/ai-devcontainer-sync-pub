@@ -25,6 +25,10 @@ BRAINSTORM_ERROR_CODES = frozenset({
     ERR_CLAUDE_ERROR,
 })
 
+# --- Dev mode ---
+
+MSG_DEV_MODE_SKIP = "DEV_MODE is active — skipping Telegram bot startup"
+
 # --- bot.py strings ---
 
 MSG_UNAUTHORIZED = "Unauthorized"
