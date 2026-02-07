@@ -1,15 +1,15 @@
 ---
-description: Generate or update docs/ROADMAP.md with completed features and future proposals
+description: Generate or update docs/ROADMAP.md with future proposals
 ---
 
 # docs/ROADMAP.md Generator
 
 <context>
-You are managing a project roadmap file that tracks completed features and proposes future development directions. The docs/ROADMAP.md file serves as a living document for project planning and progress visibility.
+You are managing a project roadmap file that proposes future development directions. The docs/ROADMAP.md file serves as a living document for project planning.
 
 This command operates in two modes:
 - **CREATE**: When docs/ROADMAP.md doesn't exist, analyze the project and generate initial proposals
-- **UPDATE**: When docs/ROADMAP.md exists, optionally add a completed feature and refresh proposals
+- **UPDATE**: When docs/ROADMAP.md exists, remove implemented proposals and refresh remaining ones
 </context>
 
 <project_analysis>
@@ -77,7 +77,7 @@ When creating a new docs/ROADMAP.md:
 
 1. Analyze the project using steps from `<project_analysis>`
 2. Generate 3-5 proposals across different priorities
-3. Create docs/ROADMAP.md with empty Completed Features section
+3. Create docs/ROADMAP.md with proposals
 4. Display summary of generated proposals
 </create_flow>
 
@@ -85,11 +85,9 @@ When creating a new docs/ROADMAP.md:
 When updating an existing docs/ROADMAP.md:
 
 1. Read the current docs/ROADMAP.md file
-2. Ask the user: "Would you like to mark a feature as completed? If yes, describe the feature. If no, just press Enter."
-3. If user provides a feature description:
-   - Generate a unique ID (increment from highest existing ID, or start at "001")
-   - Add to Completed Features with current date
-   - Remove any related proposal if it matches the completed feature
+2. Ask the user: "Which proposals have been implemented? List them, or press Enter to skip."
+3. If user identifies implemented proposals:
+   - Delete those proposals from docs/ROADMAP.md
 4. Re-analyze the project to refresh proposals based on current state
 5. Update proposals while preserving any that are still relevant
 6. Save updated docs/ROADMAP.md
@@ -118,15 +116,6 @@ The docs/ROADMAP.md must follow this exact structure:
 ```markdown
 # Roadmap
 
-## Completed Features
-
-### {id} - {title}
-> Completed: {YYYY-MM-DD}
-
-{description}
-
----
-
 ## Proposals
 
 ### P1 - Critical
@@ -146,11 +135,9 @@ The docs/ROADMAP.md must follow this exact structure:
 ```
 
 **Validation rules:**
-- `id` must be zero-padded 3-digit string ("001", "002", etc.)
-- Date format: YYYY-MM-DD (ISO date without time)
-- Each completed feature ends with `---` separator
 - Proposals grouped by priority with H3 headers (P1, P2, P3)
 - Each proposal has H4 title followed by description paragraph
+- Empty priority sections may be omitted
 </output_format>
 
 <execution>
@@ -162,13 +149,13 @@ Execute in this order:
 4. **Synthesize findings**: Combine agent results into actionable insights
 5. **Execute appropriate flow**:
    - CREATE: Generate fresh proposals based on exploration, create file
-   - UPDATE: Ask about completed feature, refresh proposals using exploration insights, update file
+   - UPDATE: Ask about implemented proposals, remove them, refresh remaining proposals using exploration insights, update file
 6. **Write docs/ROADMAP.md**: Use the Write tool to save the file
 7. **Display summary**: Show what was created/updated in a concise format
 
 After completion, display:
 - Mode executed (CREATE or UPDATE)
-- Number of completed features (total)
+- Number of removed proposals (UPDATE mode only)
 - Number of proposals by priority
 - File path where docs/ROADMAP.md was saved
 </execution>

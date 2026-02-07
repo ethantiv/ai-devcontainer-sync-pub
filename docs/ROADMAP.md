@@ -1,21 +1,27 @@
 # Roadmap
 
-## Completed Features
-
 ## Proposals
 
 ### P1 - Critical
 
-#### Telegram: Task completion summary with actionable next steps
-When a loop task finishes, the bot sends only a generic "done" message. The user has no idea what changed — files modified, tests passing, commits made. They must SSH in or `tmux attach` to find out. Add a completion summary that parses the last run's git diff and test output, then sends a Telegram message with key metrics (files changed, commits created, test results) and inline buttons for next actions (View Diff, Start Review, Deploy). This turns the bot from a "fire and forget" launcher into a proper feedback loop.
+#### Full English localization of Telegram bot and application
+The Telegram bot UI is entirely in Polish — button labels ("Klonuj repo", "Nowy worktree", "Powrot"), status messages ("W toku", "Wolny", "w kolejce"), error messages ("Brak wybranego projektu"), brainstorming flow ("Claude mysli...", "Zapisuje IDEA..."), help text, and completion summaries. The `notify-telegram.sh` script also has Polish status texts ("Sukces", "Ukonczono iteracje", "Przerwane"). This limits the project to Polish-speaking users and makes error string matching fragile (e.g. `_is_brainstorm_error()` checks for Polish substrings). Translate all user-facing strings in `bot.py`, `tasks.py`, `projects.py`, `notify-telegram.sh`, and `COMMANDS.md` to English. Extract strings to a central location for maintainability.
 
-#### Telegram: Live progress notifications during loop execution
-A 5-iteration build can run 30+ minutes with zero feedback. The user sees "task started" and then nothing until it finishes (or silently fails). Poll the `.progress` file and tmux output at each iteration boundary. Send a short notification per iteration: "2/5 complete — updated auth module, 12 tests passing". Include error alerts if the loop crashes mid-run, so the user knows immediately instead of discovering it later.
+#### Startup validation for required environment variables
+`TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` default to empty string and 0 respectively, causing silent runtime failures later. Add validation at bot startup that exits with clear error messages when required variables are missing or invalid. Also validate `PROJECTS_ROOT` is writable and Claude CLI is accessible.
 
 ### P2 - Important
 
-#### Brainstorming session persistence across container restarts
-Brainstorming sessions live only in memory (`BrainstormManager.sessions` dict). If the container restarts or the bot crashes, all active sessions are lost with no way to resume. Save session metadata to disk (session ID, project, Claude `--resume` session ref) so sessions survive restarts. Add a "Resume session" option in the Telegram bot that lists recent sessions for the current project.
+#### Unit tests for Telegram bot and summary parser
+The Telegram bot (`bot.py` 1,200 LOC, `tasks.py` 735 LOC) and summary parser (`summary.js` 192 LOC) have zero test coverage. Add pytest tests for `git_utils.py` (diff/commit parsing), `projects.py` (worktree detection, project listing), `tasks.py` (queue management, session serialization), and Jest tests for `summary.js` (JSONL parsing, tool usage counting, test result detection). Focus on unit tests for pure functions first.
 
-#### Loop run summary with post-execution report
-After `loop run` finishes, the only output is the log file path. The user must manually check git diff, read JSONL logs, and inspect the implementation plan to understand what happened. Generate a human-readable summary at the end of each run: files modified, tests run (pass/fail), plan progress percentage, commits created, and a suggested next step ("Plan complete — run `loop run` to start building"). Also add `loop summary` CLI command to view the last run's report on demand.
+#### Move brainstorm temp files from /tmp to PROJECTS_ROOT
+`BrainstormManager` writes Claude output files to `/tmp` (line 345: `TMP_DIR = Path("/tmp")`). These files are lost on system reboot and could cause data loss for in-progress brainstorming sessions. Move output files to `PROJECTS_ROOT/.brainstorm/` to keep them alongside session metadata and survive container restarts.
+
+### P3 - Nice to Have
+
+#### Configurable timeouts and thresholds via environment variables
+Several values are hardcoded: stale detection threshold (300s), brainstorm poll interval (0.5s), brainstorm timeout (300s), git diff range (HEAD~5..HEAD). On slow systems like Raspberry Pi, the 5-minute stale threshold may fire during normal long iterations. Extract these to environment variables with sensible defaults so operators can tune behavior without code changes.
+
+#### Task state persistence across container restarts
+`TaskManager.active_tasks` dict lives only in memory. If the container restarts while a task is running, the queue and active task state are lost. Orphaned tmux sessions may continue running without bot tracking. Persist task state to disk (similar to brainstorm sessions) and reconcile with running tmux sessions on startup.
