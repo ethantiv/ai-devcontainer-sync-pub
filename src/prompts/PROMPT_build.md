@@ -1,4 +1,4 @@
-0a. Load skills: @loop/PROMPT_skills.md
+0a. For each skill listed in @loop/PROMPT_skills.md, invoke the **Skill** tool (e.g., `Skill(skill="agent-browser")`). Load all skills in parallel in a single message.
 
 0b. Study @docs/ with up to 10 parallel **Haiku** subagents to learn specifications.
 
@@ -15,7 +15,7 @@
    - If @docs/plans/IMPLEMENTATION_PLAN.md exceeds 800 lines, trim completed content. Remove: completed tasks `[x]`, phases with status `complete`, resolved Issues rows. Keep: pending tasks `[ ]`, active phases, Technical Decisions. Git history = full audit trail.
    - Run validation (typecheck, lint).
    - If validation fails, fix before proceeding.
-   - Load skill `auto-revise-claude-md` to update `Operational Notes`.
+   - Invoke **Skill** tool: `Skill(skill="auto-revise-claude-md")` to update `Operational Notes`.
    - After completing everything: `git add -A && git commit` then `git push`.
 
 ## Important Rules

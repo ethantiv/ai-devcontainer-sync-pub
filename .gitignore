@@ -13,3 +13,4 @@ __pycache__/
 
 # Logs
 src/logs/
+loop/logs/
