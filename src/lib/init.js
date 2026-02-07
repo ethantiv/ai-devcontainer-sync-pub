@@ -24,6 +24,12 @@ const TEMPLATES = [
 
 const DIRS = ['docs/plans', 'loop/logs', '.claude/skills/auto-revise-claude-md'];
 
+// overlayfs (Docker) can leave ghost entries where existsSync returns true
+// but the file has nlink=0 and readFileSync throws ENOENT
+function fileExists(p) {
+  try { return fs.statSync(p).nlink > 0; } catch { return false; }
+}
+
 function init({ force = false, symlinkOnly = false } = {}) {
   const projectRoot = process.cwd();
 
@@ -50,7 +56,7 @@ function init({ force = false, symlinkOnly = false } = {}) {
 
       if (!fs.existsSync(srcPath)) continue;
 
-      if (fs.existsSync(destPath)) {
+      if (!force && fileExists(destPath)) {
         console.log(`  skip ${dest} (exists)`);
       } else {
         fs.copyFileSync(srcPath, destPath);
