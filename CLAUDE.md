@@ -52,6 +52,7 @@ Available as local marketplace plugins (`dev-marketplace`):
 | `GIT_USER_EMAIL` | No | Git global user.email |
 | `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for remote loop control |
 | `TELEGRAM_CHAT_ID` | No | Authorized Telegram chat ID |
+| `APP_NAME` | No | Container/image/volume name prefix (default: `claude-code`, use `dev-claude-code` for dev) |
 | `DEV_MODE` | No | Disable Telegram bot in dev containers (true/1/yes) |
 | `LOOP_STALE_THRESHOLD` | No | Stale progress detection seconds (default: 300) |
 | `LOOP_BRAINSTORM_POLL_INTERVAL` | No | Brainstorm polling interval seconds (default: 0.5) |
@@ -163,11 +164,11 @@ Feature development uses structured planning documents:
 
 **Docker Claude persistence**: Claude installed to `~/.claude/bin/` (volume) at first container start, not during image build. This preserves updates across `docker compose down && up`. The `CLAUDE_INSTALL_DIR` env var controls install location; fallback moves binary from `~/.local/bin/` if installer ignores it.
 
-**Docker volumes**: Four named volumes persist data across container rebuilds:
-- `claude-config` → `~/.claude` — Claude binary, settings, credentials, skills symlinks
-- `agents-skills` → `~/.agents` — Global skills installed via `npx skills add -g` (symlinked from `~/.claude/skills/`)
-- `gemini-config` → `~/.gemini` — Gemini CLI configuration
-- `projects` → `~/projects` — Working directory for projects
+**Docker volumes**: Four named volumes persist data across container rebuilds. Volume names are prefixed with `APP_NAME` (default: `claude-code`) via the `name:` field in `docker-compose.yml`:
+- `{APP_NAME}-claude-config` → `~/.claude` — Claude binary, settings, credentials, skills symlinks
+- `{APP_NAME}-agents-skills` → `~/.agents` — Global skills installed via `npx skills add -g` (symlinked from `~/.claude/skills/`)
+- `{APP_NAME}-gemini-config` → `~/.gemini` — Gemini CLI configuration
+- `{APP_NAME}-projects` → `~/projects` — Working directory for projects
 
 ### File Sync Mapping
 
@@ -213,4 +214,5 @@ Feature development uses structured planning documents:
 - **Subprocess timeout pattern**: All `subprocess.run()` calls in both `git_utils.py` and `projects.py` use `timeout` parameter + `try/except (subprocess.TimeoutExpired, OSError)`. Timeouts: `_get_branch()` 10s, `create_worktree()` 30s, `clone_repo()` 60s (network), `_run_loop_init()` 30s. On failure: `_get_branch()` returns `"unknown"`, `_run_loop_init()` returns `False`, others return `(False, message)` tuple.
 - **Configurable thresholds**: 5 hardcoded values extracted to `config.py` as env-var-overridable constants: `STALE_THRESHOLD` (LOOP_STALE_THRESHOLD, default 300), `BRAINSTORM_POLL_INTERVAL` (LOOP_BRAINSTORM_POLL_INTERVAL, default 0.5), `BRAINSTORM_TIMEOUT` (LOOP_BRAINSTORM_TIMEOUT, default 300), `MAX_QUEUE_SIZE` (LOOP_MAX_QUEUE_SIZE, default 10), `GIT_DIFF_RANGE` (LOOP_GIT_DIFF_RANGE, default HEAD~5..HEAD). Uses `_safe_int()` and `_safe_float()` helpers for graceful fallback on invalid values. `bot.py` imports `STALE_THRESHOLD` and `GIT_DIFF_RANGE`; `tasks.py` imports `BRAINSTORM_POLL_INTERVAL`, `BRAINSTORM_TIMEOUT`, and `MAX_QUEUE_SIZE`.
 - **Task state persistence**: `TaskManager` persists active tasks and queues to `PROJECTS_ROOT/.tasks.json` via atomic writes (`os.replace`), same pattern as `BrainstormManager`. `_save_tasks()` is called after `_start_task_now()`, queue additions, `process_completed_tasks()`, and `cancel_queued_task()`. `_load_tasks()` runs in `__init__()`, validates tmux sessions exist via `_is_session_running()`, removes stale active tasks, and always restores queues. Deadlock prevention: `_save_tasks()` acquires `_queue_lock` internally, so callers must NOT hold the lock when calling it.
+- **Docker Compose volume parameterization**: Docker Compose does NOT interpolate env vars in YAML keys — only in values. Volume definition keys in `docker-compose.yml` stay static (`claude-config`, `agents-skills`, etc.), while the `name:` field (a value) uses `${APP_NAME:-claude-code}-<volume>` for parameterized Docker volume names. This enables volume isolation between prod (`APP_NAME=claude-code`) and dev (`APP_NAME=dev-claude-code`) instances on the same host. Note: Coolify adds its own UUID prefix on top of this.
 - **Python dependencies via requirements.txt**: Telegram bot Python dependencies are declared in `src/telegram_bot/requirements.txt` (`python-telegram-bot[job-queue]>=21.0,<22.0`). Dockerfile runtime stage COPYs this file and runs `pip3 install --break-system-packages -r`. Builder stage only installs `uv` (no Python app packages). To add new Python dependencies, update `requirements.txt` — no need to edit Dockerfile.

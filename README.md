@@ -194,7 +194,9 @@ Data persists across container rebuilds:
 
 | Volume | Mount Point | Purpose |
 |--------|-------------|---------|
-| `claude-config` | `~/.claude` | Claude binary, settings, credentials, plugins |
-| `agents-skills` | `~/.agents` | Globally installed skills |
-| `gemini-config` | `~/.gemini` | Gemini CLI configuration |
-| `projects` | `~/projects` | Your working projects |
+| `{APP_NAME}-claude-config` | `~/.claude` | Claude binary, settings, credentials, plugins |
+| `{APP_NAME}-agents-skills` | `~/.agents` | Globally installed skills |
+| `{APP_NAME}-gemini-config` | `~/.gemini` | Gemini CLI configuration |
+| `{APP_NAME}-projects` | `~/projects` | Your working projects |
+
+Volume names are prefixed with `APP_NAME` (default: `claude-code`). Set `APP_NAME=dev-claude-code` for dev instances to isolate volumes.

@@ -1,7 +1,7 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 2/14 (14%)
+**Progress:** 7/14 (50%)
 
 ## Goal
 
@@ -12,19 +12,19 @@ Enhance DEV_MODE to support dual deployment (dev/prod) of claude-code on the sam
 
 ## Current Phase
 
-Phase 1: Docker & Compose Configuration
+Phase 2: Coolify Dev Application Deployment
 
 ## Phases
 
 ### Phase 1: Docker & Compose Configuration
 - [x] Add `APP_NAME` to `container_name` and `hostname` in `docker-compose.yml` (lines 7-8) — done in commit `e35738e`
 - [x] Add `DEV_MODE` implementation: entrypoint.sh (line 130-135), config.py (line 53), run.py (lines 23-25), 6 tests — done in commit `4f3d756`
-- [ ] Parameterize image name in `docker-compose.yml` using `APP_NAME`: change `image: claude-code:latest` → `image: ${APP_NAME:-claude-code}:latest` (line 6)
-- [ ] Parameterize volume names in `docker-compose.yml` — both service-level mounts (lines 13-17) and top-level `name:` fields (lines 30-37) — to use `${APP_NAME:-claude-code}` prefix (e.g. `${APP_NAME:-claude-code}-claude-config`)
-- [ ] Add `APP_NAME=claude-code` to `docker/.env` (currently absent; needed for local `docker compose` usage)
-- [ ] Add `APP_NAME` to `docker/.env.example` with comment explaining dev vs prod values
-- [ ] Update README.md Docker Volumes table to reflect parameterized volume names
-- **Status:** in_progress
+- [x] Parameterize image name in `docker-compose.yml` using `APP_NAME`: `image: ${APP_NAME:-claude-code}:latest`
+- [x] Parameterize volume names in `docker-compose.yml` — top-level `name:` fields use `${APP_NAME:-claude-code}` prefix; volume keys stay static (Compose doesn't interpolate YAML keys). Validated with `docker compose config` for both prod and dev APP_NAME values.
+- [x] Add `APP_NAME=claude-code` to `docker/.env`
+- [x] Add `APP_NAME` to `docker/.env.example` with comment explaining dev vs prod values
+- [x] Update README.md Docker Volumes table to reflect parameterized volume names
+- **Status:** complete
 - **Note:** Do NOT add `DEV_MODE` to `docker/.env` — it must only be set as a Coolify per-app env var to avoid branch conflicts
 
 ### Phase 2: Coolify Dev Application Deployment
@@ -155,6 +155,7 @@ From ROADMAP.md:
 | `APP_NAME` resolved at Coolify parse time | Coolify resolves env vars in compose YAML during parsing; `${APP_NAME:-claude-code}` becomes `claude-code` in `docker_compose_raw` — so dev compose must have `dev-claude-code` hardcoded as service name in `docker_compose_raw` |
 | `base_directory`/`docker_compose_location` not in MCP tool | Must use `curl -X PATCH` against Coolify API directly to set these fields |
 | `cc` alias collision | Inside-container alias `cc='clear && claude'` and RPi host alias `cc` for `docker exec` are in different scopes — no conflict |
+| Docker Compose YAML key interpolation | Compose doesn't interpolate env vars in YAML keys — volume keys stay static, `name:` field (a value) provides parameterized Docker volume names |
 
 ### Resources
 
