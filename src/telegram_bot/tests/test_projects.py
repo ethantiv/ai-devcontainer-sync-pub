@@ -2,7 +2,7 @@
 
 import subprocess
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, call
 
 import pytest
 
@@ -242,3 +242,128 @@ class TestCloneRepo:
                 success, msg = clone_repo("https://github.com/user/my-repo.git")
             assert success is True
             assert "failed" in msg.lower() or "manually" in msg.lower()
+
+
+class TestSubprocessTimeouts:
+    """Tests for subprocess timeout and OSError handling in projects.py.
+
+    Every subprocess.run() call must have a timeout parameter and handle
+    TimeoutExpired and OSError gracefully — matching the pattern in git_utils.py.
+    """
+
+    def test_get_branch_has_timeout(self, tmp_path):
+        """_get_branch() passes timeout to subprocess.run()."""
+        from src.telegram_bot.projects import _get_branch
+        mock_result = MagicMock(returncode=0, stdout="main\n")
+        with patch("src.telegram_bot.projects.subprocess.run", return_value=mock_result) as m:
+            _get_branch(tmp_path)
+        assert m.call_args.kwargs.get("timeout") is not None, \
+            "_get_branch() must pass timeout to subprocess.run()"
+
+    def test_get_branch_timeout_returns_unknown(self, tmp_path):
+        """_get_branch() returns 'unknown' when subprocess times out."""
+        from src.telegram_bot.projects import _get_branch
+        with patch("src.telegram_bot.projects.subprocess.run",
+                    side_effect=subprocess.TimeoutExpired("git", 10)):
+            result = _get_branch(tmp_path)
+        assert result == "unknown"
+
+    def test_get_branch_oserror_returns_unknown(self, tmp_path):
+        """_get_branch() returns 'unknown' when subprocess raises OSError."""
+        from src.telegram_bot.projects import _get_branch
+        with patch("src.telegram_bot.projects.subprocess.run",
+                    side_effect=OSError("No such file")):
+            result = _get_branch(tmp_path)
+        assert result == "unknown"
+
+    def test_create_worktree_has_timeout(self, tmp_projects_root):
+        """create_worktree() passes timeout to subprocess.run()."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import create_worktree
+            project_path = tmp_projects_root / "my-repo"
+            project_path.mkdir()
+            mock_result = MagicMock(returncode=0, stderr="")
+            with patch("src.telegram_bot.projects.subprocess.run", return_value=mock_result) as m:
+                create_worktree(project_path, "feat-x")
+            assert m.call_args.kwargs.get("timeout") is not None, \
+                "create_worktree() must pass timeout to subprocess.run()"
+
+    def test_create_worktree_timeout_returns_failure(self, tmp_projects_root):
+        """create_worktree() returns (False, message) on timeout."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import create_worktree
+            project_path = tmp_projects_root / "my-repo"
+            project_path.mkdir()
+            with patch("src.telegram_bot.projects.subprocess.run",
+                        side_effect=subprocess.TimeoutExpired("git", 30)):
+                success, msg = create_worktree(project_path, "feat-x")
+            assert success is False
+            assert "timeout" in msg.lower()
+
+    def test_create_worktree_oserror_returns_failure(self, tmp_projects_root):
+        """create_worktree() returns (False, message) on OSError."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import create_worktree
+            project_path = tmp_projects_root / "my-repo"
+            project_path.mkdir()
+            with patch("src.telegram_bot.projects.subprocess.run",
+                        side_effect=OSError("exec failed")):
+                success, msg = create_worktree(project_path, "feat-x")
+            assert success is False
+
+    def test_clone_repo_has_timeout(self, tmp_projects_root):
+        """clone_repo() passes timeout to subprocess.run()."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import clone_repo
+            mock_result = MagicMock(returncode=0)
+            with (
+                patch("src.telegram_bot.projects.subprocess.run", return_value=mock_result) as m,
+                patch("src.telegram_bot.projects._run_loop_init", return_value=True),
+            ):
+                clone_repo("https://github.com/user/my-repo.git")
+            assert m.call_args.kwargs.get("timeout") is not None, \
+                "clone_repo() must pass timeout to subprocess.run()"
+
+    def test_clone_repo_timeout_returns_failure(self, tmp_projects_root):
+        """clone_repo() returns (False, message) on timeout."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import clone_repo
+            with patch("src.telegram_bot.projects.subprocess.run",
+                        side_effect=subprocess.TimeoutExpired("git", 60)):
+                success, msg = clone_repo("https://github.com/user/my-repo.git")
+            assert success is False
+            assert "timeout" in msg.lower()
+
+    def test_clone_repo_oserror_returns_failure(self, tmp_projects_root):
+        """clone_repo() returns (False, message) on OSError."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import clone_repo
+            with patch("src.telegram_bot.projects.subprocess.run",
+                        side_effect=OSError("git not found")):
+                success, msg = clone_repo("https://github.com/user/my-repo.git")
+            assert success is False
+
+    def test_run_loop_init_has_timeout(self, tmp_path):
+        """_run_loop_init() passes timeout to subprocess.run()."""
+        from src.telegram_bot.projects import _run_loop_init
+        mock_result = MagicMock(returncode=0)
+        with patch("src.telegram_bot.projects.subprocess.run", return_value=mock_result) as m:
+            _run_loop_init(tmp_path)
+        assert m.call_args.kwargs.get("timeout") is not None, \
+            "_run_loop_init() must pass timeout to subprocess.run()"
+
+    def test_run_loop_init_timeout_returns_false(self, tmp_path):
+        """_run_loop_init() returns False on timeout."""
+        from src.telegram_bot.projects import _run_loop_init
+        with patch("src.telegram_bot.projects.subprocess.run",
+                    side_effect=subprocess.TimeoutExpired("loop", 30)):
+            result = _run_loop_init(tmp_path)
+        assert result is False
+
+    def test_run_loop_init_oserror_returns_false(self, tmp_path):
+        """_run_loop_init() returns False when command not found."""
+        from src.telegram_bot.projects import _run_loop_init
+        with patch("src.telegram_bot.projects.subprocess.run",
+                    side_effect=OSError("No such file")):
+            result = _run_loop_init(tmp_path)
+        assert result is False

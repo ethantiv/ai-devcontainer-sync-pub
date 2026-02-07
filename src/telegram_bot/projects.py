@@ -91,13 +91,17 @@ def list_projects() -> list[Project]:
 
 def _get_branch(path: Path) -> str:
     """Get current branch name for a git repository."""
-    result = subprocess.run(
-        ["git", "branch", "--show-current"],
-        cwd=path,
-        capture_output=True,
-        text=True,
-    )
-    return result.stdout.strip() if result.returncode == 0 else ""
+    try:
+        result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            cwd=path,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return result.stdout.strip() if result.returncode == 0 else ""
+    except (subprocess.TimeoutExpired, OSError):
+        return "unknown"
 
 
 def get_project(name: str) -> Project | None:
@@ -124,12 +128,18 @@ def create_worktree(project_path: Path, suffix: str) -> tuple[bool, str]:
     if new_path.exists():
         return False, MSG_DIR_ALREADY_EXISTS.format(name=new_name)
 
-    result = subprocess.run(
-        ["git", "worktree", "add", "-b", suffix, str(new_path)],
-        cwd=project_path,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "worktree", "add", "-b", suffix, str(new_path)],
+            cwd=project_path,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        return False, "Timeout creating worktree"
+    except OSError as e:
+        return False, f"Failed to create worktree: {e}"
 
     if result.returncode != 0:
         return False, f"Failed to create worktree: {result.stderr}"
@@ -158,11 +168,17 @@ def clone_repo(url: str) -> tuple[bool, str]:
     if target.exists():
         return False, MSG_DIR_ALREADY_EXISTS.format(name=name)
 
-    result = subprocess.run(
-        ["git", "clone", url, str(target)],
-        capture_output=True,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "clone", url, str(target)],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except subprocess.TimeoutExpired:
+        return False, "Timeout cloning repository"
+    except OSError as e:
+        return False, f"git clone failed: {e}"
 
     if result.returncode != 0:
         return False, f"git clone failed: {result.stderr}"
@@ -185,10 +201,14 @@ def _run_loop_init(project_path: Path) -> bool:
     if not Path(loop_cli).exists():
         loop_cli = "loop"  # fall back to PATH
 
-    result = subprocess.run(
-        [loop_cli, "init"],
-        cwd=project_path,
-        capture_output=True,
-        text=True,
-    )
-    return result.returncode == 0
+    try:
+        result = subprocess.run(
+            [loop_cli, "init"],
+            cwd=project_path,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        return result.returncode == 0
+    except (subprocess.TimeoutExpired, OSError):
+        return False

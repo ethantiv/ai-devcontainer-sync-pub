@@ -1,8 +1,8 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 19/31 (61%)
-**Verified:** 2026-02-07 (rev.7) — Phase 4 complete
+**Progress:** 21/31 (68%)
+**Verified:** 2026-02-07 (rev.8) — Phase 5 complete
 
 ## Goal
 
@@ -10,7 +10,7 @@ Implement all proposals from ROADMAP.md across three priority tiers: P1 (Critica
 
 ## Current Phase
 
-Phase 5: Subprocess Timeouts (P2)
+Phase 6: Configurable Thresholds (P3)
 
 ## Phases
 
@@ -61,9 +61,9 @@ Move brainstorm output files from `/tmp` to a persistent location under `PROJECT
 
 Add timeout parameters to all subprocess calls in `projects.py`, following the existing pattern in `git_utils.py`.
 
-- [ ] Add `timeout=30` to all 4 `subprocess.run()` calls in `src/telegram_bot/projects.py` — `_get_branch()` (line 87, use `timeout=10`), `create_worktree()` (line 120, use `timeout=30`), `clone_repo()` (line 154, use `timeout=60` for network operation), `_run_loop_init()` (line 181, use `timeout=30`)
-- [ ] Wrap each call in `try/except (subprocess.TimeoutExpired, OSError)` — return appropriate failure values: `_get_branch()` returns `"unknown"`, `create_worktree()` returns `(False, "Timeout...")`, `clone_repo()` returns `(False, "Timeout...")`, `_run_loop_init()` returns `False`
-- **Status:** pending
+- [x] Add `timeout` to all 4 `subprocess.run()` calls in `src/telegram_bot/projects.py` — `_get_branch()` (timeout=10), `create_worktree()` (timeout=30), `clone_repo()` (timeout=60 for network), `_run_loop_init()` (timeout=30)
+- [x] Wrap each call in `try/except (subprocess.TimeoutExpired, OSError)` — `_get_branch()` returns `"unknown"`, `create_worktree()` returns `(False, "Timeout...")`, `clone_repo()` returns `(False, "Timeout...")`, `_run_loop_init()` returns `False`; added 12 new tests in TestSubprocessTimeouts (33 total in test_projects.py)
+- **Status:** complete
 
 ### Phase 6: Configurable Thresholds (P3)
 
@@ -131,9 +131,9 @@ Create a dedicated requirements file for Telegram bot Python dependencies.
 | Polish string count | ~87 strings across bot.py (~52 unique, ~65 with duplicates like 6x "Powrót", 5x "Brak wybranego projektu"), tasks.py (13), projects.py (5+1 mixed "Projekt {name} already exists"), notify-telegram.sh (10: 4 status + 6 labels), COMMANDS.md (7 button labels in ASCII-only spelling) — re-verified 2026-02-07 |
 | Error detection coupling | `_is_brainstorm_error()` at bot.py:98 checks 5 Polish substrings ("Sesja brainstorming już", "Nie udało", "Timeout", "Brak aktywnej", "nie jest gotowa") + "error" (English); used at lines 530, 742, 783 — translation requires coordinated refactor with tasks.py BrainstormManager return values |
 | Missing i18n infrastructure | No messages.py, strings.py, or any translation system exists |
-| Test coverage | 93 Python tests (pytest) + 20 JS tests (Jest) — full coverage for pure functions |
+| Test coverage | 105 Python tests (pytest) + 20 JS tests (Jest) — full coverage for pure functions |
 | Env var validation gaps | PROJECTS_ROOT not validated at all; Claude CLI not checked; TELEGRAM_CHAT_ID accepts 0 silently |
-| Subprocess timeout gaps | 4 calls in projects.py lack timeouts (lines 87, 120, 154, 181); git_utils.py has correct pattern (timeout=10, `except (subprocess.TimeoutExpired, OSError)`, return None/[]) |
+| Subprocess timeout gaps | **Resolved Phase 5**: all 4 calls in projects.py now have timeouts (10/30/60/30) and `try/except (TimeoutExpired, OSError)` matching git_utils.py pattern |
 | Brainstorm /tmp usage | **Resolved Phase 4**: `TMP_DIR` now uses `PROJECTS_ROOT/.brainstorm/`, created in `__init__()` with OSError fallback |
 | Task persistence gap | TaskManager is memory-only; BrainstormManager has full persistence with atomic writes — pattern ready to reuse |
 | requirements.txt missing | `python-telegram-bot[job-queue]` installed inline in docker/Dockerfile only |
