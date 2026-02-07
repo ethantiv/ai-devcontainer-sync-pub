@@ -244,3 +244,136 @@ class TestValidateReturnType:
         env = {"PROJECTS_ROOT": "/nonexistent/xyz"}
         errors, _ = _reload_and_validate(env)
         assert len(errors) >= 3
+
+
+class TestConfigurableThresholds:
+    """Configurable threshold constants parsed from environment variables.
+
+    Each threshold reads an env var with a sensible default. Invalid values
+    (non-numeric strings) fall back to the default silently.
+    """
+
+    def test_stale_threshold_default(self, tmp_projects_root):
+        """STALE_THRESHOLD defaults to 300 when env var is not set."""
+        env = {"PROJECTS_ROOT": str(tmp_projects_root)}
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.STALE_THRESHOLD == 300
+
+    def test_stale_threshold_from_env(self, tmp_projects_root):
+        """STALE_THRESHOLD reads LOOP_STALE_THRESHOLD env var."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_STALE_THRESHOLD": "600",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.STALE_THRESHOLD == 600
+
+    def test_stale_threshold_invalid_falls_back(self, tmp_projects_root):
+        """Non-numeric LOOP_STALE_THRESHOLD falls back to 300."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_STALE_THRESHOLD": "not_a_number",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.STALE_THRESHOLD == 300
+
+    def test_brainstorm_poll_interval_default(self, tmp_projects_root):
+        """BRAINSTORM_POLL_INTERVAL defaults to 0.5."""
+        env = {"PROJECTS_ROOT": str(tmp_projects_root)}
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.BRAINSTORM_POLL_INTERVAL == 0.5
+
+    def test_brainstorm_poll_interval_from_env(self, tmp_projects_root):
+        """BRAINSTORM_POLL_INTERVAL reads LOOP_BRAINSTORM_POLL_INTERVAL."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_BRAINSTORM_POLL_INTERVAL": "1.5",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.BRAINSTORM_POLL_INTERVAL == 1.5
+
+    def test_brainstorm_poll_interval_invalid_falls_back(self, tmp_projects_root):
+        """Non-numeric LOOP_BRAINSTORM_POLL_INTERVAL falls back to 0.5."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_BRAINSTORM_POLL_INTERVAL": "abc",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.BRAINSTORM_POLL_INTERVAL == 0.5
+
+    def test_brainstorm_timeout_default(self, tmp_projects_root):
+        """BRAINSTORM_TIMEOUT defaults to 300."""
+        env = {"PROJECTS_ROOT": str(tmp_projects_root)}
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.BRAINSTORM_TIMEOUT == 300
+
+    def test_brainstorm_timeout_from_env(self, tmp_projects_root):
+        """BRAINSTORM_TIMEOUT reads LOOP_BRAINSTORM_TIMEOUT."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_BRAINSTORM_TIMEOUT": "120",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.BRAINSTORM_TIMEOUT == 120
+
+    def test_brainstorm_timeout_invalid_falls_back(self, tmp_projects_root):
+        """Non-numeric LOOP_BRAINSTORM_TIMEOUT falls back to 300."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_BRAINSTORM_TIMEOUT": "",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.BRAINSTORM_TIMEOUT == 300
+
+    def test_max_queue_size_default(self, tmp_projects_root):
+        """MAX_QUEUE_SIZE defaults to 10."""
+        env = {"PROJECTS_ROOT": str(tmp_projects_root)}
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.MAX_QUEUE_SIZE == 10
+
+    def test_max_queue_size_from_env(self, tmp_projects_root):
+        """MAX_QUEUE_SIZE reads LOOP_MAX_QUEUE_SIZE."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_MAX_QUEUE_SIZE": "20",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.MAX_QUEUE_SIZE == 20
+
+    def test_max_queue_size_invalid_falls_back(self, tmp_projects_root):
+        """Non-numeric LOOP_MAX_QUEUE_SIZE falls back to 10."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_MAX_QUEUE_SIZE": "lots",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.MAX_QUEUE_SIZE == 10
+
+    def test_git_diff_range_default(self, tmp_projects_root):
+        """GIT_DIFF_RANGE defaults to 'HEAD~5..HEAD'."""
+        env = {"PROJECTS_ROOT": str(tmp_projects_root)}
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.GIT_DIFF_RANGE == "HEAD~5..HEAD"
+
+    def test_git_diff_range_from_env(self, tmp_projects_root):
+        """GIT_DIFF_RANGE reads LOOP_GIT_DIFF_RANGE."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_GIT_DIFF_RANGE": "HEAD~10..HEAD",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.GIT_DIFF_RANGE == "HEAD~10..HEAD"

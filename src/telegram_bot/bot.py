@@ -17,7 +17,12 @@ from telegram.ext import (
     filters,
 )
 
-from .config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+from .config import (
+    GIT_DIFF_RANGE,
+    STALE_THRESHOLD,
+    TELEGRAM_BOT_TOKEN,
+    TELEGRAM_CHAT_ID,
+)
 from .git_utils import get_diff_stats, get_plan_progress, get_recent_commits
 from .messages import (
     BRAINSTORM_ERROR_CODES,
@@ -1088,7 +1093,7 @@ async def check_task_progress(context: ContextTypes.DEFAULT_TYPE) -> None:
             stale_seconds = 0
 
         if (
-            stale_seconds > 300
+            stale_seconds > STALE_THRESHOLD
             and not task.stale_warned
             and task_manager._is_session_running(task.session_name)
         ):
@@ -1153,7 +1158,7 @@ async def handle_completion_diff(update: Update, context: ContextTypes.DEFAULT_T
     # Get git diff --stat for the project (last commit range)
     try:
         result = subprocess.run(
-            ["git", "diff", "--stat", "HEAD~5..HEAD"],
+            ["git", "diff", "--stat", GIT_DIFF_RANGE],
             capture_output=True,
             text=True,
             cwd=project.path,

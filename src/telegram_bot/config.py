@@ -15,9 +15,28 @@ def _safe_int(value: str | None, default: int) -> int:
         return default
 
 
+def _safe_float(value: str | None, default: float) -> float:
+    """Safely convert string to float, returning default on failure."""
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except ValueError:
+        return default
+
+
 TELEGRAM_BOT_TOKEN = environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = _safe_int(environ.get("TELEGRAM_CHAT_ID"), 0)
 PROJECTS_ROOT = environ.get("PROJECTS_ROOT", "/home/developer/projects")
+
+# Configurable thresholds — override via environment variables
+STALE_THRESHOLD = _safe_int(environ.get("LOOP_STALE_THRESHOLD"), 300)
+BRAINSTORM_POLL_INTERVAL = _safe_float(
+    environ.get("LOOP_BRAINSTORM_POLL_INTERVAL"), 0.5
+)
+BRAINSTORM_TIMEOUT = _safe_int(environ.get("LOOP_BRAINSTORM_TIMEOUT"), 300)
+MAX_QUEUE_SIZE = _safe_int(environ.get("LOOP_MAX_QUEUE_SIZE"), 10)
+GIT_DIFF_RANGE = environ.get("LOOP_GIT_DIFF_RANGE", "HEAD~5..HEAD")
 
 
 def validate() -> tuple[list[str], list[str]]:

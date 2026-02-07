@@ -168,6 +168,11 @@ Set these in `.devcontainer/.env` (DevContainer) or `docker/.env` (Docker).
 | `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |
 | `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for remote loop control |
 | `TELEGRAM_CHAT_ID` | No | Authorized Telegram chat ID |
+| `LOOP_STALE_THRESHOLD` | No | Stale progress detection in seconds (default: 300) |
+| `LOOP_BRAINSTORM_POLL_INTERVAL` | No | Brainstorm polling interval in seconds (default: 0.5) |
+| `LOOP_BRAINSTORM_TIMEOUT` | No | Brainstorm max wait in seconds (default: 300) |
+| `LOOP_MAX_QUEUE_SIZE` | No | Max queued tasks per project (default: 10) |
+| `LOOP_GIT_DIFF_RANGE` | No | Git diff range for completion summary (default: HEAD~5..HEAD) |
 | `GIT_USER_NAME` | No | Git global user.name |
 | `GIT_USER_EMAIL` | No | Git global user.email |
 | `RESET_CLAUDE_CONFIG` | No | Set to `true` to clear Claude config on startup |

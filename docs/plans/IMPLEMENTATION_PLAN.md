@@ -1,8 +1,8 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 21/31 (68%)
-**Verified:** 2026-02-07 (rev.8) — Phase 5 complete
+**Progress:** 25/31 (81%)
+**Verified:** 2026-02-07 (rev.9) — Phase 6 complete
 
 ## Goal
 
@@ -10,7 +10,7 @@ Implement all proposals from ROADMAP.md across three priority tiers: P1 (Critica
 
 ## Current Phase
 
-Phase 6: Configurable Thresholds (P3)
+Phase 7: Task State Persistence (P3)
 
 ## Phases
 
@@ -69,11 +69,11 @@ Add timeout parameters to all subprocess calls in `projects.py`, following the e
 
 Extract hardcoded timeout/threshold values to environment variables with sensible defaults.
 
-- [ ] Add config constants to `src/telegram_bot/config.py` — `STALE_THRESHOLD = _safe_int(environ.get("LOOP_STALE_THRESHOLD"), 300)`, `BRAINSTORM_POLL_INTERVAL = float(environ.get("LOOP_BRAINSTORM_POLL_INTERVAL", "0.5"))`, `BRAINSTORM_TIMEOUT = _safe_int(environ.get("LOOP_BRAINSTORM_TIMEOUT"), 300)`, `MAX_QUEUE_SIZE = _safe_int(environ.get("LOOP_MAX_QUEUE_SIZE"), 10)`, `GIT_DIFF_RANGE = environ.get("LOOP_GIT_DIFF_RANGE", "HEAD~5..HEAD")`
-- [ ] Update `src/telegram_bot/bot.py` — replace hardcoded `300` (line 1038) with `config.STALE_THRESHOLD`; replace `"HEAD~5..HEAD"` (line 1103) with `config.GIT_DIFF_RANGE`
-- [ ] Update `src/telegram_bot/tasks.py` — replace `POLL_INTERVAL = 0.5` (line 343) with `config.BRAINSTORM_POLL_INTERVAL`; replace `MAX_WAIT = 300` (line 344) with `config.BRAINSTORM_TIMEOUT`; replace `MAX_QUEUE_SIZE = 10` (line 82) with `config.MAX_QUEUE_SIZE`
-- [ ] Document new env vars in project `CLAUDE.md` environment variables table and `README.md`
-- **Status:** pending
+- [x] Add config constants to `src/telegram_bot/config.py` — `STALE_THRESHOLD = _safe_int(environ.get("LOOP_STALE_THRESHOLD"), 300)`, `BRAINSTORM_POLL_INTERVAL = _safe_float(environ.get("LOOP_BRAINSTORM_POLL_INTERVAL"), 0.5)`, `BRAINSTORM_TIMEOUT = _safe_int(environ.get("LOOP_BRAINSTORM_TIMEOUT"), 300)`, `MAX_QUEUE_SIZE = _safe_int(environ.get("LOOP_MAX_QUEUE_SIZE"), 10)`, `GIT_DIFF_RANGE = environ.get("LOOP_GIT_DIFF_RANGE", "HEAD~5..HEAD")`; added `_safe_float()` helper for float env vars
+- [x] Update `src/telegram_bot/bot.py` — replaced hardcoded `300` (line 1091) with `STALE_THRESHOLD`; replaced `"HEAD~5..HEAD"` (line 1156) with `GIT_DIFF_RANGE`; both imported from config
+- [x] Update `src/telegram_bot/tasks.py` — `BrainstormManager.POLL_INTERVAL` now reads `BRAINSTORM_POLL_INTERVAL` from config; `BrainstormManager.MAX_WAIT` reads `BRAINSTORM_TIMEOUT`; removed module-level `MAX_QUEUE_SIZE = 10`, now imported from config; all 3 constants are env-var configurable
+- [x] Document new env vars in project `CLAUDE.md` environment variables table and `README.md` — added 5 LOOP_* env vars to both files
+- **Status:** complete
 
 ### Phase 7: Task State Persistence (P3)
 
@@ -131,7 +131,7 @@ Create a dedicated requirements file for Telegram bot Python dependencies.
 | Polish string count | ~87 strings across bot.py (~52 unique, ~65 with duplicates like 6x "Powrót", 5x "Brak wybranego projektu"), tasks.py (13), projects.py (5+1 mixed "Projekt {name} already exists"), notify-telegram.sh (10: 4 status + 6 labels), COMMANDS.md (7 button labels in ASCII-only spelling) — re-verified 2026-02-07 |
 | Error detection coupling | `_is_brainstorm_error()` at bot.py:98 checks 5 Polish substrings ("Sesja brainstorming już", "Nie udało", "Timeout", "Brak aktywnej", "nie jest gotowa") + "error" (English); used at lines 530, 742, 783 — translation requires coordinated refactor with tasks.py BrainstormManager return values |
 | Missing i18n infrastructure | No messages.py, strings.py, or any translation system exists |
-| Test coverage | 105 Python tests (pytest) + 20 JS tests (Jest) — full coverage for pure functions |
+| Test coverage | 119 Python tests (pytest) + 20 JS tests (Jest) — full coverage for pure functions including configurable thresholds |
 | Env var validation gaps | PROJECTS_ROOT not validated at all; Claude CLI not checked; TELEGRAM_CHAT_ID accepts 0 silently |
 | Subprocess timeout gaps | **Resolved Phase 5**: all 4 calls in projects.py now have timeouts (10/30/60/30) and `try/except (TimeoutExpired, OSError)` matching git_utils.py pattern |
 | Brainstorm /tmp usage | **Resolved Phase 4**: `TMP_DIR` now uses `PROJECTS_ROOT/.brainstorm/`, created in `__init__()` with OSError fallback |

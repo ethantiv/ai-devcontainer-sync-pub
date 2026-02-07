@@ -15,7 +15,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .config import PROJECTS_ROOT
+from .config import (
+    BRAINSTORM_POLL_INTERVAL,
+    BRAINSTORM_TIMEOUT,
+    MAX_QUEUE_SIZE,
+    PROJECTS_ROOT,
+)
 from .git_utils import get_commit_hash
 from .messages import (
     ERR_NO_RESULT,
@@ -98,9 +103,6 @@ class QueuedTask:
     iterations: int
     idea: str | None
     queued_at: datetime = field(default_factory=datetime.now)
-
-
-MAX_QUEUE_SIZE = 10
 
 
 class TaskManager:
@@ -360,9 +362,9 @@ class BrainstormManager:
     Sessions are keyed by chat_id (one session per Telegram chat).
     """
 
-    # Configuration
-    POLL_INTERVAL = 0.5  # seconds between polling
-    MAX_WAIT = 300  # 5 minutes max wait for response
+    # Configuration — values from config.py, overridable via env vars
+    POLL_INTERVAL = BRAINSTORM_POLL_INTERVAL
+    MAX_WAIT = BRAINSTORM_TIMEOUT
 
     def __init__(self) -> None:
         self.TMP_DIR = Path(PROJECTS_ROOT) / ".brainstorm"
