@@ -1,8 +1,8 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 10/31 (32%)
-**Verified:** 2026-02-07 (rev.5) — Phase 2 complete
+**Progress:** 17/31 (55%)
+**Verified:** 2026-02-07 (rev.6) — Phase 3 complete
 
 ## Goal
 
@@ -10,7 +10,7 @@ Implement all proposals from ROADMAP.md across three priority tiers: P1 (Critica
 
 ## Current Phase
 
-Phase 3: Unit Tests (P2)
+Phase 4: Brainstorm Temp Files (P2)
 
 ## Phases
 
@@ -40,14 +40,14 @@ Add comprehensive environment variable validation at bot startup to fail fast wi
 
 Add pytest and Jest test infrastructure and unit tests for pure functions.
 
-- [ ] Create `src/telegram_bot/tests/` directory with `__init__.py`, `conftest.py` (shared fixtures for mocking subprocess, temp dirs, PROJECTS_ROOT)
-- [ ] Create `src/telegram_bot/tests/test_git_utils.py` — test `get_commit_hash()`, `get_diff_stats()`, `get_recent_commits()`, `get_plan_progress()` with mocked subprocess calls; test timeout handling, malformed output
-- [ ] Create `src/telegram_bot/tests/test_projects.py` — test `_parse_gitdir()` with real `.git` file content, `list_projects()` with mocked directory structure, `_get_branch()` with mocked subprocess, `create_worktree()` / `clone_repo()` success and failure paths
-- [ ] Create `src/telegram_bot/tests/test_tasks.py` — test `TaskManager` queue management (add, cancel, max queue size), `_is_session_running()` with mocked subprocess, `BrainstormManager` session serialization/deserialization (round-trip JSON), stale session detection
-- [ ] Add Jest config to `src/package.json` — add `"test"` script and jest dev dependency
-- [ ] Create `src/lib/__tests__/summary.test.js` — test `parseLog()` with sample JSONL data, `extractTestResults()` regex patterns (Jest/Vitest and pytest formats), `formatSummary()` output structure, `findLatestLog()` file selection by mtime
-- [ ] Add test commands to project `CLAUDE.md` validation section — `pytest src/telegram_bot/tests/` and `npm test --prefix src`
-- **Status:** pending
+- [x] Create `src/telegram_bot/tests/` directory with `__init__.py`, `conftest.py` (shared fixtures for mocking subprocess, temp dirs, PROJECTS_ROOT) — already existed from Phase 2 with test_config.py
+- [x] Create `src/telegram_bot/tests/test_git_utils.py` — 20 tests covering all 4 exported functions with mocked subprocess calls; tests timeout handling, malformed output, binary files, case-insensitive checkboxes
+- [x] Create `src/telegram_bot/tests/test_projects.py` — 21 tests covering `_parse_gitdir()` with real .git file content, `list_projects()` with patched PROJECTS_ROOT, `_get_branch()` mocked subprocess, `create_worktree()` / `clone_repo()` success and failure paths
+- [x] Create `src/telegram_bot/tests/test_tasks.py` — 30 tests covering TaskManager queue management (add, cancel, max size), `_is_session_running()` mocked subprocess, BrainstormManager session persistence (round-trip JSON, stale detection, corrupt JSON), `_parse_stream_json()`, cancel, async start/respond error conditions (requires pytest-asyncio)
+- [x] Add Jest config to `src/package.json` — added `"test": "jest"` script and `jest` ^30.0.0 devDependency
+- [x] Create `src/lib/__tests__/summary.test.js` — 20 tests covering `parseLog()` with sample JSONL data, `extractTestResults()` regex patterns (Jest/Vitest and pytest formats), `formatSummary()` output structure, `findLatestLog()` file selection by mtime
+- [x] Add test commands to project `CLAUDE.md` validation section — `npm test --prefix src` added alongside existing `pytest` command
+- **Status:** complete
 
 ### Phase 4: Brainstorm Temp Files (P2)
 

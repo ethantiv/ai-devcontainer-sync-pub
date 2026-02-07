@@ -17,6 +17,7 @@ Re-sync configuration after changes:
 claude mcp list                    # Verify MCP servers
 claude plugin marketplace list     # List installed plugins
 python3 -m pytest src/telegram_bot/tests/ -v  # Run Telegram bot tests
+npm test --prefix src              # Run JS tests (summary.js)
 ```
 
 ### Test Output Guidelines
@@ -195,3 +196,4 @@ Loop CLI changes (flags, defaults) require edits across 4 files: `src/bin/cli.js
 - **Loop run summary**: `src/lib/summary.js` parses JSONL log files for tool usage counts, files modified (Edit/Write), token usage, and test results. `loop summary` CLI command reads from `./loop/logs/` by default. `loop.sh` cleanup trap auto-generates `summary-latest.txt` in log dir on each run completion. Uses `$LOOP_ROOT/lib/summary` path (resolved via `readlink -f`) so it works in both Docker (`/opt/loop`) and local dev.
 - **Telegram bot string localization**: All user-facing strings live in `src/telegram_bot/messages.py` as named constants (e.g. `MSG_NO_PROJECT_SELECTED`). `bot.py`, `tasks.py`, `projects.py` import from `messages.py` — no inline strings. Error codes (`ERR_SESSION_ACTIVE`, `ERR_START_FAILED`, etc.) decouple error detection from display language. `BrainstormManager.start()`/`respond()` yield `(error_code, status, is_final)` tuples; `_is_brainstorm_error()` checks `error_code in BRAINSTORM_ERROR_CODES`.
 - **Telegram bot startup validation**: `config.validate()` returns `(errors, warnings)` tuple. Fatal checks: TELEGRAM_BOT_TOKEN non-empty, TELEGRAM_CHAT_ID non-zero integer, PROJECTS_ROOT exists/is-dir/writable. Warning checks: Claude CLI in PATH or `~/.claude/bin/claude`, tmux in PATH, loop script at `/opt/loop/scripts/loop.sh` or `loop` in PATH. `run.py` calls `validate()` before `create_application()` — exits on errors, prints warnings.
+- **Test infrastructure**: Python tests use pytest + pytest-asyncio at `src/telegram_bot/tests/` (89 tests across config, git_utils, projects, tasks). JS tests use Jest at `src/lib/__tests__/` (20 tests for summary.js). Python tests patch `PROJECTS_ROOT` in module namespace (`patch("src.telegram_bot.projects.PROJECTS_ROOT", ...)`), not via env vars. Async generator tests (BrainstormManager.start/respond) require `@pytest.mark.asyncio`.
