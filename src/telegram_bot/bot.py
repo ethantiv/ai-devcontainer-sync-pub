@@ -5,6 +5,7 @@ import os
 import subprocess
 import time
 from enum import IntEnum, auto
+from pathlib import Path
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
@@ -19,6 +20,7 @@ from telegram.ext import (
 
 from .config import (
     GIT_DIFF_RANGE,
+    PROJECTS_ROOT,
     STALE_THRESHOLD,
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID,
@@ -58,6 +60,8 @@ from .messages import (
     MSG_CANCELLED,
     MSG_CLONE_REPO_BTN,
     MSG_CLONING_REPO,
+    MSG_CREATE_PROJECT_BTN,
+    MSG_CREATING_PROJECT,
     MSG_COMPLETION_CHANGES,
     MSG_COMPLETION_COMMITS,
     MSG_COMPLETION_ITERATIONS,
@@ -68,9 +72,17 @@ from .messages import (
     MSG_DIFF_SUMMARY_BTN,
     MSG_DIFF_TITLE,
     MSG_ENTER_ITERATIONS,
+    MSG_ENTER_PROJECT_NAME,
     MSG_ENTER_REPO_URL,
     MSG_ENTER_REPO_URL_EMPTY,
     MSG_ENTER_WORKTREE_NAME,
+    MSG_GITHUB_CHOICE_PROMPT,
+    MSG_GITHUB_CREATING,
+    MSG_GITHUB_CREATED,
+    MSG_GITHUB_FAILED,
+    MSG_GITHUB_PRIVATE_BTN,
+    MSG_GITHUB_PUBLIC_BTN,
+    MSG_GITHUB_SKIP_BTN,
     MSG_HELP,
     MSG_IDEA_LABEL,
     MSG_IN_QUEUE,
@@ -110,7 +122,15 @@ from .messages import (
     MSG_TRUNCATED,
     MSG_UNAUTHORIZED,
 )
-from .projects import clone_repo, create_worktree, get_project, list_projects
+from .projects import (
+    clone_repo,
+    create_github_repo,
+    create_project,
+    create_worktree,
+    get_project,
+    list_projects,
+    validate_project_name,
+)
 from .tasks import Task, brainstorm_manager, task_manager
 
 logging.basicConfig(
@@ -131,6 +151,8 @@ class State(IntEnum):
     BRAINSTORMING = auto()
     ENTER_BRAINSTORM_PROMPT = auto()
     ENTER_URL = auto()
+    ENTER_PROJECT_NAME = auto()
+    GITHUB_CHOICE = auto()
 
 
 # Store conversation data
@@ -208,8 +230,15 @@ async def show_projects(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     projects = list_projects()
 
     if not projects:
-        await reply_text(update, MSG_NO_PROJECTS, parse_mode=None)
-        return ConversationHandler.END
+        keyboard = [
+            [
+                InlineKeyboardButton(MSG_CREATE_PROJECT_BTN, callback_data="action:create_project"),
+                InlineKeyboardButton(MSG_CLONE_REPO_BTN, callback_data="action:clone"),
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await reply_text(update, MSG_NO_PROJECTS, reply_markup=reply_markup, parse_mode=None)
+        return State.SELECT_PROJECT
 
     buttons = []
     for project in projects:
@@ -226,7 +255,10 @@ async def show_projects(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     # Arrange buttons in rows of 2
     keyboard = [buttons[i : i + 2] for i in range(0, len(buttons), 2)]
-    keyboard.append([InlineKeyboardButton(MSG_CLONE_REPO_BTN, callback_data="action:clone")])
+    keyboard.append([
+        InlineKeyboardButton(MSG_CREATE_PROJECT_BTN, callback_data="action:create_project"),
+        InlineKeyboardButton(MSG_CLONE_REPO_BTN, callback_data="action:clone"),
+    ])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await reply_text(update, MSG_AVAILABLE_PROJECTS, reply_markup=reply_markup)
@@ -358,6 +390,13 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     if action == "status":
         return await show_status(update, context)
+
+    if action == "create_project":
+        await query.edit_message_text(
+            MSG_ENTER_PROJECT_NAME,
+            parse_mode="Markdown",
+        )
+        return State.ENTER_PROJECT_NAME
 
     if action == "clone":
         await query.edit_message_text(
@@ -558,6 +597,94 @@ async def handle_clone_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     else:
         await update.message.reply_text(f"✗ {message}")
         return State.ENTER_URL
+
+
+@authorized
+async def handle_project_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle project name input for project creation flow."""
+    assert update.message is not None
+    assert update.message.text is not None
+    assert update.effective_chat is not None
+    name = update.message.text.strip().lower()
+
+    valid, result = validate_project_name(name)
+    if not valid:
+        await update.message.reply_text(result, parse_mode="Markdown")
+        return State.ENTER_PROJECT_NAME
+
+    await update.message.reply_text(MSG_CREATING_PROJECT)
+
+    success, message = create_project(name)
+
+    if not success:
+        await update.message.reply_text(f"\u2717 {message}")
+        return State.ENTER_PROJECT_NAME
+
+    # Store created project name for GitHub choice step
+    user_data = get_user_data(update.effective_chat.id)
+    user_data["created_project_name"] = name
+
+    buttons = [
+        [
+            InlineKeyboardButton(MSG_GITHUB_PRIVATE_BTN, callback_data="github:private"),
+            InlineKeyboardButton(MSG_GITHUB_PUBLIC_BTN, callback_data="github:public"),
+        ],
+        [InlineKeyboardButton(MSG_GITHUB_SKIP_BTN, callback_data="github:skip")],
+    ]
+    reply_markup = InlineKeyboardMarkup(buttons)
+
+    await update.message.reply_text(
+        MSG_GITHUB_CHOICE_PROMPT,
+        reply_markup=reply_markup,
+        parse_mode="Markdown",
+    )
+    return State.GITHUB_CHOICE
+
+
+@authorized_callback
+async def handle_github_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle GitHub repo visibility choice after project creation."""
+    query = update.callback_query
+    assert query is not None
+    assert query.data is not None
+    assert update.effective_chat is not None
+    await query.answer()
+
+    choice = query.data.replace("github:", "")
+    user_data = get_user_data(update.effective_chat.id)
+    project_name = user_data.get("created_project_name")
+
+    if not project_name:
+        await query.edit_message_text(MSG_NO_PROJECT_SELECTED)
+        return ConversationHandler.END
+
+    if choice == "skip":
+        project = get_project(project_name)
+        if project:
+            user_data["project"] = project
+            return await show_project_menu(update, context, project)
+        return await show_projects(update, context)
+
+    # private or public
+    private = choice == "private"
+    await query.edit_message_text(MSG_GITHUB_CREATING)
+
+    project_path = Path(PROJECTS_ROOT) / project_name
+    success, message = create_github_repo(project_path, project_name, private)
+
+    # Show GitHub result, then navigate to project menu
+    project = get_project(project_name)
+    if project:
+        user_data["project"] = project
+        # Send result as a separate message, then show project menu via edit
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=message,
+            parse_mode="Markdown",
+        )
+        return await show_project_menu(update, context, project)
+
+    return await show_projects(update, context)
 
 
 @authorized
@@ -1220,6 +1347,13 @@ def create_application() -> Application:
                 CallbackQueryHandler(handle_iterations, pattern=r"^iter:"),
                 CommandHandler("cancel", cancel),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_custom_iterations),
+            ],
+            State.ENTER_PROJECT_NAME: [
+                CommandHandler("cancel", cancel),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_project_name),
+            ],
+            State.GITHUB_CHOICE: [
+                CallbackQueryHandler(handle_github_choice, pattern=r"^github:"),
             ],
             State.BRAINSTORMING: [
                 CommandHandler("done", finish_brainstorming),
