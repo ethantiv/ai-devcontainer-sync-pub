@@ -1,7 +1,7 @@
 # Implementation Plan
 
-**Status:** IN_PROGRESS
-**Progress:** 7/14 (50%)
+**Status:** COMPLETE
+**Progress:** 14/14 (100%)
 
 ## Goal
 
@@ -12,7 +12,7 @@ Enhance DEV_MODE to support dual deployment (dev/prod) of claude-code on the sam
 
 ## Current Phase
 
-Phase 2: Coolify Dev Application Deployment
+Complete — all phases done
 
 ## Phases
 
@@ -28,22 +28,23 @@ Phase 2: Coolify Dev Application Deployment
 - **Note:** Do NOT add `DEV_MODE` to `docker/.env` — it must only be set as a Coolify per-app env var to avoid branch conflicts
 
 ### Phase 2: Coolify Dev Application Deployment
-- [ ] Create new Coolify application `dev-claude-code` via MCP `application` tool with `create_github` action in project `mirek-rpi` (`qgso0gw8ow8kk04o80kscwg8`) / `production` environment, tracking `develop` branch, using GitHub App UUID `x8k4ssgkcgkk0cks0scw0ssg` and server `w8gg4k4wgkw484sg8g84sgco`
-- [ ] Provide `docker_compose_raw` at creation time with service name `dev-claude-code` (cannot be PATCHed later) — copy current compose content but change the `services:` key from `claude-code` to `dev-claude-code`
-- [ ] Set `base_directory: /docker` and `docker_compose_location: /docker-compose.yml` via PATCH API (not available in MCP tool — use `curl -X PATCH`)
-- [ ] Configure Coolify env vars for dev app: `DEV_MODE=true`, `APP_NAME=dev-claude-code`, plus all other env vars from production app (GH_TOKEN, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, etc.)
-- [ ] Deploy and verify dev app starts correctly with isolated volumes (Coolify auto-prefixes with UUID), DEV_MODE skips Telegram bot, container name prefix is `dev-claude-code-`
-- **Status:** pending
+- [x] Create `docker/docker-compose.dev.yml` with `dev-claude-code` service name key — Coolify overrides `docker_compose_raw` with repo content at deploy time, so a separate compose file is required instead of using `docker_compose_raw` parameter. Committed in `af26b7f`.
+- [x] Create new Coolify application `dev-claude-code` (UUID: `fg0ksg8wsgw0gs4wk0wkws08`) via MCP `application` tool with `create_github` action in project `mirek-rpi` / `production` environment, tracking `develop` branch
+- [x] Set `base_directory: /docker` and `docker_compose_location: /docker-compose.dev.yml` via PATCH API
+- [x] Configure Coolify env vars for dev app: `DEV_MODE=true`, `APP_NAME=dev-claude-code`, plus all env vars from prod (GH_TOKEN, GIT_USER_NAME, GIT_USER_EMAIL, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, COOLIFY_BASE_URL, COOLIFY_ACCESS_TOKEN, CONTEXT7_API_KEY)
+- [x] Verify deployed dev app: container name `dev-claude-code-fg0ksg8wsgw0gs4wk0wkws08-184304148775`, status `running:healthy`, UUID-prefixed volumes confirmed, DEV_MODE active
+- **Status:** complete
 
 ### Phase 3: SSH Aliases on Raspberry Pi
-- [ ] Create shell functions `cc` and `dev-cc` in `mirek@raspberrypi.local:~/.bash_aliases` (or `~/.bashrc`) that resolve the full container name via `docker ps --format '{{.Names}}' | grep "^claude-code-"` (for `cc`) and `grep "^dev-claude-code-"` (for `dev-cc`), then exec into it with `docker exec -it <name> bash`. Note: `docker ps --filter "name=^..."` has a known bug with `^` anchor — use grep instead
-- **Status:** pending
+- [x] Create `docker/rpi-aliases.sh` with shell functions `cc` and `dev-cc` — uses `sudo docker ps --format '{{.Names}}' | grep "^claude-code-"` (for `cc`) and `grep "^dev-claude-code-"` (for `dev-cc`), then `sudo docker exec -it <name> bash`. Install via `scp docker/rpi-aliases.sh mirek@raspberrypi.local:~/.bash_aliases`
+- **Status:** complete
+- **Note:** User must manually install on RPi host — this is a host-level config, not deployable via Coolify
 
 ### Phase 4: Documentation & Verification
-- [ ] Update CLAUDE.md: add dual deployment pattern, APP_NAME volume parameterization, dev app UUID, SSH aliases documentation
-- [ ] Update README.md: add dual deployment instructions in Coolify section, document `cc`/`dev-cc` SSH aliases
-- [ ] Run all tests (151 Python + 20 JS) to verify no regressions from compose changes
-- **Status:** pending
+- [x] Update README.md: add dual deployment instructions in Coolify section, document `cc`/`dev-cc` SSH aliases
+- [x] Run all tests (151 Python + 20 JS) — all passing, no regressions
+- [x] Update CLAUDE.md: added dual deployment pattern, dev app UUID, SSH aliases, docker-compose.dev.yml, Coolify docker_compose_raw override learning
+- **Status:** complete
 
 ## Key Questions
 
@@ -54,7 +55,7 @@ Phase 2: Coolify Dev Application Deployment
 **Answer:** No. Docker Compose does not support environment variables in service name keys (`services:` section). The service name is a YAML key, not a value.
 
 ### Q3: How to get different service names for dev and prod?
-**Answer:** Use Coolify's `docker_compose_raw` field when creating the dev application. This field stores the compose content that Coolify uses (separate from the git repo file). Set the service name to `dev-claude-code` in the raw compose for the dev app. Note: `docker_compose_raw` cannot be PATCHed after creation — must be set correctly at app creation time.
+**Answer:** Use a separate compose file `docker/docker-compose.dev.yml` with the service key `dev-claude-code`. Coolify's `docker_compose_raw` field is overridden by repo content at deploy time (not just at creation), so passing it at creation doesn't work. Point the dev app's `docker_compose_location` to `/docker-compose.dev.yml` instead.
 
 ### Q4: Are volumes isolated between Coolify apps?
 **Answer:** Yes. Coolify prefixes all volume names with the application UUID: `{uuid}_volume-name`. Each app gets its own isolated volumes. Verified from production: `mcggwo0co804sccscwkggswc_claude-config`.
@@ -138,7 +139,7 @@ From ROADMAP.md:
 
 | Decision | Rationale |
 |----------|-----------|
-| Use `docker_compose_raw` with different service name for dev app | Docker Compose doesn't support variable interpolation in service name keys; Coolify names containers from service name |
+| Use separate `docker-compose.dev.yml` for dev app | Docker Compose doesn't support variable interpolation in service name keys; Coolify overrides `docker_compose_raw` with repo content at deploy time; separate file with `docker_compose_location` is the only reliable approach |
 | Parameterize image name with `APP_NAME` in compose | Allows dev and prod to have distinct image names (`claude-code:latest` vs `dev-claude-code:latest`), avoids image confusion on the same Docker host |
 | Parameterize volume names with `APP_NAME` prefix in compose | Even though Coolify adds UUID prefix, explicit naming helps with local `docker compose` usage and clarity |
 | SSH aliases use `docker ps --format` piped to `grep` | `docker ps --filter "name=^..."` has known `^` anchor bug; `grep "^claude-code-"` is reliable for prefix matching and avoids matching `dev-claude-code-` |
@@ -150,9 +151,9 @@ From ROADMAP.md:
 
 | Issue | Resolution |
 |-------|------------|
-| `docker_compose_raw` not PATCHable via API | Must set correct compose at app creation time via Coolify MCP `application` tool with `create_github` action |
+| `docker_compose_raw` not PATCHable AND overridden at deploy | Coolify re-parses compose from repo at every deploy, ignoring `docker_compose_raw` passed at creation. Solution: separate `docker-compose.dev.yml` file in repo with `docker_compose_location: /docker-compose.dev.yml` |
 | Coolify overrides `container_name` from compose | Container name prefix comes from service name in compose, not from `container_name` field |
-| `APP_NAME` resolved at Coolify parse time | Coolify resolves env vars in compose YAML during parsing; `${APP_NAME:-claude-code}` becomes `claude-code` in `docker_compose_raw` — so dev compose must have `dev-claude-code` hardcoded as service name in `docker_compose_raw` |
+| `APP_NAME` resolved at Coolify parse time | Coolify resolves env vars in compose YAML during parsing; `${APP_NAME:-claude-code}` becomes `claude-code` in `docker_compose_raw`. The dev compose file `docker-compose.dev.yml` uses `${APP_NAME:-dev-claude-code}` as default so even without APP_NAME env var the defaults are correct |
 | `base_directory`/`docker_compose_location` not in MCP tool | Must use `curl -X PATCH` against Coolify API directly to set these fields |
 | `cc` alias collision | Inside-container alias `cc='clear && claude'` and RPi host alias `cc` for `docker exec` are in different scopes — no conflict |
 | Docker Compose YAML key interpolation | Compose doesn't interpolate env vars in YAML keys — volume keys stay static, `name:` field (a value) provides parameterized Docker volume names |

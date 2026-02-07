@@ -51,6 +51,14 @@ Deploy as a Docker Compose application on a server managed by [Coolify](https://
 
 The container runs headless with auto-restart. Manage it through Coolify UI or API.
 
+**Dual deployment (dev + prod):** To run both environments on the same server, create a second Coolify app pointing to the `develop` branch with **Docker Compose Location** set to `/docker-compose.dev.yml`. Set env vars `DEV_MODE=true` and `APP_NAME=dev-claude-code`. The dev compose uses service name `dev-claude-code` so containers are named `dev-claude-code-{uuid}-{ts}` (vs `claude-code-{uuid}-{ts}` for prod).
+
+**SSH aliases** for quick access from the host (`docker/rpi-aliases.sh`):
+- `cc` — exec into prod container
+- `dev-cc` — exec into dev container
+
+Install: `scp docker/rpi-aliases.sh user@host:~/.bash_aliases`
+
 ### Option 4: macOS (Local Setup)
 
 No Docker required. Installs plugins, skills, and the loop CLI directly on your Mac.
