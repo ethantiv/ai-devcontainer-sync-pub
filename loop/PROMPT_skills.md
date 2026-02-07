@@ -1,1 +1,4 @@
-../src/prompts/PROMPT_skills.md
+- `agent-browser`
+<!-- - `frontend-design`
+- `web-design-guidelines`
+- `vercel-react-best-practices` -->
