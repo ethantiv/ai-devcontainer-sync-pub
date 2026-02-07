@@ -11,7 +11,6 @@
     "ghcr.io/devcontainers/features/terraform:1": {}
   },
   "onCreateCommand": {
-    "cleanup-ai-dirs": "rm -rf /workspaces/ai-devcontainer-sync/.claude || true",
     "setup-claude-dir": "sudo mkdir -p /home/vscode/.claude && sudo chown -R vscode:vscode /home/vscode/.claude",
     "setup-gemini-dir": "sudo mkdir -p /home/vscode/.gemini && sudo chown -R vscode:vscode /home/vscode/.gemini",
     "setup-google-auth-dir": "sudo mkdir -p /home/vscode/.cache/google-vscode-extension/auth && sudo chown -R vscode:vscode /home/vscode/.cache/google-vscode-extension"
