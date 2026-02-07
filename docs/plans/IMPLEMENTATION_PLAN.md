@@ -1,8 +1,8 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 7/31 (23%)
-**Verified:** 2026-02-07 (rev.4) — Phase 1 complete
+**Progress:** 10/31 (32%)
+**Verified:** 2026-02-07 (rev.5) — Phase 2 complete
 
 ## Goal
 
@@ -10,7 +10,7 @@ Implement all proposals from ROADMAP.md across three priority tiers: P1 (Critica
 
 ## Current Phase
 
-Phase 2: Startup Validation (P1)
+Phase 3: Unit Tests (P2)
 
 ## Phases
 
@@ -31,10 +31,10 @@ Translate all user-facing Polish strings to English across the Telegram bot and 
 
 Add comprehensive environment variable validation at bot startup to fail fast with clear error messages.
 
-- [ ] Extend validation in `src/telegram_bot/run.py` — add checks for: `PROJECTS_ROOT` exists and is a writable directory, `claude` CLI is in PATH or at `~/.claude/bin/claude` (via `shutil.which`), `tmux` is available (via `shutil.which`), `TELEGRAM_CHAT_ID` is a non-zero integer
-- [ ] Update `src/telegram_bot/config.py` — remove silent defaults (empty string for token, 0 for chat_id); add a `validate()` function that returns list of error strings, called from `run.py` before `create_application()`
-- [ ] Add loop script availability check — verify either `/opt/loop/scripts/loop.sh` or `loop` command exists; warn (not fail) if missing since bot can still function for brainstorming without loop
-- **Status:** pending
+- [x] Extend validation in `src/telegram_bot/run.py` — calls `config.validate()` before `create_application()`; prints warnings for non-fatal issues, exits with error messages for fatal ones
+- [x] Update `src/telegram_bot/config.py` — added `validate()` function returning `(errors, warnings)` tuple; validates TELEGRAM_BOT_TOKEN (non-empty), TELEGRAM_CHAT_ID (non-zero integer), PROJECTS_ROOT (exists, is directory, writable); checks Claude CLI, tmux, loop as warnings
+- [x] Add loop script availability check — verifies `/opt/loop/scripts/loop.sh` or `loop` command exists; warns (not fails) if missing; same for Claude CLI and tmux
+- **Status:** complete
 
 ### Phase 3: Unit Tests (P2)
 

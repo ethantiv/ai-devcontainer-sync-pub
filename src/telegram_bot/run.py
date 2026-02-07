@@ -4,17 +4,19 @@
 import sys
 
 from .bot import create_application
-from .config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+from .config import TELEGRAM_CHAT_ID, validate
 
 
 def main() -> int:
     """Run the Telegram bot."""
-    if not TELEGRAM_BOT_TOKEN:
-        print("Error: TELEGRAM_BOT_TOKEN environment variable not set")
-        return 1
+    errors, warnings = validate()
 
-    if not TELEGRAM_CHAT_ID:
-        print("Error: TELEGRAM_CHAT_ID environment variable not set")
+    for warning in warnings:
+        print(f"Warning: {warning}")
+
+    if errors:
+        for error in errors:
+            print(f"Error: {error}")
         return 1
 
     print("Starting Telegram bot...")
