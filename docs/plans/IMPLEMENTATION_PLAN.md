@@ -1,50 +1,98 @@
 # Implementation Plan
 
-**Status:** COMPLETE
-**Progress:** 11/11 (100%)
+**Status:** IN_PROGRESS
+**Progress:** 0/18 (0%)
 **Last updated:** 2026-02-08
 
 ## Goal
 
-Reduce and consolidate Telegram bot notification messages between task completion and queue start. Currently the user receives 3-4 separate messages in rapid succession (completion summary from notify-telegram.sh, rich completion summary from bot.py, "Started from queue" message, and iteration progress message). Consolidate into minimal, unified messages.
+Add natural conversation continuation with context-aware inline buttons throughout the Telegram bot. After every operation (task start, cancel, help, brainstorm end, etc.) the user should see relevant follow-up buttons instead of dead-end text messages. This eliminates the need to manually invoke `/start` between operations.
 
 From ROADMAP.md:
-> zmniejsz ilość ekranów z podumowaniami, informacjami o zakończniu pracy i starcie kolejki do niezbędnego minimum, teraz między kolejnymi zadaniami z kolejki otrzymuję równolegle 3-4 wiadomości z podsumowanie, inforamcją o zakończniu i starcie nowego, zmniejsz ilość i ujednolić format tych wiadmości
+> dodaj w telegram bot taką naturalną kontynuację pomiędzy kolejnymi wiadmościami np po planie powinien się pojawić przycisk build i powrót do listy projektów, bo dodaniu zadania do kolejki też powinny się wyświetlić jakieś przyciski np przyciski związane z projektem gdzie jest kolejka albo lista projektów, ma być zachowany natrutrany flow w oknie rozmowy , żebym nie musiał cały czas wywoływać polecenia /start w trakcie pracy z agentem za pośrednictwem bota
 
 ## Current Phase
 
-All phases complete.
+Phase 1
 
 ## Phases
 
-### Phase 1: Remove duplicate notification from notify-telegram.sh
-- [x] Remove `notify-telegram.sh` call from `loop.sh` cleanup trap (loop.sh lines 30-35, 6 lines) — bot.py's `check_task_completion()` already sends a richer summary with diff stats, commits, plan progress, and interactive buttons
-- [x] Keep `notify-telegram.sh` file intact for potential standalone use; keep `loop init` symlink in `init.js` line 99
-- **Status:** complete
+### Phase 1: Add follow-up buttons after task start/queue
+- [ ] Add `MSG_PROJECTS_LIST_BTN` constant in messages.py (e.g. `"\u2261 Projects"`) — for "go to project list" navigation; reuse existing `MSG_PROJECT_BTN` (`"\u25b8 Project"`) for "view current project" navigation (no new constant needed)
+- [ ] In `start_task()` (bot.py line 926): replace plain `reply_text` with `reply_text(..., reply_markup=keyboard)` containing context-aware buttons:
+  - When task **started**: "View Project" button (`project:{project.name}`) + "Projects" button (`action:back`)
+  - When task **queued**: "Queue" button (`action:queue`) + "View Project" button (`project:{project.name}`) + "Projects" button (`action:back`)
+  - When task **failed**: "View Project" button (`project:{project.name}`) + "Projects" button (`action:back`)
+- [ ] Change `start_task()` return from `ConversationHandler.END` to `State.SELECT_PROJECT` so button callbacks stay routed within the conversation
+- **Status:** pending
 
-### Phase 2: Consolidate completion summary + queue start into single message
-- [x] Add new message constant `MSG_COMPLETION_QUEUE_NEXT` in messages.py (after line 164) for the "next task started" line within the completion message
-- [x] Add optional `next_task: Task | None = None` parameter to `_format_completion_summary()` (bot.py); when provided, append `MSG_COMPLETION_QUEUE_NEXT` line to the summary output
-- [x] Update `check_task_completion()` (bot.py): when both `completed_task` and `next_task` exist, pass `next_task` to `_format_completion_summary()` and skip the second `send_message()` call (changed `if next_task:` to `elif next_task:`)
-- [x] When only `next_task` exists (orphaned queue start, no completed task), keep sending standalone `MSG_STARTED_FROM_QUEUE` message
-- [x] Add `MSG_COMPLETION_QUEUE_NEXT` import to bot.py imports
-- **Status:** complete
+### Phase 2: Add follow-up buttons after cancel/end operations
+- [ ] In `cancel_brainstorming()` (bot.py line 1131/1133): add inline keyboard with "View Project" + "Projects" buttons after cancel/no-active message; return `State.SELECT_PROJECT` instead of `END`
+- [ ] In `handle_input_cancel()` (bot.py line 1144): change `edit_message_text(MSG_CANCELLED)` to include inline keyboard with "Projects" button (`action:back`); return `State.SELECT_PROJECT` instead of `END`
+- [ ] In `cancel()` (bot.py line 1211): add inline keyboard with "Projects" button after cancel message; return `State.SELECT_PROJECT` instead of `END`
+- [ ] In `handle_idea_button()` idea:cancel path (bot.py line 1162): add inline keyboard with "View Project" + "Projects" buttons; return `State.SELECT_PROJECT` instead of `END`
+- [ ] In `handle_brainstorm_action()` `brainstorm:end` path (bot.py line 1118): add inline keyboard with "View Project" + "Projects" buttons; return `State.SELECT_PROJECT` instead of `END`
+- [ ] In `handle_brainstorm_action()` `brainstorm:plan` no-project path (bot.py line 1103): add inline keyboard with "Projects" button; return `State.SELECT_PROJECT` instead of `END`
+- **Status:** pending
 
-### Phase 3: Add tests for consolidated notifications
-- [x] Add tests for `_format_completion_summary()` in `test_bot.py` verifying: basic output, with diff stats, with commits, with plan progress, and with `next_task` appended (queue next line present in output)
-- [x] Add tests for `check_task_completion()` in `test_bot.py` verifying: single `send_message` call when task completes with queued next (not two), standalone message for orphaned queue start, no message when no tasks completed
-- [x] Add test verifying `notify-telegram.sh` is no longer called from `loop.sh` cleanup trap (grep loop.sh for the call)
-- [x] Run `python3 -m pytest src/telegram_bot/tests/ -v` — all tests pass
-- **Status:** complete
+### Phase 3: Add follow-up buttons to help and notification messages
+- [ ] In `help_command()` (bot.py line 1222): add inline keyboard with "Projects" button after help text
+- [ ] In orphaned queue start message (bot.py line 1334): add `reply_markup` with "View Project" button (`project:{project}`) to `send_message()` call
+- **Status:** pending
+
+### Phase 4: Add tests for follow-up buttons
+- [ ] Add tests for `start_task()` verifying: reply_markup present with correct buttons for started, queued, and failed cases
+- [ ] Add tests for `cancel_brainstorming()` verifying: reply_markup present after cancel, returns SELECT_PROJECT
+- [ ] Add tests for `handle_input_cancel()` verifying: reply_markup in edited message, returns SELECT_PROJECT
+- [ ] Add tests for `cancel()` verifying: reply_markup present, returns SELECT_PROJECT
+- [ ] Add tests for `handle_brainstorm_action()` end/no-project paths verifying: reply_markup present, returns SELECT_PROJECT
+- [ ] Add tests for orphaned queue start verifying: reply_markup in send_message call
+- [ ] Run `python3 -m pytest src/telegram_bot/tests/ -v` — all tests pass
+- **Status:** pending
 
 ## Findings & Decisions
+
+### Requirements
+- Every bot response that ends a conversation (`ConversationHandler.END`) should include at least one navigation button
+- Buttons should be context-aware: show "View Project" when a project is selected, show "Projects" to go to project list
+- Background notification messages (orphaned queue start) should include navigation buttons
+- Existing button patterns (callback_data namespaces: `project:`, `action:`) must be reused
+- `/help` remains stateless (returns `None`, not a conversation state) but should still offer a "Projects" button
+
+### Research Findings
+
+#### Dead-end locations identified in bot.py (no follow-up buttons):
+| Location | Line | Current behavior | Fix |
+|----------|------|------------------|-----|
+| `start_task()` | 926 | `reply_text(text)` → END | Add project/queue/projects buttons |
+| `cancel_brainstorming()` | 1131 | `reply_text(MSG_BRAINSTORM_CANCELLED)` → END | Add project/projects buttons |
+| `handle_input_cancel()` | 1144 | `edit_message_text(MSG_CANCELLED)` → END | Add projects button |
+| `cancel()` | 1211 | `reply_text(MSG_CANCELLED)` → END | Add projects button |
+| `handle_idea_button()` idea:cancel | 1162 | `edit_message_text(MSG_CANCELLED)` → END | Add project/projects buttons |
+| `handle_brainstorm_action()` end | 1118 | `edit_message_text(MSG_BRAINSTORM_SESSION_ENDED)` → END | Add project/projects buttons |
+| `handle_brainstorm_action()` no project | 1103 | `edit_message_text(MSG_NO_PROJECT_SELECTED)` → END | Add projects button |
+| `help_command()` | 1222 | `reply_text(MSG_HELP)` → None | Add projects button |
+| Orphaned queue start | 1334 | `send_message(text)` — no markup | Add project button |
+
+#### Well-covered locations (already have buttons):
+- `show_projects()` — project list + create/clone buttons
+- `show_project_menu()` — full action menu
+- `show_queue()` — cancel buttons + back
+- `show_iterations_menu()` — iteration buttons + cancel
+- `check_task_completion()` — diff summary + project buttons
+- All brainstorm states — done/save/cancel buttons
+- `finish_brainstorming()` — Run Plan / End buttons
+
+#### Locations that appear dead-end but are not:
+- `handle_github_choice()` line 725: sends plain text BUT immediately follows with `show_project_menu()` on line 730 — not a dead-end
+- `handle_name()` / `handle_clone_url()`: on success call `start()` which shows projects — not a dead-end
 
 ### Technical Decisions
 | Decision | Rationale |
 |----------|-----------|
-| Remove `notify-telegram.sh` from loop.sh cleanup trap instead of disabling bot notification | Bot's notification is richer (diffs, commits, plan, buttons); removing the shell notification eliminates ~70% duplication with zero information loss |
-| Keep `notify-telegram.sh` file intact (just stop calling it) | May be useful for standalone loop runs without bot; avoids breaking `loop init` symlinks |
-| Merge queue start into completion message (not the reverse) | Completion summary is the primary message; "next task started" is secondary info that fits as an appendix line |
-| Keep orphaned queue start as standalone message | When there's no completed task (bot restarted), the queue start notification is the only message — can't merge into nothing |
-| Keep iteration progress message (message #4) unchanged | Already optimized with edit-in-place pattern; sends 1 new message + N-1 edits. No consolidation needed |
-| Add `MSG_COMPLETION_QUEUE_NEXT` constant instead of reusing `MSG_STARTED_FROM_QUEUE` | Different formatting — inline within summary vs standalone message |
+| Reuse existing `project:` and `action:` callback namespaces | Existing handlers already process these callbacks; no new handler registration needed |
+| Return `State.SELECT_PROJECT` instead of `END` from cancel handlers | Keeps button callbacks routed within the ConversationHandler; `SELECT_PROJECT` already handles both `project:` and `action:` callbacks |
+| Keep `help_command()` stateless (return None) | Help is a fallback handler; adding reply_markup is sufficient for navigation without changing state management |
+| Add `MSG_PROJECTS_LIST_BTN` as a new constant | Distinct from `MSG_BACK_BTN` ("← Back") — "Projects" better communicates the destination when not in a sub-menu |
+| Reuse existing `MSG_PROJECT_BTN` for "View Project" instead of adding `MSG_VIEW_PROJECT_BTN` | Already defined as `"\u25b8 Project"` with the right icon; avoid duplicate constants |
+| Add buttons to orphaned queue start but NOT to progress messages | Progress messages use edit-in-place pattern (1 create + N edits); adding buttons would add clutter to frequently-updated messages. Orphaned queue start is a one-time message that benefits from navigation. |
