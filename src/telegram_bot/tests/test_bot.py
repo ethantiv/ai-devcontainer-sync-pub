@@ -1770,3 +1770,247 @@ class TestCheckTaskProgress:
         # proj-b: edit message (was at 1, now 2)
         assert context.bot.send_message.await_count == 1
         assert context.bot.edit_message_text.await_count == 1
+
+
+class TestHandleSync:
+    """Tests for handle_sync callback handler — Sync/Pull button."""
+
+    CHAT_ID = 12345
+
+    def _make_project(self, name="test-proj", has_loop=True):
+        project = MagicMock()
+        project.name = name
+        project.branch = "main"
+        project.is_worktree = False
+        project.parent_repo = None
+        project.has_loop = has_loop
+        project.path = Path(f"/tmp/{name}")
+        return project
+
+    @pytest.mark.asyncio
+    async def test_answers_callback_query(self):
+        """Handler answers the callback to dismiss loading indicator."""
+        from src.telegram_bot.bot import handle_action
+
+        update = make_callback_update(self.CHAT_ID, "action:sync")
+        context = make_context()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.get_user_data", return_value={"project": self._make_project()}),
+            patch("src.telegram_bot.bot.pull_project", return_value=(True, "Already up to date.")),
+            patch("src.telegram_bot.bot.show_project_menu", new_callable=AsyncMock, return_value=42),
+        ):
+            await handle_action(update, context)
+        update.callback_query.answer.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_successful_pull_shows_result_and_refreshes_menu(self):
+        """Successful sync shows success message then refreshes project menu."""
+        from src.telegram_bot.bot import handle_action
+
+        update = make_callback_update(self.CHAT_ID, "action:sync")
+        context = make_context()
+        project = self._make_project()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.get_user_data", return_value={"project": project}),
+            patch("src.telegram_bot.bot.pull_project", return_value=(True, "Fast-forward")),
+            patch("src.telegram_bot.bot.get_project", return_value=project),
+            patch("src.telegram_bot.bot.show_project_menu", new_callable=AsyncMock, return_value=42) as mock_menu,
+        ):
+            result = await handle_action(update, context)
+
+        # Should refresh project menu after pull
+        mock_menu.assert_awaited_once()
+        assert result == 42
+
+    @pytest.mark.asyncio
+    async def test_failed_pull_shows_error(self):
+        """Failed sync shows error message with stderr details."""
+        from src.telegram_bot.bot import handle_action
+        from src.telegram_bot.messages import MSG_SYNC_FAILED
+
+        update = make_callback_update(self.CHAT_ID, "action:sync")
+        context = make_context()
+        project = self._make_project()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.get_user_data", return_value={"project": project}),
+            patch("src.telegram_bot.bot.pull_project", return_value=(False, "merge conflict")),
+            patch("src.telegram_bot.bot.get_project", return_value=project),
+            patch("src.telegram_bot.bot.show_project_menu", new_callable=AsyncMock, return_value=42),
+        ):
+            result = await handle_action(update, context)
+
+        # Second edit_message_text call (first is "Pulling changes...")
+        call_args = update.callback_query.edit_message_text.call_args_list[1]
+        text = call_args[0][0]
+        assert "merge conflict" in text
+
+    @pytest.mark.asyncio
+    async def test_no_project_returns_to_projects(self):
+        """Sync without selected project returns to project list."""
+        from src.telegram_bot.bot import handle_action
+
+        update = make_callback_update(self.CHAT_ID, "action:sync")
+        context = make_context()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.get_user_data", return_value={}),
+            patch("src.telegram_bot.bot.show_projects", new_callable=AsyncMock, return_value=1) as mock_proj,
+        ):
+            result = await handle_action(update, context)
+        mock_proj.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_already_up_to_date_shows_no_updates(self):
+        """When pull returns 'Already up to date', shows that message."""
+        from src.telegram_bot.bot import handle_action
+        from src.telegram_bot.messages import MSG_SYNC_NO_UPDATES
+
+        update = make_callback_update(self.CHAT_ID, "action:sync")
+        context = make_context()
+        project = self._make_project()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.get_user_data", return_value={"project": project}),
+            patch("src.telegram_bot.bot.pull_project", return_value=(True, "Already up to date.")),
+            patch("src.telegram_bot.bot.get_project", return_value=project),
+            patch("src.telegram_bot.bot.show_project_menu", new_callable=AsyncMock, return_value=42),
+        ):
+            result = await handle_action(update, context)
+
+        # Second edit_message_text call (first is "Pulling changes...")
+        call_args = update.callback_query.edit_message_text.call_args_list[1]
+        text = call_args[0][0]
+        assert MSG_SYNC_NO_UPDATES in text
+
+
+class TestShowProjectMenuSyncButton:
+    """Tests for Sync button presence in show_project_menu()."""
+
+    CHAT_ID = 12345
+
+    def _make_project(self, name="test-proj", has_loop=True, is_worktree=False):
+        project = MagicMock()
+        project.name = name
+        project.branch = "main"
+        project.is_worktree = is_worktree
+        project.parent_repo = "parent" if is_worktree else None
+        project.has_loop = has_loop
+        project.path = Path(f"/tmp/{name}")
+        return project
+
+    @pytest.mark.asyncio
+    async def test_sync_button_in_free_project_with_loop(self):
+        """Sync button appears in project menu when project has loop and no active task."""
+        from src.telegram_bot.bot import show_project_menu
+        from src.telegram_bot.messages import MSG_SYNC_BTN
+
+        update = make_callback_update(self.CHAT_ID, "project:test-proj")
+        context = make_context()
+        project = self._make_project()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
+            patch("src.telegram_bot.bot.check_remote_updates", return_value=0),
+        ):
+            mock_tm.get_task.return_value = None
+            mock_tm.get_queue.return_value = []
+            mock_bm.sessions = {}
+            result = await show_project_menu(update, context, project)
+
+        call_kwargs = update.callback_query.edit_message_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_data = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert "action:sync" in button_data
+
+    @pytest.mark.asyncio
+    async def test_sync_button_shows_count_when_updates_available(self):
+        """Sync button shows update count when remote has new commits."""
+        from src.telegram_bot.bot import show_project_menu
+        from src.telegram_bot.messages import MSG_SYNC_BTN_WITH_COUNT
+
+        update = make_callback_update(self.CHAT_ID, "project:test-proj")
+        context = make_context()
+        project = self._make_project()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
+            patch("src.telegram_bot.bot.check_remote_updates", return_value=3),
+        ):
+            mock_tm.get_task.return_value = None
+            mock_tm.get_queue.return_value = []
+            mock_bm.sessions = {}
+            await show_project_menu(update, context, project)
+
+        call_kwargs = update.callback_query.edit_message_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_texts = [b.text for row in markup.inline_keyboard for b in row]
+        expected_text = MSG_SYNC_BTN_WITH_COUNT.format(count=3)
+        assert expected_text in button_texts
+
+    @pytest.mark.asyncio
+    async def test_sync_button_in_running_task_menu(self):
+        """Sync button appears even when a task is running."""
+        from src.telegram_bot.bot import show_project_menu
+
+        update = make_callback_update(self.CHAT_ID, "project:test-proj")
+        context = make_context()
+        project = self._make_project()
+
+        mock_task = MagicMock()
+        mock_task.mode = "build"
+        mock_task.iterations = 5
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
+            patch("src.telegram_bot.bot.check_remote_updates", return_value=0),
+        ):
+            mock_tm.get_task.return_value = mock_task
+            mock_tm.get_queue.return_value = []
+            mock_tm.get_current_iteration.return_value = 2
+            mock_tm.get_task_duration.return_value = "1m 0s"
+            mock_bm.sessions = {}
+            await show_project_menu(update, context, project)
+
+        call_kwargs = update.callback_query.edit_message_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_data = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert "action:sync" in button_data
+
+    @pytest.mark.asyncio
+    async def test_no_sync_button_without_loop(self):
+        """Sync button does not appear when project has no loop initialized."""
+        from src.telegram_bot.bot import show_project_menu
+
+        update = make_callback_update(self.CHAT_ID, "project:test-proj")
+        context = make_context()
+        project = self._make_project(has_loop=False)
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
+        ):
+            mock_tm.get_task.return_value = None
+            mock_tm.get_queue.return_value = []
+            mock_bm.sessions = {}
+            await show_project_menu(update, context, project)
+
+        call_kwargs = update.callback_query.edit_message_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_data = [b.callback_data for row in markup.inline_keyboard for b in row]
+        # No sync button in uninitialized projects
+        assert "action:sync" not in button_data

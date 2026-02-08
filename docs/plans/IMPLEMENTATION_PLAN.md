@@ -1,8 +1,8 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 31/43 (72%)
-**Last Verified:** 2026-02-08 — Phase 5 complete
+**Progress:** 38/43 (88%)
+**Last Verified:** 2026-02-08 — Phase 6 complete
 
 ## Goal
 
@@ -10,7 +10,7 @@ Implement all proposals from docs/ROADMAP.md across three priority tiers: P1 (Cr
 
 ## Current Phase
 
-Phase 6: Sync/Pull Button in Telegram Project Menu (P3-Nice to Have)
+Phase 7: Interactive Brainstorm History Viewer (P3-Nice to Have)
 
 ## Phases
 
@@ -61,14 +61,14 @@ Phase 6: Sync/Pull Button in Telegram Project Menu (P3-Nice to Have)
 - **Status:** complete
 
 ### Phase 6: Sync/Pull Button in Telegram Project Menu (P3-Nice to Have)
-- [ ] Add `check_remote_updates(project_path)` function to `git_utils.py`: run `git fetch` then `git rev-list HEAD..@{u} --count` to detect new remote commits, return count (int), use 10s timeout — follow existing subprocess pattern
-- [ ] Add `pull_project(project_path)` function to `git_utils.py`: run `git pull` with 30s timeout, return `(success, message)` tuple — follow existing `(bool, str)` pattern in `projects.py`
-- [ ] Add message constants to `messages.py`: `MSG_SYNC_BTN`, `MSG_SYNC_BTN_WITH_COUNT`, `MSG_SYNC_SUCCESS`, `MSG_SYNC_FAILED`, `MSG_SYNC_NO_UPDATES`
-- [ ] Add "Sync" button to project menu in `bot.py::show_project_menu()` with update indicator (e.g. `"^ Sync (3 new)"`)
-- [ ] Add `handle_sync()` callback handler in `bot.py` for the `action:sync` callback data — call `pull_project()`, show result, refresh project menu
-- [ ] Run background `check_remote_updates()` on project menu open to populate button label — use `asyncio.create_task()` or similar non-blocking approach
-- [ ] Write tests for `check_remote_updates()`, `pull_project()`, and sync button handler
-- **Status:** pending
+- [x] Add `check_remote_updates(project_path)` function to `git_utils.py`: run `git fetch` then `git rev-list HEAD..@{u} --count` to detect new remote commits, return count (int), use 10s timeout — follow existing subprocess pattern
+- [x] Add `pull_project(project_path)` function to `git_utils.py`: run `git pull` with 30s timeout, return `(success, message)` tuple — follow existing `(bool, str)` pattern in `projects.py`
+- [x] Add message constants to `messages.py`: `MSG_SYNC_BTN`, `MSG_SYNC_BTN_WITH_COUNT`, `MSG_SYNC_SUCCESS`, `MSG_SYNC_FAILED`, `MSG_SYNC_NO_UPDATES`, `MSG_SYNC_PULLING`
+- [x] Add "Sync" button to project menu in `bot.py::show_project_menu()` with update indicator (e.g. `"^ Sync (3 new)"`) — button shown in bottom row alongside Back for projects with loop or active task; `check_remote_updates()` called synchronously on menu open (10s timeout)
+- [x] Add `action:sync` handler in `bot.py::handle_action()` — call `pull_project()`, show "Pulling...", then result (success/failure/up-to-date), refresh project data and menu
+- [x] Run `check_remote_updates()` on project menu open to populate button label — synchronous call with 10s timeout (simpler than async task, sufficient for UX)
+- [x] Write tests for `check_remote_updates()` (8 tests), `pull_project()` (6 tests), sync button in menu (4 tests), and sync handler (5 tests) — 23 new tests total
+- **Status:** complete
 
 ### Phase 7: Interactive Brainstorm History Viewer (P3-Nice to Have)
 - [ ] Add `list_brainstorm_sessions(projects_root)` function to `tasks.py`: scan `PROJECTS_ROOT/.brainstorm/` for JSONL files, extract metadata from filenames (chat_id, uuid) and file content (first line for topic/prompt), return sorted list with timestamp, topic, message count
@@ -83,10 +83,10 @@ Phase 6: Sync/Pull Button in Telegram Project Menu (P3-Nice to Have)
 | Question | Answer |
 |----------|--------|
 | How many tests does test_tasks.py currently have? | 110 tests (103 + 7 new TestQueueTTLExpiry) |
-| How many total tests exist? | 384 Python (110 test_tasks + 101 test_bot + 71 test_projects + 64 test_config + 20 test_git_utils + 18 test_log_rotation) + 20 JS = 404 total |
+| How many total tests exist? | 407 Python (110 test_tasks + 110 test_bot + 71 test_projects + 64 test_config + 34 test_git_utils + 18 test_log_rotation) + 20 JS = 427 total |
 | Is there any log rotation mechanism? | Yes — `log_rotation.py` module with `rotate_logs()`, `cleanup_brainstorm_files()`, `check_disk_space()`. Daily periodic job in bot.py. CLI via `loop cleanup --logs` |
 | Is there retry logic for git operations? | Yes — `clone_repo()` retries up to 3 times with exponential backoff (2s, 4s) on TimeoutExpired and transient git network errors. Non-retryable errors fail immediately |
-| Is the sync/pull feature started? | No — no git pull/fetch references in telegram_bot code, no MSG_SYNC_* constants |
+| Is the sync/pull feature started? | Yes — complete. `check_remote_updates()` and `pull_project()` in git_utils.py, Sync button in project menu with update count, `action:sync` handler in bot.py |
 | Is brainstorm history viewer started? | No — no history-related code or messages exist. Sessions removed from `.brainstorm_sessions.json` after `finish()` — only JSONL files remain |
 | What Commander.js version is installed? | ^14.0.0 in package.json (resolved to 14.0.3). Upgrade from v12 complete — all APIs stable |
 | Are there any TODOs/FIXMEs in the codebase? | None — codebase is clean with no TODO, FIXME, HACK, XXX comments or skipped tests |
@@ -151,7 +151,7 @@ Phase 6: Sync/Pull Button in Telegram Project Menu (P3-Nice to Have)
 - ~~**QueuedTask has `queued_at` field but never checked for expiry**~~ **DONE: QUEUE_TTL (default 3600s) checks in process_completed_tasks(), expired tasks removed and notified**
 - **Brainstorm session metadata lost on finish** — `_cleanup_session()` removes entry from `_sessions` dict and `.brainstorm_sessions.json`. Only JSONL files survive. Phase 7 must scan JSONL files directly or add a history log
 - **Existing test coverage gaps by priority**: (1) ~~check_task_progress() stale detection — 0 direct tests~~ **DONE: 15 tests**, (2) BrainstormManager happy paths — ~~only error-path tests (1 start, 2 respond)~~ **start() DONE: 10 tests, respond() DONE: 12 tests**, (3) ~~process_completed_tasks() workflow — 1 persistence test only~~ **DONE: 9 tests**, (4) ~~concurrent persistence — 0 tests~~ **DONE: 12 tests**, (5) ~~BrainstormManager.finish() — 0 unit tests~~ **DONE: 12 tests**, (6) ~~completion summary edge cases~~ **DONE: 5 new tests (12 total)**
-- **Per-file test breakdown (384 Python)**: test_tasks.py=110, test_bot.py=101, test_projects.py=71, test_config.py=64, test_git_utils.py=20, test_log_rotation.py=18
+- **Per-file test breakdown (407 Python)**: test_tasks.py=110, test_bot.py=110, test_projects.py=71, test_config.py=64, test_git_utils.py=34, test_log_rotation.py=18
 - **Commander.js APIs used in cli.js**: `.name()`, `.description()`, `.version()`, `.command()`, `.option()`, `.action()`, `.addHelpText('after')`, `.parse()`, plus one negatable option `--no-early-exit`. No advanced APIs (`.exitOverride()`, `.configureOutput()`, etc.). All stable across v12→v14
 - **cli.js helper functions**: `addLoopOptions(cmd)` and `addBuildOptions(cmd)` for DRY option management across plan/build/run commands
 - **No skipped or xfail tests** — all 259 Python and 20 JS tests are active and passing

@@ -114,3 +114,58 @@ def get_plan_progress(project_path: Path) -> tuple[int, int] | None:
         return None
 
     return (checked, total)
+
+
+def check_remote_updates(project_path: Path) -> int:
+    """Return count of new commits on remote branch ahead of local HEAD.
+
+    Runs git fetch then git rev-list --count HEAD..@{u}.
+    Returns 0 on any failure (no remote, no upstream, timeout).
+    """
+    try:
+        fetch = subprocess.run(
+            ["git", "fetch"],
+            capture_output=True,
+            text=True,
+            cwd=project_path,
+            timeout=10,
+        )
+        if fetch.returncode != 0:
+            return 0
+
+        revlist = subprocess.run(
+            ["git", "rev-list", "--count", "HEAD..@{u}"],
+            capture_output=True,
+            text=True,
+            cwd=project_path,
+            timeout=10,
+        )
+        if revlist.returncode != 0:
+            return 0
+
+        return int(revlist.stdout.strip())
+    except (subprocess.TimeoutExpired, OSError, ValueError):
+        return 0
+
+
+def pull_project(project_path: Path) -> tuple[bool, str]:
+    """Run git pull in the project directory.
+
+    Returns (success, message) tuple — message is stdout on success,
+    stderr on failure.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "pull"],
+            capture_output=True,
+            text=True,
+            cwd=project_path,
+            timeout=30,
+        )
+        if result.returncode == 0:
+            return (True, result.stdout.strip())
+        return (False, result.stderr.strip())
+    except subprocess.TimeoutExpired:
+        return (False, "git pull timed out")
+    except OSError as e:
+        return (False, str(e))

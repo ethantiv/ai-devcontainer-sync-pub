@@ -29,7 +29,7 @@ from .config import (
     TELEGRAM_CHAT_ID,
 )
 from .log_rotation import cleanup_brainstorm_files, rotate_logs
-from .git_utils import get_diff_stats, get_plan_progress, get_recent_commits
+from .git_utils import check_remote_updates, get_diff_stats, get_plan_progress, get_recent_commits, pull_project
 from .messages import (
     BRAINSTORM_ERROR_CODES,
     MSG_ACTIVE_BRAINSTORM,
@@ -124,6 +124,12 @@ from .messages import (
     MSG_STATUS_FREE,
     MSG_STATUS_RUNNING,
     MSG_STATUS_TITLE,
+    MSG_SYNC_BTN,
+    MSG_SYNC_BTN_WITH_COUNT,
+    MSG_SYNC_FAILED,
+    MSG_SYNC_NO_UPDATES,
+    MSG_SYNC_PULLING,
+    MSG_SYNC_SUCCESS,
     MSG_RESUME_SESSION_BTN,
     MSG_TASK_ERROR,
     MSG_TASK_NOT_FOUND,
@@ -352,6 +358,13 @@ async def show_project_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         for s in brainstorm_manager.sessions.values()
     )
 
+    # Check for remote updates (sync button label)
+    remote_count = check_remote_updates(project.path) if (task or project.has_loop) else 0
+    if remote_count > 0:
+        sync_label = MSG_SYNC_BTN_WITH_COUNT.format(count=remote_count)
+    else:
+        sync_label = MSG_SYNC_BTN
+
     icon = "↳" if project.is_worktree else "▸"
     status = MSG_STATUS_RUNNING if task else MSG_STATUS_FREE
     text = f"{icon} *{project.name}*\n"
@@ -367,6 +380,8 @@ async def show_project_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     brainstorm_row = [InlineKeyboardButton(MSG_BRAINSTORM_BTN, callback_data="action:brainstorm")]
     if has_brainstorm:
         brainstorm_row.append(InlineKeyboardButton(MSG_RESUME_SESSION_BTN, callback_data="action:resume_brainstorm"))
+
+    sync_btn = InlineKeyboardButton(sync_label, callback_data="action:sync")
 
     if task:
         duration = task_manager.get_task_duration(task)
@@ -387,7 +402,7 @@ async def show_project_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
                 InlineKeyboardButton(MSG_BUILD_BTN, callback_data="action:build"),
             ],
             brainstorm_row,
-            [InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")],
+            [sync_btn, InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")],
         ]
     elif project.has_loop:
         buttons = [
@@ -400,7 +415,7 @@ async def show_project_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
                 InlineKeyboardButton(MSG_NEW_WORKTREE_BTN, callback_data="action:worktree"),
                 InlineKeyboardButton(MSG_STATUS_BTN, callback_data="action:status"),
             ],
-            [InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")],
+            [sync_btn, InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")],
         ]
     else:
         text += MSG_LOOP_NOT_INITIALIZED
@@ -520,6 +535,31 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     if action == "queue":
         return await show_queue(update, context)
+
+    if action == "sync":
+        if not project:
+            return await show_projects(update, context)
+        await query.edit_message_text(MSG_SYNC_PULLING, parse_mode="Markdown")
+        success, message = pull_project(project.path)
+        if success:
+            if "Already up to date" in message:
+                await query.edit_message_text(MSG_SYNC_NO_UPDATES)
+            else:
+                await query.edit_message_text(
+                    MSG_SYNC_SUCCESS.format(message=message),
+                    parse_mode="Markdown",
+                )
+        else:
+            await query.edit_message_text(
+                MSG_SYNC_FAILED.format(message=message),
+                parse_mode="Markdown",
+            )
+        # Refresh project data and show menu
+        refreshed = get_project(project.name)
+        if refreshed:
+            user_data["project"] = refreshed
+            return await show_project_menu(update, context, refreshed)
+        return await show_projects(update, context)
 
     if action == "brainstorm":
         await query.edit_message_text(

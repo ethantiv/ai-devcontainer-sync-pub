@@ -167,6 +167,14 @@ MSG_COMPLETION_QUEUE_NEXT = (
     "\n\u25b6 *Next:* {icon} {project} - {mode} \u2022 {iterations} iterations"
 )
 
+# Sync / Pull
+MSG_SYNC_BTN = "^ Sync"
+MSG_SYNC_BTN_WITH_COUNT = "^ Sync ({count} new)"
+MSG_SYNC_SUCCESS = "\u2713 *Sync complete*\n\n{message}"
+MSG_SYNC_FAILED = "\u2717 *Sync failed*\n\n{message}"
+MSG_SYNC_NO_UPDATES = "\u2713 Already up to date."
+MSG_SYNC_PULLING = "\u2026 Pulling changes..."
+
 # Stale progress
 MSG_STALE_PROGRESS = "! *{project}* \u2014 no progress for {minutes} min"
 
