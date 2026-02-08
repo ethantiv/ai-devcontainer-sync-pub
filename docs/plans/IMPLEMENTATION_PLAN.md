@@ -1,189 +1,115 @@
 # Implementation Plan
 
-**Status:** COMPLETE
-**Progress:** 43/43 (100%)
-**Last Verified:** 2026-02-08 — Phase 7 complete
+**Status:** IN_PROGRESS
+**Progress:** 0/20 (0%)
+**Last Verified:** 2026-02-08
 
 ## Goal
 
-Implement all proposals from docs/ROADMAP.md across three priority tiers: P1 (Critical) log rotation and disk space management, P2 (Important) async test coverage improvements and Commander.js v14 upgrade, and P3 (Nice to Have) queue expiry/retry logic, stale threshold increase, Telegram sync/pull button, and brainstorm history viewer.
+Implement current proposals from docs/ROADMAP.md: P2 (Important) reduce bot.py size by extracting handler modules, and P3 (Nice to Have) pagination for project list in Telegram. P1 (Critical) project creation UI flow is already fully implemented — ROADMAP entry is stale.
 
 ## Current Phase
 
-All phases complete.
+Phase 1: Extract Handler Modules from bot.py
 
 ## Phases
 
-### Phase 1: Log Rotation and Disk Space Management (P1-Critical)
-- [x] Add env var constants to `config.py`: `LOG_RETENTION_DAYS` (env `LOOP_LOG_RETENTION_DAYS`, default 7), `LOG_MAX_SIZE_MB` (env `LOOP_LOG_MAX_SIZE_MB`, default 500), `MIN_DISK_MB` (env `LOOP_MIN_DISK_MB`, default 500) — use existing `_safe_int()` helper
-- [x] Add `log_rotation.py` module to `src/telegram_bot/` with `rotate_logs(projects_root)`: scan `loop/logs/` directories across all projects in PROJECTS_ROOT, delete JSONL files older than `LOG_RETENTION_DAYS`; if total size exceeds `LOG_MAX_SIZE_MB`, delete oldest files first
-- [x] Add `cleanup_brainstorm_files(projects_root)` to `log_rotation.py`: scan `PROJECTS_ROOT/.brainstorm/` for JSONL files not referenced by `.brainstorm_sessions.json`, delete orphaned files
-- [x] Add `check_disk_space(path)` to `log_rotation.py`: use `shutil.disk_usage()` to check available space, return `(ok, available_mb)` tuple — warn when below `MIN_DISK_MB`
-- [x] Integrate disk space check into `TaskManager.start_task()` — refuse to start tasks when disk is critically low, return `(False, MSG_DISK_LOW)` error
-- [x] Add `loop cleanup --logs` subcommand: add `--logs` option to `cleanup` command in `src/bin/cli.js`, spawn Python `log_rotation.py` via subprocess (same pattern as `cleanup.js` spawning `cleanup.sh`)
-- [x] Register periodic log rotation job in `bot.py` via `job_queue.run_repeating()` — daily interval (86400s), call `rotate_logs()` + `cleanup_brainstorm_files()`
-- [x] Add message constants to `messages.py`: `MSG_DISK_LOW`, `MSG_LOG_ROTATION_COMPLETE`
-- [x] Write tests for `log_rotation.py`: retention by age, retention by size, brainstorm cleanup, disk space check, edge cases (empty dirs, missing dirs)
-- **Status:** complete
+### Phase 1: Extract Handler Modules from bot.py (P2-Important)
+- [ ] Create `src/telegram_bot/handlers/` package with `__init__.py` that re-exports all handler functions needed by `bot.py`
+- [ ] Extract shared helpers to `src/telegram_bot/handlers/common.py`: `State` enum, `user_data_store`, `get_user_data()`, `authorized`/`authorized_callback` decorators, `reply_text()`, `_cancel_keyboard()`, `_nav_keyboard()`, `_brainstorm_hint_keyboard()`, `_brainstorm_hint_long_keyboard()`, `_is_brainstorm_error()`
+- [ ] Extract project handlers to `src/telegram_bot/handlers/projects.py`: `start()`, `show_projects()`, `project_selected()`, `show_project_menu()`, `handle_name()`, `handle_clone_url()`, `handle_project_name()`, `handle_github_choice()`, `handle_action()` project-related branches (create_project, clone, worktree, loop_init, sync, back, back_to_project, status)
+- [ ] Extract task handlers to `src/telegram_bot/handlers/tasks.py`: `handle_idea()`, `skip_idea()`, `handle_idea_button()`, `show_iterations_menu()`, `handle_iterations()`, `handle_custom_iterations()`, `start_task()`, `show_status()`, `show_queue()`, `handle_cancel_queue()`, `handle_action()` task-related branches (plan, build, attach, queue)
+- [ ] Extract brainstorm handlers to `src/telegram_bot/handlers/brainstorm.py`: `start_brainstorming()`, `handle_brainstorm_prompt()`, `handle_brainstorm_message()`, `handle_brainstorm_action()`, `handle_brainstorm_hint_button()`, `finish_brainstorming()`, `cancel_brainstorming()`, `show_brainstorm_history()`, `handle_action()` brainstorm-related branches (brainstorm, resume_brainstorm)
+- [ ] Extract background jobs to `src/telegram_bot/handlers/jobs.py`: `_format_completion_summary()`, `check_task_completion()`, `check_task_progress()`, `run_log_rotation()`, `handle_completion_diff()`
+- [ ] Refactor `handle_action()` mega-dispatcher: split into `_handle_project_action()`, `_handle_task_action()`, `_handle_brainstorm_action_dispatch()` in respective handler modules, keep thin `handle_action()` router in `bot.py` that delegates to sub-dispatchers
+- [ ] Slim down `bot.py` to thin wiring layer: imports from handler modules, `create_application()` function only — target ~150 lines
+- [ ] Update all test imports: `test_bot.py` patches must reference new module paths (e.g. `src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID`)
+- [ ] Run full test suite — all 424 Python tests must pass with zero regressions
+- **Status:** pending
 
-### Phase 2: Improve Async Test Coverage (P2-Important)
-- [x] Add tests for `TaskManager.process_completed_tasks()`: completed session detection (tmux gone → task completed), active task removal, queue-next start via `_start_next_in_queue()`, return tuple format `list[(completed_task, next_task)]` — 9 new tests in `TestProcessCompletedTasks`
-- [x] Add tests for stale progress detection in `bot.py::check_task_progress()`: iteration tracking via `.progress` file, `last_reported_iteration` updates, stale warning trigger when `stale_seconds > STALE_THRESHOLD`, single-warn behavior (`task.stale_warned` flag), reset on progress — 15 new tests in `TestCheckTaskProgress`
-- [x] Add tests for `BrainstormManager.start()` async generator happy path: tmux session creation, initial prompt passing, JSONL output polling, session_id capture from `_parse_stream_json()`, status yields `(error_code, response, is_final)` — 10 new tests in `TestBrainstormManagerStartHappyPath` (happy path 3-tuple flow, session registration, session_id capture, brainstorm prefix, save persistence, tmux failure cleanup, timeout cleanup, no-result cleanup, status transitions, output file path)
-- [x] Add tests for `BrainstormManager.respond()` async generator happy path: session continuation with `--resume`, prompt writing to tmux, response polling — 12 new tests in `TestBrainstormManagerRespondHappyPath` (yield format, session_id update, status transitions, last_response, resume_session_id passing, output file per turn, save persistence, tmux failure error+status, timeout error, responding status during wait, session_id preservation when None)
-- [x] Add tests for `BrainstormManager.finish()` unit tests: session lookup, tmux cleanup, `_cleanup_session()` call, return `(success, message, content)` tuple — 12 new tests in `TestBrainstormManagerFinish` (no-session error, session-not-ready cleanup, tmux start failure, resume+summary_prompt args, timeout error, no-result error, ROADMAP.md write, docs dir creation, return tuple format, cleanup on success, session removal, cleanup on every error path)
-- [x] Add tests for task persistence round-trip under concurrent scenarios: save during queue operations, load with mixed valid/stale tasks, atomic write verification (`os.replace` pattern), `_queue_lock` behavior — 12 new tests in `TestPersistenceConcurrent` (save consistency, queue order after pop, empty queue after cancel, mixed valid/stale load, stale cleanup preserves queues, atomic write no tmp, valid JSON round-trip, os.replace failure resilience, lock not held during write, queued_at timestamps, started_at/fields, multi-project independence)
-- [x] Add tests for completion summary edge cases: `None` diff_stats, empty commits list, plan progress `(0, 0)`, `None` plan progress — 5 new tests added to `TestFormatCompletionSummary` (zero-total plan progress no crash, all-complete 100% bar, zero-change diff stats, empty dict falsy, all sections combined) — total now 12 tests
-- **Status:** complete
-
-### Phase 3: Upgrade Commander.js to v14 (P2-Important)
-- [x] Update `src/package.json` dependency from `^12.0.0` to `^14.0.0`
-- [x] Run `npm install --prefix src` and verify no install errors — Commander.js 14.0.3 installed
-- [x] Run `npm test --prefix src` — all 20 JS tests pass
-- [x] Manually verify all CLI commands: `loop plan`, `loop build`, `loop run`, `loop init`, `loop cleanup`, `loop summary`, `loop update` — all 7 commands verified
-- **Status:** complete
-
-### Phase 4: Task Queue Expiry and Retry Logic (P3-Nice to Have)
-- [x] Add `QUEUE_TTL` configurable threshold to `config.py` (env var `LOOP_QUEUE_TTL`, default 3600 seconds) — use existing `_safe_int()` helper
-- [x] Add `queued_at` timestamp checking in `TaskManager.process_completed_tasks()` — iterate queue, remove tasks where `datetime.now() - task.queued_at > QUEUE_TTL`, return expired list alongside completions. `process_completed_tasks()` now returns `(completions, expired)` tuple
-- [x] Add expired task notification in `bot.py::check_task_completion()`: send message when queued task is removed due to TTL
-- [x] Add message constants to `messages.py`: `MSG_QUEUE_EXPIRED`
-- [x] Add retry logic with exponential backoff for `clone_repo()` in `projects.py`: max 3 retries, initial delay 2s, for `subprocess.TimeoutExpired` and specific git error patterns (network unreachable, connection reset, could not resolve host). Partial clone dirs cleaned up between retries. OSError fails immediately
-- [x] Write tests for queue TTL expiry — 7 new tests in `TestQueueTTLExpiry` (expired removal, fresh not expired, boundary, mixed, multi-project, save triggered, return format). Retry logic — 9 new tests in `TestCloneRepoRetry` (first try, timeout retry, network unreachable, connection reset, max retries, exponential backoff, non-retryable, OSError, partial cleanup). Updated 9 existing tests for new `(completions, expired)` return format + 3 new config tests
-- **Status:** complete
-
-### Phase 5: Stale Threshold Default Increase (P3-Nice to Have)
-- [x] Change `STALE_THRESHOLD` default from 300 to 1800 in `config.py` (line 44)
-- [x] Update `MSG_STALE_PROGRESS` in `messages.py` (line 171) to use dynamic threshold display: `"! *{project}* — no progress for {minutes} min"` instead of hardcoded `"5 min"`
-- [x] Update `bot.py::check_task_progress()` to pass threshold value to message formatting (compute `minutes = STALE_THRESHOLD // 60`)
-- [x] Update existing tests in `test_config.py` that assert `STALE_THRESHOLD == 300` → `== 1800` (2 tests: `test_stale_threshold_default`, `test_stale_threshold_invalid_falls_back`) + update `test_bot.py` stale message assertion for dynamic `{minutes}` format
-- [x] Update CLAUDE.md env var table: `LOOP_STALE_THRESHOLD` default from 300 to 1800, and Configurable thresholds note
-- **Status:** complete
-
-### Phase 6: Sync/Pull Button in Telegram Project Menu (P3-Nice to Have)
-- [x] Add `check_remote_updates(project_path)` function to `git_utils.py`: run `git fetch` then `git rev-list HEAD..@{u} --count` to detect new remote commits, return count (int), use 10s timeout — follow existing subprocess pattern
-- [x] Add `pull_project(project_path)` function to `git_utils.py`: run `git pull` with 30s timeout, return `(success, message)` tuple — follow existing `(bool, str)` pattern in `projects.py`
-- [x] Add message constants to `messages.py`: `MSG_SYNC_BTN`, `MSG_SYNC_BTN_WITH_COUNT`, `MSG_SYNC_SUCCESS`, `MSG_SYNC_FAILED`, `MSG_SYNC_NO_UPDATES`, `MSG_SYNC_PULLING`
-- [x] Add "Sync" button to project menu in `bot.py::show_project_menu()` with update indicator (e.g. `"^ Sync (3 new)"`) — button shown in bottom row alongside Back for projects with loop or active task; `check_remote_updates()` called synchronously on menu open (10s timeout)
-- [x] Add `action:sync` handler in `bot.py::handle_action()` — call `pull_project()`, show "Pulling...", then result (success/failure/up-to-date), refresh project data and menu
-- [x] Run `check_remote_updates()` on project menu open to populate button label — synchronous call with 10s timeout (simpler than async task, sufficient for UX)
-- [x] Write tests for `check_remote_updates()` (8 tests), `pull_project()` (6 tests), sync button in menu (4 tests), and sync handler (5 tests) — 23 new tests total
-- **Status:** complete
-
-### Phase 7: Interactive Brainstorm History Viewer (P3-Nice to Have)
-- [x] Add `_archive_session()` method to `BrainstormManager` in `tasks.py`: archives session metadata + last response to `PROJECTS_ROOT/.brainstorm_history.json` via atomic write. Called from `finish()` (outcome "saved") and `cancel()` (outcome "cancelled") before `_cleanup_session()`. Truncates topic to 100 chars, last_response to 500 chars
-- [x] Add `_history_file()`, `_load_history()`, `_save_history()` persistence methods to `BrainstormManager`: atomic JSON read/write with corrupt file handling, same pattern as `_save_sessions()`
-- [x] Add `list_brainstorm_history(project=None)` method to `BrainstormManager`: returns history entries sorted by `finished_at` descending, with optional project name filter
-- [x] Add Telegram command `/history` in `bot.py` with paginated list (10 entries per page) using `show_brainstorm_history()` handler — filters by selected project if one is active, shows all otherwise. Registered as ConversationHandler entry point
-- [x] Add message constants to `messages.py`: `MSG_BRAINSTORM_HISTORY_TITLE`, `MSG_BRAINSTORM_HISTORY_EMPTY`, `MSG_BRAINSTORM_SESSION_ENTRY`. Updated `MSG_HELP` to include `/history` command
-- [x] Write tests: 13 tests in `TestBrainstormHistory` (test_tasks.py) for archive, persistence, listing, cancel/finish integration + 4 tests in `TestBrainstormHistoryCommand` (test_bot.py) for handler behavior — 17 new tests total
-- **Status:** complete
+### Phase 2: Pagination for Project List (P3-Nice to Have)
+- [ ] Add pagination constants to `config.py`: `PROJECTS_PER_PAGE` (default 5, no env var — hardcoded is fine for UI layout)
+- [ ] Add message constants to `messages.py`: `MSG_PAGE_PREV_BTN` ("< Prev"), `MSG_PAGE_NEXT_BTN` ("Next >"), `MSG_PAGE_INDICATOR` ("Page {current}/{total}")
+- [ ] Add page state to `user_data`: store `projects_page` (int, default 0) in `get_user_data()` dict, reset to 0 on `/start` and `/projects`
+- [ ] Refactor `show_projects()` in project handler module: slice `projects[page*5:(page+1)*5]`, add Prev/Next navigation row with `callback_data="page:prev"` and `page:next`, show page indicator in message text, preserve Create/Clone footer on every page
+- [ ] Add `handle_page_navigation()` callback handler for `page:prev`/`page:next` patterns — update `user_data["projects_page"]`, call `show_projects()`
+- [ ] Register page navigation handler in `State.SELECT_PROJECT` state mapping
+- [ ] Write tests for pagination: page boundaries (first/last page), button visibility (no Prev on first, no Next on last), page state reset on /start, empty projects, single page (<=5 projects), multi-page navigation
+- [ ] Write tests for page navigation handler: prev/next callbacks, boundary clamping
+- [ ] Run full test suite — all tests must pass
+- [ ] Update `COMMANDS.md` if project list behavior description needs updating
+- **Status:** pending
 
 ## Key Questions
 
 | Question | Answer |
 |----------|--------|
-| How many tests does test_tasks.py currently have? | 110 tests (103 + 7 new TestQueueTTLExpiry) |
-| How many total tests exist? | 424 Python (123 test_tasks + 114 test_bot + 71 test_projects + 64 test_config + 34 test_git_utils + 18 test_log_rotation) + 20 JS = 444 total |
-| Is there any log rotation mechanism? | Yes — `log_rotation.py` module with `rotate_logs()`, `cleanup_brainstorm_files()`, `check_disk_space()`. Daily periodic job in bot.py. CLI via `loop cleanup --logs` |
-| Is there retry logic for git operations? | Yes — `clone_repo()` retries up to 3 times with exponential backoff (2s, 4s) on TimeoutExpired and transient git network errors. Non-retryable errors fail immediately |
-| Is the sync/pull feature started? | Yes — complete. `check_remote_updates()` and `pull_project()` in git_utils.py, Sync button in project menu with update count, `action:sync` handler in bot.py |
-| Is brainstorm history viewer started? | Yes — complete. `_archive_session()` saves to `.brainstorm_history.json` before cleanup. `/history` command in bot.py shows paginated list. 17 new tests |
-| What Commander.js version is installed? | ^14.0.0 in package.json (resolved to 14.0.3). Upgrade from v12 complete — all APIs stable |
-| Are there any TODOs/FIXMEs in the codebase? | None — codebase is clean with no TODO, FIXME, HACK, XXX comments or skipped tests |
-| Does Commander.js upgrade require code changes? | No — confirmed. v12→v14 upgrade required zero code changes. All 20 tests pass, all 7 CLI commands verified |
+| Is P1 project creation UI already implemented? | Yes — fully implemented. Backend (validate_project_name, create_project, create_github_repo in projects.py), UI flow (handle_project_name at bot.py:715, handle_github_choice at bot.py:756), states (ENTER_PROJECT_NAME, GITHUB_CHOICE), 16 MSG_* constants (messages.py:256-283), and "Create project" button in project list (bot.py:299,323). ROADMAP entry is stale |
+| How big is bot.py? | 1,724 lines — largest file in codebase. Contains 40+ handler functions, 3 background jobs, 12+ action dispatcher branches, all inline |
+| Is there a handlers/ directory? | No — flat module layout. No existing handler extraction pattern |
+| What modules exist in telegram_bot? | bot.py (1724), tasks.py (975), projects.py (380), messages.py (283), log_rotation.py (173), git_utils.py (171), config.py (134), run.py (37), __init__.py (1) |
+| Does show_projects() have pagination? | No — renders all projects in one message with 2-column grid. No page state, no prev/next buttons |
+| Is there an existing pagination pattern? | Brainstorm history (bot.py:1034) uses PAGE_SIZE=10 with static "...and N more" text, no interactive navigation buttons |
+| How many tests exist? | 424 Python (test_bot=114, test_tasks=123, test_projects=71, test_config=64, test_git_utils=34, test_log_rotation=18) + 20 JS = 444 total |
+| Are there tests for project creation handlers? | Only 2 lightweight tests in test_bot.py (cancel keyboard presence at line 162, no /cancel in message at line 197). Backend has 10+ tests in test_projects.py. No direct tests for handle_project_name() or handle_github_choice() handler logic |
+| Any TODOs/FIXMEs/skipped tests? | None — codebase is clean |
+| How does handle_action() work? | Mega-dispatcher (bot.py:443-598, 155 lines) with 12+ if-branches routing callback_data prefixed with "action:" to different flows. Mixes project, task, and brainstorm actions |
 
 ## Findings & Decisions
 
 ### Requirements
 
-**P1 — Log Rotation (Critical):**
-- Configurable retention by age and size
-- Automatic pruning of old JSONL files in loop/logs/
-- Cleanup of orphaned brainstorm JSONL files in .brainstorm/
-- Disk space checks before starting new tasks or cloning repos
-- Integration with `loop cleanup` CLI command
+**P1 — Project Creation UI (Critical) — ALREADY COMPLETE:**
+- ROADMAP states: "Backend functions are implemented but Telegram bot UI (Phase 3) was never built"
+- **Reality**: Full UI flow exists — `handle_project_name()` (bot.py:715-753), `handle_github_choice()` (bot.py:756-799), states `ENTER_PROJECT_NAME` and `GITHUB_CHOICE` in ConversationHandler (bot.py:1682-1689), "Create project" button in project list (bot.py:299,323), and all 16 MSG_* constants (messages.py:256-283)
+- **Action**: No implementation needed. ROADMAP entry should be removed in next `/roadmap` update
 
-**P2 — Async Test Coverage (Important):**
-- Tests for `process_completed_tasks()` (1 existing, needs workflow coverage)
-- Tests for stale progress detection (0 existing — highest priority gap)
-- Tests for `BrainstormManager.start()` happy path (1 error-path test exists)
-- Tests for `BrainstormManager.respond()` happy path (2 error-path tests exist)
-- Tests for `BrainstormManager.finish()` unit tests (only integration-level mocks in bot tests)
-- Tests for concurrent task persistence (3 basic persistence tests exist, no concurrency)
-- Tests for completion summary edge cases (7 tests exist, gaps in None/empty inputs)
+**P2 — Reduce bot.py Size (Important):**
+- Extract handlers into `handlers/` package with 5 modules: `common.py` (shared), `projects.py`, `tasks.py`, `brainstorm.py`, `jobs.py`
+- Keep `bot.py` as thin wiring layer (~150 lines) with `create_application()` only
+- Split `handle_action()` mega-dispatcher into domain-specific sub-dispatchers
+- Update all test imports to reference new module paths
 
-**P2 — Commander.js v14 (Important):**
-- Update dependency — no code changes required
-- Verify all 7 CLI commands and 20 JS tests pass
-
-**P3 — Queue Expiry (Nice to Have):**
-- Configurable queue TTL via `LOOP_QUEUE_TTL` env var
-- Leverage existing `QueuedTask.queued_at` field (already persisted)
-- Exponential backoff retry for `clone_repo()` (network operations only)
-- Telegram notification when queued task expires
-
-**P3 — Stale Threshold (Nice to Have):**
-- Change default from 300s to 1800s
-- Make stale message dynamic (not hardcoded "5 min")
-- Update 3 tests in test_config.py + CLAUDE.md env var table
-
-**P3 — Sync/Pull Button (Nice to Have):**
-- "Sync" button in project menu with update count indicator
-- Background `git fetch` + `git rev-list` on menu open
-- `git pull` on button press
-- Requires complete ground-up implementation — all infrastructure (subprocess patterns, bot handlers, message framework) is ready to extend
-
-**P3 — Brainstorm History (Nice to Have):**
-- List past sessions with timestamps and topics
-- View full conversation transcripts
-- Key gap: `.brainstorm_sessions.json` only stores ACTIVE sessions — after `finish()`, sessions are removed via `_cleanup_session()`. History must be inferred from JSONL files in `.brainstorm/` directory
+**P3 — Pagination for Project List (Nice to Have):**
+- 5 projects per page with Prev/Next inline keyboard buttons
+- Page state stored in `user_data["projects_page"]`
+- Create/Clone footer preserved on every page
+- Page indicator in message text
 
 ### Research Findings
 
-- **test_tasks.py has 46 tests** (not 3 as ROADMAP states) — tests were significantly expanded since ROADMAP was written
-- **Total test suite: 310 tests** (290 Python across 6 files + 20 JS in summary.test.js) — all active, no skipped/flaky tests
-- **Codebase has zero TODOs/FIXMEs** — all functions fully implemented, no stubs or placeholders
-- **MSG_STALE_PROGRESS hardcodes "5 min"** (messages.py:171) — must be made dynamic when threshold changes
-- **Commander.js uses only stable cross-compatible APIs** — `.command()`, `.option()`, `.action()`, `.parse()`, `.addHelpText()`, negatable options. No deprecated patterns. Upgrade to v14 is zero-risk
-- **No log rotation exists anywhere** — cleanup.sh only kills dev server ports (3000, 5173, etc.), loop.sh cleanup trap only generates summary
-- **Brainstorm JSONL files accumulate indefinitely** — new file per turn (`brainstorm_{chat_id}_{uuid}.jsonl`), old files never cleaned
-- ~~**All git subprocess calls use single-attempt pattern**~~ **DONE: clone_repo() now retries up to 3 times with exponential backoff on transient errors**
-- ~~**QueuedTask has `queued_at` field but never checked for expiry**~~ **DONE: QUEUE_TTL (default 3600s) checks in process_completed_tasks(), expired tasks removed and notified**
-- **Brainstorm session metadata lost on finish** — `_cleanup_session()` removes entry from `_sessions` dict and `.brainstorm_sessions.json`. Only JSONL files survive. Phase 7 must scan JSONL files directly or add a history log
-- **Existing test coverage gaps by priority**: (1) ~~check_task_progress() stale detection — 0 direct tests~~ **DONE: 15 tests**, (2) BrainstormManager happy paths — ~~only error-path tests (1 start, 2 respond)~~ **start() DONE: 10 tests, respond() DONE: 12 tests**, (3) ~~process_completed_tasks() workflow — 1 persistence test only~~ **DONE: 9 tests**, (4) ~~concurrent persistence — 0 tests~~ **DONE: 12 tests**, (5) ~~BrainstormManager.finish() — 0 unit tests~~ **DONE: 12 tests**, (6) ~~completion summary edge cases~~ **DONE: 5 new tests (12 total)**
-- **Per-file test breakdown (424 Python)**: test_tasks.py=123, test_bot.py=114, test_projects.py=71, test_config.py=64, test_git_utils.py=34, test_log_rotation.py=18
-- **Commander.js APIs used in cli.js**: `.name()`, `.description()`, `.version()`, `.command()`, `.option()`, `.action()`, `.addHelpText('after')`, `.parse()`, plus one negatable option `--no-early-exit`. No advanced APIs (`.exitOverride()`, `.configureOutput()`, etc.). All stable across v12→v14
-- **cli.js helper functions**: `addLoopOptions(cmd)` and `addBuildOptions(cmd)` for DRY option management across plan/build/run commands
-- **No skipped or xfail tests** — all 259 Python and 20 JS tests are active and passing
-- **cleanup.js spawns `./loop/cleanup.sh`** — the `--logs` option (Phase 1) will extend this pattern, spawning Python log_rotation.py via subprocess
+- **bot.py is 1,724 lines** with 40+ handler functions — the largest file by far
+- **handle_action() is a 155-line mega-dispatcher** (lines 443-598) handling 12+ actions via sequential if-branches mixing project, task, and brainstorm logic
+- **Handler groups are cleanly separable** by domain: projects (280-799, ~520 lines), tasks (601-659 + 802-1030, ~290 lines), brainstorm (1034-1359, ~325 lines), jobs (1384-1631, ~250 lines), shared helpers (181-278, ~100 lines)
+- **No circular import risk**: bot.py imports from config, messages, tasks, projects, git_utils, log_rotation — all one-way. Extracting handlers won't create circular dependencies as long as `common.py` has shared state/helpers
+- **test_bot.py patches `TELEGRAM_CHAT_ID` in bot module namespace** — must update to new module path after extraction
+- **`user_data_store` is a module-level dict** shared across all handlers — must live in `common.py`
+- **Existing pagination in brainstorm history** (bot.py:1034) is non-interactive (static text "...and N more"), not a reusable pattern
+- **11 out of 16 bot handlers have zero test coverage** — handler extraction is a good opportunity to improve testability but test expansion is NOT in scope for this plan (not in ROADMAP)
+- **Per-file test breakdown**: test_bot.py=114, test_tasks.py=123, test_projects.py=71, test_config.py=64, test_git_utils.py=34, test_log_rotation.py=18
+- **ConversationHandler state machine** (bot.py:1638-1704) maps 10 states to handler functions — must import from handler modules after extraction
 
 ### Technical Decisions
 | Decision | Rationale |
 |----------|-----------|
-| New `log_rotation.py` module for log management | Separation of concerns — log rotation is distinct from task/brainstorm management |
-| Periodic job in bot.py for automatic rotation | Matches existing pattern (check_task_progress 15s, check_task_completion 30s) |
-| `shutil.disk_usage()` for disk checks | Standard library, cross-platform, no external dependencies |
-| Extend `loop cleanup` CLI for log pruning | Users expect cleanup to handle all cleanup tasks |
-| No code changes for Commander.js v14 | All APIs stable across v12→v14; only dependency version bump needed |
-| Dynamic stale message with threshold value | Prevents message/config desynchronization |
-| Background git fetch on menu open | Non-blocking UX; user sees update count immediately |
-| Retry only for network operations (clone) | Local git ops (init, commit) don't benefit from retry |
-| Scan JSONL files for brainstorm history | Sessions metadata removed after finish(); JSONL files are the only persistent record |
+| 5 handler modules (common, projects, tasks, brainstorm, jobs) | Matches logical handler groupings visible in bot.py. Each module is 100-325 lines — manageable size |
+| `common.py` for shared state and helpers | `State` enum, decorators, user_data_store, and keyboard helpers are used by all handler modules — must be in one shared location |
+| Split handle_action() into sub-dispatchers | 155-line mega-dispatcher mixes 3 domains. Sub-dispatchers in respective modules keep routing logic close to handler code |
+| Keep `bot.py` as thin wiring layer | Preserves existing import patterns — `run.py` imports `create_application` from `bot.py`. No external API changes |
+| `handlers/__init__.py` re-exports all handlers | `bot.py` can `from .handlers import start, show_projects, ...` — clean import without deep paths |
+| 5 projects per page (hardcoded constant) | ROADMAP specifies 5. No need for env var — UI layout rarely changes |
+| Page state in user_data dict | Follows existing pattern (user_data["project"], user_data["mode"]) — no new infrastructure needed |
+| Interactive Prev/Next buttons (not static text) | ROADMAP explicitly requests "Next/Previous navigation buttons" — must be inline keyboard buttons |
 
 ### Issues Encountered
 | Issue | Resolution |
 |-------|------------|
-| ROADMAP test count outdated ("only 3 tests") | Verified actual count: 46 tests in test_tasks.py, 279 total (259 Python + 20 JS). Plan focuses on remaining gaps |
-| MSG_STALE_PROGRESS hardcodes "5 min" | Plan includes dynamic formatting task in Phase 5 |
-| QueuedTask.queued_at exists but unused for TTL | Leverage existing field in Phase 4 — no schema change needed |
-| Brainstorm sessions not persisted after finish() | Phase 7 must scan JSONL files in `.brainstorm/` for metadata — cannot rely on sessions.json |
-| Phase 3 originally had 6 tasks including research | Research completed during planning — Commander.js v14 requires no code changes. Reduced to 4 tasks |
-| Independent verification (2026-02-08) confirmed all findings | Test counts (259 Python + 20 JS), zero TODOs/FIXMEs, no log rotation/sync/history code, Commander ^12.0.0, MSG_STALE_PROGRESS hardcoded "5 min" — all match plan |
-| Full codebase re-analysis (2026-02-08) — no plan changes needed | Deep analysis of all source files (bot.py 1593 LOC, tasks.py 876 LOC, config.py 129 LOC, messages.py 261 LOC, projects.py 346 LOC, git_utils.py 116 LOC, cli.js 90 LOC, 4 JS libs 409 LOC) confirmed: all 7 phases correctly scoped, task counts accurate (43 tasks), no missing ROADMAP features, no existing implementations overlap with planned work |
+| ROADMAP P1 says project creation UI not built | Verified: fully implemented (bot.py:715-799, messages.py:256-283). ROADMAP is stale — P1 requires no work |
+| handle_action() mixes all domains | Plan splits into sub-dispatchers per handler module, thin router in bot.py |
+| test_bot.py patches module-level constants | Phase 1 task 9 explicitly covers updating all test imports after extraction |
+| Brainstorm history pagination is non-interactive | P3 implements proper interactive pagination with Prev/Next buttons — different from existing brainstorm history pattern |
 
 ### Resources
-- ROADMAP.md — 7 proposals across P1/P2/P3 priority tiers
-- Commander.js changelog — reviewed: no breaking changes for our API usage between v12→v14
-- python-telegram-bot job_queue docs — for Phase 1 periodic rotation job
-- shutil.disk_usage() — Python stdlib for disk space checks
+- python-telegram-bot ConversationHandler docs — for state machine wiring
+- Telegram Bot API InlineKeyboardMarkup — max 100 buttons, 8 buttons per row practical limit
+- Existing codebase patterns for handler decorators and keyboard helpers
