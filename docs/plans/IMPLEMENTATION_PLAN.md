@@ -56,6 +56,10 @@ Phase 1: Extract Handler Modules from bot.py
 | How does handle_action() work? | Mega-dispatcher (bot.py:443-598, 155 lines) with exactly 14 if-branches routing callback_data prefixed with "action:" to different flows: 7 project (back, back_to_project, create_project, clone, worktree, loop_init, sync), 5 task (status, plan, build, attach, queue), 2 brainstorm (brainstorm, resume_brainstorm) |
 | Are there unaccounted functions? | 3 functions were missing from handler groups: `cancel()` (line 1363), `help_command()` (line 1374), `handle_input_cancel()` (line 1278) — generic fallback handlers, assigned to common.py |
 | What patch locations need updating? | test_bot.py has 18 unique patched items across ~100 locations. No other test files reference bot.py — changes fully isolated |
+| What does run.py import from bot.py? | Only `create_application` — the single external entry point. No changes needed to run.py after handler extraction |
+| Does conftest.py have bot.py fixtures? | No — `make_callback_update` helper and mock patterns are defined inline in test_bot.py (2,129 lines, 114 tests, 23 test classes) |
+| Does COMMANDS.md describe pagination? | No — describes project list as flat button grid with status icons. Needs updating after Phase 2 |
+| How many handler functions lack tests? | 19 of 45 — mostly core conversation flow handlers (project CRUD, iteration selection, brainstorm start/message/finish). Out of scope for P2/P3 |
 
 ## Findings & Decisions
 
@@ -82,7 +86,7 @@ Phase 1: Extract Handler Modules from bot.py
 
 - **bot.py is 1,724 lines** with 45 functions (41 async handlers + 4 regular) — the largest file by far
 - **handle_action() is a 155-line mega-dispatcher** (lines 443-598) with exactly 14 if-branches: 7 project (back, back_to_project, create_project, clone, worktree, loop_init, sync), 5 task (status, plan, build, attach, queue), 2 brainstorm (brainstorm, resume_brainstorm)
-- **Handler groups are cleanly separable** by domain: projects (280-799, ~520 lines), tasks (601-659 + 802-1030, ~290 lines), brainstorm (1034-1359, ~325 lines), jobs (1384-1631, ~250 lines), shared helpers (181-278, ~100 lines)
+- **Handler groups are cleanly separable** by domain (verified line counts): shared helpers (162-278, 117 lines), projects (280-800, 521 lines), tasks (802-1031, 230 lines), brainstorm (1033-1360, 328 lines), background jobs + generic handlers (1362-1632, 271 lines), create_application wiring (1634-1724, 91 lines)
 - **3 functions missing from original handler groups**: `cancel()` (line 1363), `help_command()` (line 1374), `handle_input_cancel()` (line 1278) — generic fallback/cancel handlers used across all states, should go to `common.py`
 - **No circular import risk**: bot.py imports from config, messages, tasks, projects, git_utils, log_rotation — all one-way. Extracting handlers won't create circular dependencies as long as `common.py` has shared state/helpers
 - **test_bot.py has 18 unique patched items** across ~100 patch locations: module constants (`TELEGRAM_CHAT_ID`, `STALE_THRESHOLD`, `PROJECTS_ROOT`), manager instances (`task_manager`, `brainstorm_manager`), functions imported from other modules (`pull_project`, `check_remote_updates`, `get_plan_progress`, `get_diff_stats`, `get_recent_commits`, `rotate_logs`, `cleanup_brainstorm_files`), UI functions (`show_project_menu`, `show_projects`, `show_iterations_menu`, `get_project`), helpers (`get_user_data`, `os.path.getmtime`). No other test files reference bot.py — test changes fully isolated to test_bot.py
@@ -93,6 +97,10 @@ Phase 1: Extract Handler Modules from bot.py
 - **create_application()** is 90 lines (1634-1723): builds ConversationHandler with 5 entry points, 10 states, 3 fallbacks, 1 standalone callback handler, 3 job_queue registrations. After extraction: ~150 lines for bot.py (imports + create_application)
 - **ConversationHandler state machine** (bot.py:1638-1704) maps 10 states to handler functions — must import from handler modules after extraction
 - **No pagination infrastructure exists**: no `PROJECTS_PER_PAGE` in config.py, no `MSG_PAGE_*` in messages.py, no page state in user_data, no `handle_page_navigation()`, no `page:prev`/`page:next` callback patterns registered
+- **run.py imports only `create_application` from bot.py** — no other external modules reference bot.py internals. Handler extraction is safe as long as `create_application()` stays in bot.py
+- **conftest.py has no bot.py fixtures** — `make_callback_update` helper and mock patterns live inside test_bot.py itself, not in shared fixtures
+- **COMMANDS.md does not mention pagination** — needs updating after Phase 2 implementation
+- **19 of 45 bot.py handler functions have zero direct tests** (start, show_projects, project_selected, handle_name, handle_clone_url, handle_project_name, handle_github_choice, handle_idea, handle_brainstorm_prompt, skip_idea, show_iterations_menu, handle_iterations, handle_custom_iterations, show_status, show_queue, handle_cancel_queue, start_brainstorming, handle_brainstorm_message, finish_brainstorming) — existing test coverage focuses on UI helpers, background jobs, and callback button handlers. Handler test gaps are out of scope for this plan (P2/P3 only)
 
 ### Technical Decisions
 | Decision | Rationale |
