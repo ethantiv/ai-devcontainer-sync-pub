@@ -47,7 +47,7 @@ Phase 1: Extract Handler Modules from bot.py
 | Is P1 project creation UI already implemented? | Yes — fully implemented. Backend (validate_project_name, create_project, create_github_repo in projects.py), UI flow (handle_project_name at bot.py:715, handle_github_choice at bot.py:756), states (ENTER_PROJECT_NAME, GITHUB_CHOICE), 16 MSG_* constants (messages.py:256-283), and "Create project" button in project list (bot.py:299,323). ROADMAP entry is stale |
 | How big is bot.py? | 1,724 lines — largest file in codebase. Contains 45 functions (41 async + 4 regular), 3 background jobs, 14 action dispatcher branches, all inline |
 | Is there a handlers/ directory? | No — flat module layout. No existing handler extraction pattern |
-| What modules exist in telegram_bot? | bot.py (1724), tasks.py (975), projects.py (380), messages.py (283), log_rotation.py (173), git_utils.py (171), config.py (134), run.py (37), __init__.py (1) |
+| What modules exist in telegram_bot? | bot.py (1724), tasks.py (976), projects.py (381), messages.py (283), log_rotation.py (174), git_utils.py (172), config.py (134), run.py (38), __init__.py (1) |
 | Does show_projects() have pagination? | No — renders all projects in one message with 2-column grid. No page state, no prev/next buttons |
 | Is there an existing pagination pattern? | Brainstorm history (bot.py:1034) uses PAGE_SIZE=10 with static "...and N more" text, no interactive navigation buttons |
 | How many tests exist? | 424 Python (test_bot=114, test_tasks=123, test_projects=71, test_config=64, test_git_utils=34, test_log_rotation=18) + 20 JS = 444 total |
