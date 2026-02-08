@@ -18,6 +18,11 @@ from src.telegram_bot.messages import (
     MSG_BRAINSTORM_CLAUDE_THINKING,
     MSG_BRAINSTORM_STARTING,
     MSG_FAILED_TO_START_CLAUDE,
+    MSG_IDEA_SAVED,
+    MSG_NO_ACTIVE_BRAINSTORM,
+    MSG_SESSION_NOT_READY,
+    MSG_SUMMARY_PROMPT,
+    MSG_TIMEOUT_WAITING,
 )
 
 
@@ -1580,3 +1585,282 @@ class TestProcessCompletedTasks:
         from src.telegram_bot.tasks import Task
         assert isinstance(completed, Task)
         assert next_task is None
+
+
+class TestBrainstormManagerFinish:
+    """Tests for BrainstormManager.finish() — session lookup, tmux cleanup,
+    ROADMAP.md writing, _cleanup_session() call, return (success, message, content) tuple.
+
+    finish() is an async method that:
+    1. Looks up session by chat_id
+    2. Validates session_id exists (session ready)
+    3. Starts Claude in tmux with MSG_SUMMARY_PROMPT (--resume)
+    4. Waits for Claude response
+    5. Writes response to docs/ROADMAP.md
+    6. Cleans up session
+    7. Returns (True, MSG_IDEA_SAVED, idea_content) on success
+    """
+
+    def _setup_active_session(self, brainstorm_manager, tmp_path):
+        """Create an active brainstorm session ready for finish()."""
+        from src.telegram_bot.tasks import BrainstormSession
+
+        project_path = tmp_path / "myproject"
+        project_path.mkdir(exist_ok=True)
+
+        session = BrainstormSession(
+            chat_id=42,
+            project="myproject",
+            project_path=project_path,
+            session_id="sess-finish-123",
+            tmux_session="brainstorm-42",
+            output_file=Path(str(tmp_path) + "/.brainstorm/old_output.jsonl"),
+            initial_prompt="original prompt",
+        )
+        session.status = "ready"
+        session.last_response = "previous response"
+        brainstorm_manager.sessions[42] = session
+        return session
+
+    @pytest.mark.asyncio
+    async def test_no_session_returns_error(self, brainstorm_manager):
+        """finish() returns (False, MSG_NO_ACTIVE_BRAINSTORM, None) when no session exists."""
+        success, message, content = await brainstorm_manager.finish(999)
+
+        assert success is False
+        assert message == MSG_NO_ACTIVE_BRAINSTORM
+        assert content is None
+
+    @pytest.mark.asyncio
+    async def test_no_session_id_cleans_up_and_returns_error(self, brainstorm_manager, tmp_path):
+        """finish() cleans up and returns error when session has no session_id (not ready)."""
+        session = self._setup_active_session(brainstorm_manager, tmp_path)
+        session.session_id = None  # Not ready yet
+
+        with patch.object(brainstorm_manager, "_cleanup_session") as mock_cleanup:
+            success, message, content = await brainstorm_manager.finish(42)
+
+        assert success is False
+        assert message == MSG_SESSION_NOT_READY
+        assert content is None
+        mock_cleanup.assert_called_once_with(42)
+
+    @pytest.mark.asyncio
+    async def test_tmux_start_failure_cleans_up(self, brainstorm_manager, tmp_path):
+        """finish() cleans up and returns error when Claude tmux start fails."""
+        self._setup_active_session(brainstorm_manager, tmp_path)
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=False),
+            patch.object(brainstorm_manager, "_cleanup_session") as mock_cleanup,
+        ):
+            success, message, content = await brainstorm_manager.finish(42)
+
+        assert success is False
+        assert message == MSG_FAILED_TO_START_CLAUDE
+        assert content is None
+        mock_cleanup.assert_called_once_with(42)
+
+    @pytest.mark.asyncio
+    async def test_tmux_start_uses_resume_and_summary_prompt(self, brainstorm_manager, tmp_path):
+        """finish() starts Claude with MSG_SUMMARY_PROMPT and --resume using session_id."""
+        session = self._setup_active_session(brainstorm_manager, tmp_path)
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True) as mock_start,
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "# User Idea\n\nA cool project", "sess-new"),
+            ),
+            patch.object(brainstorm_manager, "_cleanup_session"),
+        ):
+            await brainstorm_manager.finish(42)
+
+        mock_start.assert_called_once()
+        call_args = mock_start.call_args
+        # Verify resume_session_id is passed
+        assert call_args.kwargs.get("resume_session_id") == "sess-finish-123"
+        # Verify MSG_SUMMARY_PROMPT is used as the prompt
+        assert call_args.args[2] == MSG_SUMMARY_PROMPT
+        # Verify project_path matches session
+        assert call_args.args[1] == session.project_path
+
+    @pytest.mark.asyncio
+    async def test_wait_error_cleans_up(self, brainstorm_manager, tmp_path):
+        """finish() cleans up and returns error when _wait_for_response returns an error."""
+        self._setup_active_session(brainstorm_manager, tmp_path)
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(ERR_TIMEOUT, MSG_TIMEOUT_WAITING, None),
+            ),
+            patch.object(brainstorm_manager, "_cleanup_session") as mock_cleanup,
+        ):
+            success, message, content = await brainstorm_manager.finish(42)
+
+        assert success is False
+        assert message == MSG_TIMEOUT_WAITING
+        assert content is None
+        mock_cleanup.assert_called_once_with(42)
+
+    @pytest.mark.asyncio
+    async def test_wait_no_result_error(self, brainstorm_manager, tmp_path):
+        """finish() returns error when Claude ends without result."""
+        self._setup_active_session(brainstorm_manager, tmp_path)
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(ERR_NO_RESULT, "Claude ended without response", None),
+            ),
+            patch.object(brainstorm_manager, "_cleanup_session") as mock_cleanup,
+        ):
+            success, message, content = await brainstorm_manager.finish(42)
+
+        assert success is False
+        assert message == "Claude ended without response"
+        assert content is None
+        mock_cleanup.assert_called_once_with(42)
+
+    @pytest.mark.asyncio
+    async def test_success_writes_roadmap_file(self, brainstorm_manager, tmp_path):
+        """finish() writes Claude's response to docs/ROADMAP.md in the project directory."""
+        self._setup_active_session(brainstorm_manager, tmp_path)
+        idea_text = "# User Idea\n\nBuild a distributed cache layer"
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, idea_text, "sess-new"),
+            ),
+            patch.object(brainstorm_manager, "_cleanup_session"),
+        ):
+            success, message, content = await brainstorm_manager.finish(42)
+
+        assert success is True
+        roadmap = tmp_path / "myproject" / "docs" / "ROADMAP.md"
+        assert roadmap.exists()
+        assert roadmap.read_text() == idea_text
+
+    @pytest.mark.asyncio
+    async def test_success_creates_docs_dir(self, brainstorm_manager, tmp_path):
+        """finish() creates docs/ directory if it doesn't exist."""
+        self._setup_active_session(brainstorm_manager, tmp_path)
+
+        docs_dir = tmp_path / "myproject" / "docs"
+        assert not docs_dir.exists()
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "some content", "sess-new"),
+            ),
+            patch.object(brainstorm_manager, "_cleanup_session"),
+        ):
+            await brainstorm_manager.finish(42)
+
+        assert docs_dir.exists()
+
+    @pytest.mark.asyncio
+    async def test_success_return_tuple_format(self, brainstorm_manager, tmp_path):
+        """finish() returns (True, MSG_IDEA_SAVED with path, idea_content) on success."""
+        session = self._setup_active_session(brainstorm_manager, tmp_path)
+        idea_text = "# User Idea\n\nAmazing project"
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, idea_text, "sess-new"),
+            ),
+            patch.object(brainstorm_manager, "_cleanup_session"),
+        ):
+            success, message, content = await brainstorm_manager.finish(42)
+
+        assert success is True
+        expected_path = session.project_path / "docs" / "ROADMAP.md"
+        assert message == MSG_IDEA_SAVED.format(path=expected_path)
+        assert content == idea_text
+
+    @pytest.mark.asyncio
+    async def test_success_calls_cleanup_session(self, brainstorm_manager, tmp_path):
+        """finish() calls _cleanup_session after writing ROADMAP.md on success."""
+        self._setup_active_session(brainstorm_manager, tmp_path)
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "idea content", "sess-new"),
+            ),
+            patch.object(brainstorm_manager, "_cleanup_session") as mock_cleanup,
+        ):
+            await brainstorm_manager.finish(42)
+
+        mock_cleanup.assert_called_once_with(42)
+
+    @pytest.mark.asyncio
+    async def test_session_removed_after_finish(self, brainstorm_manager, tmp_path):
+        """finish() removes session from sessions dict (via real _cleanup_session)."""
+        self._setup_active_session(brainstorm_manager, tmp_path)
+        assert 42 in brainstorm_manager.sessions
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "idea content", "sess-new"),
+            ),
+            patch.object(brainstorm_manager, "_is_session_running", return_value=False),
+            patch.object(brainstorm_manager, "_save_sessions"),
+        ):
+            await brainstorm_manager.finish(42)
+
+        # Session should be removed by _cleanup_session
+        assert 42 not in brainstorm_manager.sessions
+
+    @pytest.mark.asyncio
+    async def test_cleanup_session_called_on_every_path(self, brainstorm_manager, tmp_path):
+        """_cleanup_session is called on all failure paths except no-session."""
+        # Path 1: no session_id — cleanup called
+        session = self._setup_active_session(brainstorm_manager, tmp_path)
+        session.session_id = None
+        with patch.object(brainstorm_manager, "_cleanup_session") as mock_cleanup:
+            await brainstorm_manager.finish(42)
+        mock_cleanup.assert_called_once_with(42)
+
+        # Path 2: tmux start failure — cleanup called
+        self._setup_active_session(brainstorm_manager, tmp_path)
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=False),
+            patch.object(brainstorm_manager, "_cleanup_session") as mock_cleanup,
+        ):
+            await brainstorm_manager.finish(42)
+        mock_cleanup.assert_called_once_with(42)
+
+        # Path 3: wait error — cleanup called
+        self._setup_active_session(brainstorm_manager, tmp_path)
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(ERR_TIMEOUT, MSG_TIMEOUT_WAITING, None),
+            ),
+            patch.object(brainstorm_manager, "_cleanup_session") as mock_cleanup,
+        ):
+            await brainstorm_manager.finish(42)
+        mock_cleanup.assert_called_once_with(42)
