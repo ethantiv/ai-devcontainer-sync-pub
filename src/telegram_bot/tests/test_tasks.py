@@ -519,6 +519,288 @@ class TestBrainstormManagerRespondErrors:
         assert results[0][2] is True
 
 
+class TestBrainstormManagerRespondHappyPath:
+    """Tests for respond() async generator — successful session continuation.
+
+    Covers: session continuation with --resume, prompt writing to tmux, response
+    polling, session_id update, status transitions, output file creation,
+    _save_sessions() persistence, and yield format (error_code, response, is_final).
+    """
+
+    def _setup_active_session(self, brainstorm_manager):
+        """Create an active brainstorm session ready for respond()."""
+        from src.telegram_bot.tasks import BrainstormSession
+
+        session = BrainstormSession(
+            chat_id=42,
+            project="myproject",
+            project_path=Path("/tmp/myproject"),
+            session_id="sess-existing-123",
+            tmux_session="brainstorm-42",
+            output_file=Path("/tmp/old_output.jsonl"),
+            initial_prompt="original prompt",
+        )
+        session.status = "ready"
+        session.last_response = "previous response"
+        brainstorm_manager.sessions[42] = session
+        return session
+
+    @pytest.mark.asyncio
+    async def test_respond_happy_path_yields_two_tuples(self, brainstorm_manager):
+        """Successful respond yields (thinking, final_response) — 2 tuples total."""
+        self._setup_active_session(brainstorm_manager)
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "Here are my thoughts on that...", "sess-new-456"),
+            ),
+            patch.object(brainstorm_manager, "_save_sessions"),
+        ):
+            results = []
+            async for error_code, msg, is_final in brainstorm_manager.respond(
+                42, "What about caching?"
+            ):
+                results.append((error_code, msg, is_final))
+
+        assert len(results) == 2
+        # First yield: thinking status
+        assert results[0] == (None, MSG_BRAINSTORM_CLAUDE_THINKING, False)
+        # Second yield: final response
+        assert results[1] == (None, "Here are my thoughts on that...", True)
+
+    @pytest.mark.asyncio
+    async def test_respond_updates_session_id_from_response(self, brainstorm_manager):
+        """session_id from _wait_for_response replaces the old one on the session."""
+        self._setup_active_session(brainstorm_manager)
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "response", "sess-updated-789"),
+            ),
+            patch.object(brainstorm_manager, "_save_sessions"),
+        ):
+            async for _ in brainstorm_manager.respond(42, "follow up"):
+                pass
+
+        session = brainstorm_manager.sessions[42]
+        assert session.session_id == "sess-updated-789"
+
+    @pytest.mark.asyncio
+    async def test_respond_sets_status_ready_after_success(self, brainstorm_manager):
+        """Session status is 'ready' after successful respond()."""
+        self._setup_active_session(brainstorm_manager)
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "done", "s1"),
+            ),
+            patch.object(brainstorm_manager, "_save_sessions"),
+        ):
+            async for _ in brainstorm_manager.respond(42, "msg"):
+                pass
+
+        assert brainstorm_manager.sessions[42].status == "ready"
+
+    @pytest.mark.asyncio
+    async def test_respond_updates_last_response(self, brainstorm_manager):
+        """last_response is updated to the new response text after respond()."""
+        self._setup_active_session(brainstorm_manager)
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "new detailed answer", "s2"),
+            ),
+            patch.object(brainstorm_manager, "_save_sessions"),
+        ):
+            async for _ in brainstorm_manager.respond(42, "explain more"):
+                pass
+
+        assert brainstorm_manager.sessions[42].last_response == "new detailed answer"
+
+    @pytest.mark.asyncio
+    async def test_respond_passes_resume_session_id_to_tmux(self, brainstorm_manager):
+        """respond() passes resume_session_id to _start_claude_in_tmux for --resume flag."""
+        self._setup_active_session(brainstorm_manager)
+        captured_kwargs = {}
+
+        def capture_tmux_call(tmux_name, project_path, prompt, output_file, **kwargs):
+            captured_kwargs.update(kwargs)
+            captured_kwargs["tmux_name"] = tmux_name
+            captured_kwargs["prompt"] = prompt
+            return True
+
+        with (
+            patch.object(
+                brainstorm_manager, "_start_claude_in_tmux", side_effect=capture_tmux_call
+            ),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "ok", "s1"),
+            ),
+            patch.object(brainstorm_manager, "_save_sessions"),
+        ):
+            async for _ in brainstorm_manager.respond(42, "my follow-up question"):
+                pass
+
+        assert captured_kwargs["resume_session_id"] == "sess-existing-123"
+        assert captured_kwargs["tmux_name"] == "brainstorm-42"
+        assert captured_kwargs["prompt"] == "my follow-up question"
+
+    @pytest.mark.asyncio
+    async def test_respond_creates_new_output_file_per_turn(self, brainstorm_manager):
+        """Each respond() call creates a new output file (different from previous turn)."""
+        session = self._setup_active_session(brainstorm_manager)
+        old_output = session.output_file
+        captured_output = {}
+
+        def capture_tmux_call(tmux_name, project_path, prompt, output_file, **kwargs):
+            captured_output["file"] = output_file
+            return True
+
+        with (
+            patch.object(
+                brainstorm_manager, "_start_claude_in_tmux", side_effect=capture_tmux_call
+            ),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "ok", "s1"),
+            ),
+            patch.object(brainstorm_manager, "_save_sessions"),
+        ):
+            async for _ in brainstorm_manager.respond(42, "msg"):
+                pass
+
+        new_output = captured_output["file"]
+        assert new_output != old_output
+        assert str(new_output).startswith(str(brainstorm_manager.TMP_DIR))
+        assert "brainstorm_42_" in str(new_output)
+        assert str(new_output).endswith(".jsonl")
+
+    @pytest.mark.asyncio
+    async def test_respond_saves_sessions_after_success(self, brainstorm_manager):
+        """_save_sessions() is called after successful respond() to persist state."""
+        self._setup_active_session(brainstorm_manager)
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "response", "s1"),
+            ),
+            patch.object(brainstorm_manager, "_save_sessions") as mock_save,
+        ):
+            async for _ in brainstorm_manager.respond(42, "msg"):
+                pass
+
+        mock_save.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_respond_tmux_failure_yields_error(self, brainstorm_manager):
+        """When _start_claude_in_tmux fails, yields ERR_START_FAILED."""
+        self._setup_active_session(brainstorm_manager)
+
+        with patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=False):
+            results = []
+            async for error_code, msg, is_final in brainstorm_manager.respond(42, "msg"):
+                results.append((error_code, msg, is_final))
+
+        assert len(results) == 2
+        assert results[0] == (None, MSG_BRAINSTORM_CLAUDE_THINKING, False)
+        assert results[1][0] == ERR_START_FAILED
+        assert results[1][2] is True
+
+    @pytest.mark.asyncio
+    async def test_respond_tmux_failure_sets_error_status(self, brainstorm_manager):
+        """Session status is 'error' when tmux start fails."""
+        self._setup_active_session(brainstorm_manager)
+
+        with patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=False):
+            async for _ in brainstorm_manager.respond(42, "msg"):
+                pass
+
+        assert brainstorm_manager.sessions[42].status == "error"
+
+    @pytest.mark.asyncio
+    async def test_respond_timeout_yields_error(self, brainstorm_manager):
+        """When _wait_for_response returns ERR_TIMEOUT, error is propagated."""
+        self._setup_active_session(brainstorm_manager)
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(ERR_TIMEOUT, "Timeout waiting", None),
+            ),
+        ):
+            results = []
+            async for error_code, msg, is_final in brainstorm_manager.respond(42, "msg"):
+                results.append((error_code, msg, is_final))
+
+        assert results[-1][0] == ERR_TIMEOUT
+        assert results[-1][2] is True
+        assert brainstorm_manager.sessions[42].status == "error"
+
+    @pytest.mark.asyncio
+    async def test_respond_sets_status_responding_during_wait(self, brainstorm_manager):
+        """Session status transitions to 'responding' before _wait_for_response."""
+        self._setup_active_session(brainstorm_manager)
+        statuses_during_wait = []
+
+        async def capture_status(*args, **kwargs):
+            session = brainstorm_manager.sessions.get(42)
+            if session:
+                statuses_during_wait.append(session.status)
+            return (None, "response", "s1")
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager, "_wait_for_response", side_effect=capture_status
+            ),
+            patch.object(brainstorm_manager, "_save_sessions"),
+        ):
+            async for _ in brainstorm_manager.respond(42, "msg"):
+                pass
+
+        assert statuses_during_wait == ["responding"]
+
+    @pytest.mark.asyncio
+    async def test_respond_preserves_session_id_when_none_returned(self, brainstorm_manager):
+        """If _wait_for_response returns None as session_id, the old one is kept."""
+        self._setup_active_session(brainstorm_manager)
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "response", None),
+            ),
+            patch.object(brainstorm_manager, "_save_sessions"),
+        ):
+            async for _ in brainstorm_manager.respond(42, "msg"):
+                pass
+
+        # Original session_id preserved when new one is None
+        assert brainstorm_manager.sessions[42].session_id == "sess-existing-123"
+
+
 class TestBrainstormManagerStartHappyPath:
     """Tests for start() async generator — successful session creation and response flow.
 
