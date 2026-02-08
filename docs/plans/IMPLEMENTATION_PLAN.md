@@ -1,131 +1,112 @@
 # Implementation Plan
 
-**Status:** COMPLETE
-**Progress:** 17/17 (100%)
+**Status:** IN_PROGRESS
+**Progress:** 0/12 (0%)
 **Last updated:** 2026-02-08
-**Line numbers verified:** 2026-02-08 (bot.py line numbers shifted +15 from Phase 2 additions)
 
 ## Goal
 
-Replace all slash commands (/cancel, /skip, /done, /save) in Telegram bot conversation states with inline keyboard buttons. Users should be able to cancel, skip, save, etc. by tapping a button instead of typing a slash command. Free text input must remain functional alongside the new buttons.
+Reduce and consolidate Telegram bot notification messages between task completion and queue start. Currently the user receives 3-4 separate messages in rapid succession (completion summary from notify-telegram.sh, rich completion summary from bot.py, "Started from queue" message, and iteration progress message). Consolidate into minimal, unified messages.
 
 From ROADMAP.md:
-> Przerob wszystkie komunikaty bota telegram ktore wymagaja potwierdzania, anulowania itd na przyciski.
+> zmniejsz ilość ekranów z podumowaniami, informacjami o zakończniu pracy i starcie kolejki do niezbędnego minimum, teraz między kolejnymi zadaniami z kolejki otrzymuję równolegle 3-4 wiadomości z podsumowanie, inforamcją o zakończniu i starcie nowego, zmniejsz ilość i ujednolić format tych wiadmości
 
 ## Current Phase
 
-All phases complete
+Phase 1: Remove duplicate notification from notify-telegram.sh
 
 ## Phases
 
-### Phase 1: Add inline Cancel button to text-input states
-- [x] Create cancel keyboard helper — `_cancel_keyboard(callback_data)` (bot.py line 216)
-- [x] Add cancel button to `ENTER_PROJECT_NAME` prompt (bot.py line 401)
-- [x] Add cancel button to `ENTER_URL` prompt (bot.py line 409)
-- [x] Add cancel button to `ENTER_NAME` prompt (bot.py line 417)
-- [x] Add cancel button to `ENTER_BRAINSTORM_PROMPT` prompt (bot.py line 466)
-- [x] Add cancel button to `SELECT_ITERATIONS` custom input prompt (bot.py line 823)
-- [x] Add `CallbackQueryHandler(handle_input_cancel, pattern=r"^input:cancel$")` to 5 states
-- [x] Remove "/cancel" text from 5 message constants in messages.py
-- **Status:** complete
+### Phase 1: Remove duplicate notification from notify-telegram.sh
+- [ ] Remove `notify-telegram.sh` call from `loop.sh` cleanup trap (loop.sh line 30-35) — bot.py's `check_task_completion()` already sends a richer summary with diff stats, commits, plan progress, and interactive buttons
+- [ ] Keep `notify-telegram.sh` file for potential standalone use but stop calling it from the cleanup trap
+- [ ] Update loop.sh cleanup function: remove the 6 lines calling notify-telegram.sh (lines 30-35)
+- **Status:** pending
 
-### Phase 2: Add Skip + Cancel buttons to ENTER_IDEA state
-- [x] Add `→ Skip` + `✗ Cancel` inline buttons to `ENTER_IDEA` prompt — reused `MSG_GITHUB_SKIP_BTN` (bot.py line 449-455)
-- [x] Add `CallbackQueryHandler(handle_idea_button, pattern=r"^idea:")` to ENTER_IDEA state (bot.py line 1382)
-- [x] Remove "/skip" and "/cancel" text from MSG_PLAN_ENTER_IDEA (messages.py line 78-80)
-- **Status:** complete
+### Phase 2: Consolidate completion summary + queue start into single message
+- [ ] Merge "Started from queue" info into the completion summary message — append queue start line to `_format_completion_summary()` output instead of sending a separate `send_message()` call (bot.py lines 1310-1322)
+- [ ] Add new message constant `MSG_COMPLETION_QUEUE_NEXT` in messages.py for the "next task started" line within the completion message
+- [ ] Update `check_task_completion()` (bot.py line 1261-1323): when both `completed_task` and `next_task` exist, include queue start info in the summary message instead of a second `send_message()`
+- [ ] When only `next_task` exists (orphaned queue start, no completed task), keep sending a standalone message
+- **Status:** pending
 
-### Phase 3: Add Done/Save/Cancel buttons to BRAINSTORMING state
-- [x] Create brainstorm button keyboards — `_brainstorm_hint_keyboard()` and `_brainstorm_hint_long_keyboard()` (bot.py)
-- [x] Add `MSG_BRAINSTORM_DONE_BTN = "✓ Done"` and `MSG_BRAINSTORM_SAVE_BTN = "✓ Save"` to messages.py
-- [x] Pass `reply_markup=_brainstorm_hint_keyboard()` when sending `MSG_BRAINSTORM_REPLY_HINT` after `brainstorm_manager.start()` in button flow
-- [x] Pass `reply_markup=_brainstorm_hint_long_keyboard()` when sending `MSG_BRAINSTORM_REPLY_HINT_LONG` after `/brainstorming` command flow
-- [x] Pass `reply_markup=_brainstorm_hint_keyboard()` to brainstorm reply messages in `handle_brainstorm_message()` — appends hint text and buttons after Claude's response
-- [x] Pass `reply_markup=_brainstorm_hint_keyboard()` when sending `MSG_BRAINSTORM_RESUME`
-- [x] Add `CallbackQueryHandler(handle_brainstorm_hint_button, pattern=r"^bs:")` to BRAINSTORMING state
-- [x] Remove slash command text from messages: MSG_BRAINSTORM_REPLY_HINT, MSG_BRAINSTORM_REPLY_HINT_LONG, MSG_BRAINSTORM_RESUME, MSG_SESSION_ALREADY_ACTIVE
-- **Status:** complete
-
-### Phase 4: Add tests for new button handlers
-- [x] Create `src/telegram_bot/tests/test_bot.py` with test utilities — `make_callback_update(chat_id, data)` and `make_context()` helpers
-- [x] Add tests for `handle_input_cancel` callback — 3 tests verify answer, edit, return END
-- [x] Add tests for `handle_idea_button` callback — 6 tests verify skip (answer, set idea=None, show_iterations_menu) and cancel (answer, edit, return END) + 2 message constant tests
-- [x] Add tests for `handle_brainstorm_hint_button` callback — 11 tests verify `bs:done`/`bs:save` trigger finish logic; `bs:cancel` triggers cancel logic; keyboard helpers tested (4 tests); message constants verified (9 tests)
-- [x] Run `python3 -m pytest src/telegram_bot/tests/ -v` — all 226 tests pass
-- **Status:** complete
+### Phase 3: Add tests for consolidated notifications
+- [ ] Add tests for `_format_completion_summary()` verifying: basic output, with diff stats, with commits, with plan progress, and with queue next task appended
+- [ ] Add tests for `check_task_completion()` verifying: single message sent when task completes with queued next (not two), standalone message for orphaned queue start, no message when no tasks completed
+- [ ] Add test verifying `notify-telegram.sh` is no longer called from loop.sh cleanup trap
+- [ ] Run `python3 -m pytest src/telegram_bot/tests/ -v` — all tests pass
+- **Status:** pending
 
 ## Findings & Decisions
 
 ### Requirements
-- All states that accept free text input AND show "/cancel" (or /skip, /done, /save) text must get equivalent inline buttons
-- Free text input must continue to work — users can still type their response
-- Slash commands (/cancel, /skip, /done, /save) should remain as fallback handlers for backward compatibility, but the text prompts should no longer advertise them
-- Button style must use existing Unicode symbols (✗, →, ✓) consistent with project conventions
+- Reduce the number of separate Telegram messages between task completion and next queue task start from 3-4 to 1-2
+- Preserve all useful information (diff stats, commits, plan progress, interactive buttons)
+- Maintain the unified visual style (mode icons ◇/■, markdown formatting)
+- Keep the iteration progress message as-is (already uses edit-in-place pattern, sends only 1 new message + edits)
 
 ### Research Findings
 
-**7 conversation states** accept free text input and reference slash commands:
+**Current notification flow when a task completes and queue has next task:**
 
-| State | Current Slash Commands | Button Replacement | callback_data |
-|-------|----------------------|-------------------|---------------|
-| ENTER_NAME | /cancel | `✗ Cancel` button | `input:cancel` |
-| ENTER_URL | /cancel | `✗ Cancel` button | `input:cancel` |
-| ENTER_PROJECT_NAME | /cancel | `✗ Cancel` button | `input:cancel` |
-| ENTER_BRAINSTORM_PROMPT | /cancel | `✗ Cancel` button | `input:cancel` |
-| SELECT_ITERATIONS (custom) | /cancel | `✗ Cancel` button | `iter:cancel` (existing) |
-| ENTER_IDEA | /cancel, /skip | `→ Skip` + `✗ Cancel` buttons | `idea:skip`, `idea:cancel` |
-| BRAINSTORMING | /done, /save, /cancel | `✓ Done` + `✓ Save` + `✗ Cancel` buttons | `bs:done`, `bs:save`, `bs:cancel` |
+| # | Source | Timing | Message | Type |
+|---|--------|--------|---------|------|
+| 1 | `notify-telegram.sh` via loop.sh cleanup trap | Immediate on script exit | Basic summary: mode, status, iterations/total, time, project | NEW message |
+| 2 | `check_task_completion()` in bot.py (line 1302-1307) | Within 30s (job poll) | Rich summary: iterations, time, diff stats, commits, plan progress + buttons | NEW message |
+| 3 | `check_task_completion()` in bot.py (line 1318-1322) | Same job run as #2 | "▶ Started from queue: {project} - {mode} • {iterations} iterations" | NEW message |
+| 4 | `check_task_progress()` in bot.py (line 1364-1369) | Within 15s of new task starting | "◇/■ {project} — Iteration 1/N (elapsed)" | NEW message (then edits for subsequent iterations) |
 
-**Existing pattern to follow:** The `SELECT_ITERATIONS` state already has a `MSG_CANCEL_BTN` inline button with `callback_data="iter:cancel"` in its iteration selection menu (bot.py line 777). The new cancel buttons should follow this same pattern.
+**Result: User sees 4 separate messages within ~30 seconds of a task completing.**
 
-**10 message constants** reference slash commands and need text updates:
+**Problem breakdown:**
+- Message #1 (notify-telegram.sh) **duplicates** message #2 (bot.py) — 70% content overlap, bot.py version is strictly richer
+- Message #3 (queue start) could be appended to message #2 instead of sent separately
+- Message #4 (iteration progress) is already optimized (1 new message, subsequent edits) and should remain as-is
 
-| Constant | File:Line | Slash Commands Referenced |
-|----------|-----------|--------------------------|
-| MSG_ENTER_REPO_URL | messages.py:60 | /cancel |
-| MSG_ENTER_WORKTREE_NAME | messages.py:70 | /cancel |
-| MSG_PLAN_ENTER_IDEA | messages.py:82-83 | /skip, /cancel |
-| MSG_BRAINSTORM_HEADER | messages.py:94 | /cancel |
-| MSG_BRAINSTORM_RESUME | messages.py:102 | /done, /cancel |
-| MSG_BRAINSTORM_REPLY_HINT | messages.py:108 | /done, /cancel |
-| MSG_BRAINSTORM_REPLY_HINT_LONG | messages.py:110-112 | /done, /save, /cancel |
-| MSG_ENTER_ITERATIONS | messages.py:129 | /cancel |
-| MSG_SESSION_ALREADY_ACTIVE | messages.py:217 | /done, /cancel |
-| MSG_ENTER_PROJECT_NAME | messages.py:242 | /cancel |
+**After consolidation: 2 messages** (1 completion+queue summary, 1 iteration progress)
 
-Additionally `MSG_NO_ACTIVE_BRAINSTORM` (messages.py:219) references `/brainstorming` command — this stays unchanged as it's a command instruction, not a button-replaceable prompt.
+**Key code locations:**
 
-**Brainstorm hint attachment points** (buttons go as `reply_markup` on these messages):
+| File | Lines | Function | Change Needed |
+|------|-------|----------|---------------|
+| `src/scripts/loop.sh` | 30-35 | `cleanup()` trap | Remove `notify-telegram.sh` call |
+| `src/telegram_bot/bot.py` | 1225-1258 | `_format_completion_summary()` | Add optional `next_task` parameter |
+| `src/telegram_bot/bot.py` | 1261-1323 | `check_task_completion()` | Merge queue start into summary |
+| `src/telegram_bot/messages.py` | 161-164 | `MSG_STARTED_FROM_QUEUE` | Keep for orphaned queue; add `MSG_COMPLETION_QUEUE_NEXT` |
 
-| Code Location | Message | Keyboard Variant |
-|---------------|---------|-----------------|
-| bot.py:740-744 | `handle_brainstorm_prompt()` button flow response | short (Done + Cancel) |
-| bot.py:949-953 | `start_brainstorming()` command flow response | long (Done + Save + Cancel) |
-| bot.py:991-994 | `handle_brainstorm_message()` multi-turn response | short (Done + Cancel) |
-| bot.py:477-479 | `resume_brainstorm` action | short (Done + Cancel) |
+**notify-telegram.sh vs bot.py comparison:**
 
-**No test_bot.py exists** — bot conversation handler layer has zero test coverage. New tests must be created.
+| Field | notify-telegram.sh | bot.py check_task_completion() |
+|-------|-------------------|-------------------------------|
+| Mode icon (◇/■) | ✓ | ✓ |
+| Project name | ✓ | ✓ |
+| Mode (plan/build) | ✓ | ✓ (in title) |
+| Status (success/completed/interrupted) | ✓ | ✗ (always "completed") |
+| Iterations | ✓ (completed/total) | ✓ (just total) |
+| Duration | ✓ | ✓ |
+| Diff stats (files, +/- lines) | ✗ | ✓ |
+| Recent commits | ✗ | ✓ |
+| Plan progress | ✗ | ✓ |
+| Interactive buttons | ✗ | ✓ |
 
-**2 new message constants needed:** `MSG_BRAINSTORM_DONE_BTN` and `MSG_BRAINSTORM_SAVE_BTN`. Evaluate reusing `MSG_GITHUB_SKIP_BTN` ("→ Skip") for ENTER_IDEA or create a dedicated `MSG_SKIP_BTN`.
+**Conclusion:** bot.py's notification is strictly superior. The only field lost is "Status" (success/completed/interrupted distinction), but this is low-value since the bot always treats task end as completion.
+
+**Coordination between paths:** Zero. No deduplication flag, no shared state, no timing guarantee. Both paths always fire independently when bot is running.
 
 ### Technical Decisions
 | Decision | Rationale |
 |----------|-----------|
-| Use `callback_data` prefix per state (`input:cancel`, `idea:skip`, `bs:done`) | Consistent with existing patterns (`iter:cancel`, `action:back`), allows state-specific handling |
-| Reuse `iter:cancel` for SELECT_ITERATIONS custom input | Already handled by `handle_iterations()` — no new handler needed |
-| Keep /cancel, /skip, /done, /save as CommandHandler fallbacks | Backward compatibility — users who type commands still get expected behavior |
-| Remove slash command text from messages but keep commands registered | Buttons become primary UX, commands remain as hidden fallback |
-| Send buttons via `reply_markup` on the prompt message itself | Each prompt message gets its own keyboard — no separate message needed |
-| Create `_cancel_keyboard()` helper to avoid repeated keyboard creation | DRY — 5 states use the same cancel-only keyboard pattern |
-| Use single `CallbackQueryHandler` per pattern prefix in each state | Matches existing ConversationHandler state structure |
-| `bs:` prefix for brainstorm hint buttons (not `brainstorm:`) | Avoids collision with existing `brainstorm:plan` and `brainstorm:end` patterns used for post-finish action buttons |
+| Remove `notify-telegram.sh` from loop.sh cleanup trap instead of disabling bot notification | Bot's notification is richer (diffs, commits, plan, buttons); removing the shell notification eliminates ~70% duplication with zero information loss |
+| Keep `notify-telegram.sh` file intact (just stop calling it) | May be useful for standalone loop runs without bot; avoids breaking `loop init` symlinks |
+| Merge queue start into completion message (not the reverse) | Completion summary is the primary message; "next task started" is secondary info that fits as an appendix line |
+| Keep orphaned queue start as standalone message | When there's no completed task (bot restarted), the queue start notification is the only message — can't merge into nothing |
+| Keep iteration progress message (message #4) unchanged | Already optimized with edit-in-place pattern; sends 1 new message + N-1 edits. No consolidation needed |
+| Add `MSG_COMPLETION_QUEUE_NEXT` constant instead of reusing `MSG_STARTED_FROM_QUEUE` | Different formatting — inline within summary vs standalone message |
 
 ### Issues Encountered
 | Issue | Resolution |
 |-------|------------|
-| InlineKeyboardMarkup on prompt message gets removed when user sends text (Telegram behavior) | Buttons are one-time use — after user types text, the keyboard disappears naturally which is acceptable |
-| BRAINSTORMING state sends multiple messages (thinking, response, hint) | Attach buttons to the hint/response message — the last message sent back to user |
-| `handle_brainstorm_message()` sends response without hint text (line 991-994) | Need to append `MSG_BRAINSTORM_REPLY_HINT` text and `reply_markup` to the Claude response message |
-| No existing test infrastructure for bot handlers | Create test utilities for mocking Update/Context in a new test_bot.py file |
-| `finish_brainstorming()` / `cancel_brainstorming()` expect `update.message` (not callback_query) | New `handle_brainstorm_hint_button` handler must reimplement the logic using `query.edit_message_text()` instead of `update.message.reply_text()`, since button callbacks don't have `update.message` |
-| Brainstorm hint keyboards need two variants (short vs long) | Short hint (Done + Cancel) for multi-turn replies; long hint (Done + Save + Cancel) only for first response via `/brainstorming` command |
+| notify-telegram.sh sends via direct curl to Telegram API; bot.py sends via python-telegram-bot library | Two independent notification paths with zero coordination — solved by removing the shell path |
+| Removing notify-telegram.sh call means no immediate notification (bot polls every 30s) | Acceptable trade-off: user waits up to 30s but gets a single, richer notification instead of 2 spammy ones |
+| `_format_completion_summary()` currently takes only task data, not queue info | Extend function signature to accept optional `next_task: Task` parameter |
+| `MSG_STARTED_FROM_QUEUE` is used both for standalone and merged contexts | Create separate `MSG_COMPLETION_QUEUE_NEXT` for merged context; keep `MSG_STARTED_FROM_QUEUE` for orphaned queue starts |
