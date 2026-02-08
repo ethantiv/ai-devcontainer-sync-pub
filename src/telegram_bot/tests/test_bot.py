@@ -1,4 +1,4 @@
-"""Tests for bot.py handlers — inline button functionality."""
+"""Tests for bot handlers — inline button functionality."""
 
 import time
 from pathlib import Path
@@ -104,7 +104,7 @@ class TestHandleInputCancel:
         update = make_callback_update(self.CHAT_ID, "input:cancel")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID):
             await handle_input_cancel(update, context)
         update.callback_query.answer.assert_awaited_once()
 
@@ -117,7 +117,7 @@ class TestHandleInputCancel:
         update = make_callback_update(self.CHAT_ID, "input:cancel")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID):
             await handle_input_cancel(update, context)
         call_args = update.callback_query.edit_message_text.call_args
         assert call_args[0][0] == MSG_CANCELLED
@@ -130,7 +130,7 @@ class TestHandleInputCancel:
         update = make_callback_update(self.CHAT_ID, "input:cancel")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID):
             result = await handle_input_cancel(update, context)
         assert result == State.SELECT_PROJECT
 
@@ -143,7 +143,7 @@ class TestHandleInputCancel:
         update = make_callback_update(self.CHAT_ID, "input:cancel")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID):
             await handle_input_cancel(update, context)
 
         call_kwargs = update.callback_query.edit_message_text.call_args[1]
@@ -236,9 +236,9 @@ class TestHandleIdeaButton:
         update = make_callback_update(self.CHAT_ID, "idea:skip")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value={}) as mock_gud, \
-             patch("src.telegram_bot.bot.show_iterations_menu", new_callable=AsyncMock, return_value=42):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.tasks.get_user_data", return_value={}) as mock_gud, \
+             patch("src.telegram_bot.handlers.tasks.show_iterations_menu", new_callable=AsyncMock, return_value=42):
             await handle_idea_button(update, context)
         update.callback_query.answer.assert_awaited_once()
 
@@ -251,9 +251,9 @@ class TestHandleIdeaButton:
         context = make_context()
         user_data = {"idea": "something"}
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value=user_data), \
-             patch("src.telegram_bot.bot.show_iterations_menu", new_callable=AsyncMock, return_value=42):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.tasks.get_user_data", return_value=user_data), \
+             patch("src.telegram_bot.handlers.tasks.show_iterations_menu", new_callable=AsyncMock, return_value=42):
             await handle_idea_button(update, context)
         assert user_data["idea"] is None
 
@@ -265,9 +265,9 @@ class TestHandleIdeaButton:
         update = make_callback_update(self.CHAT_ID, "idea:skip")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value={}), \
-             patch("src.telegram_bot.bot.show_iterations_menu", new_callable=AsyncMock, return_value=42) as mock_menu:
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.tasks.get_user_data", return_value={}), \
+             patch("src.telegram_bot.handlers.tasks.show_iterations_menu", new_callable=AsyncMock, return_value=42) as mock_menu:
             result = await handle_idea_button(update, context)
         mock_menu.assert_awaited_once_with(update, context)
         assert result == 42
@@ -280,8 +280,8 @@ class TestHandleIdeaButton:
         update = make_callback_update(self.CHAT_ID, "idea:cancel")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value={}):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.tasks.get_user_data", return_value={}):
             await handle_idea_button(update, context)
         update.callback_query.answer.assert_awaited_once()
 
@@ -294,8 +294,8 @@ class TestHandleIdeaButton:
         update = make_callback_update(self.CHAT_ID, "idea:cancel")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value={}):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.tasks.get_user_data", return_value={}):
             await handle_idea_button(update, context)
         call_args = update.callback_query.edit_message_text.call_args
         assert call_args[0][0] == MSG_CANCELLED
@@ -308,8 +308,8 @@ class TestHandleIdeaButton:
         update = make_callback_update(self.CHAT_ID, "idea:cancel")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value={}):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.tasks.get_user_data", return_value={}):
             result = await handle_idea_button(update, context)
         assert result == State.SELECT_PROJECT
 
@@ -324,8 +324,8 @@ class TestHandleIdeaButton:
         mock_project = MagicMock()
         mock_project.name = "test-proj"
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value={"project": mock_project}):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.tasks.get_user_data", return_value={"project": mock_project}):
             await handle_idea_button(update, context)
 
         call_kwargs = update.callback_query.edit_message_text.call_args[1]
@@ -458,8 +458,8 @@ class TestHandleBrainstormHintButton:
         update = make_callback_update(self.CHAT_ID, "bs:done")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm:
             mock_bm.finish = AsyncMock(return_value=(True, "Saved", "content"))
             await handle_brainstorm_hint_button(update, context)
         update.callback_query.answer.assert_awaited_once()
@@ -472,8 +472,8 @@ class TestHandleBrainstormHintButton:
         update = make_callback_update(self.CHAT_ID, "bs:done")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm:
             mock_bm.finish = AsyncMock(return_value=(True, "Saved", "content"))
             await handle_brainstorm_hint_button(update, context)
         mock_bm.finish.assert_awaited_once_with(chat_id=self.CHAT_ID)
@@ -487,8 +487,8 @@ class TestHandleBrainstormHintButton:
         update = make_callback_update(self.CHAT_ID, "bs:done")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm:
             mock_bm.finish = AsyncMock(return_value=(True, "Saved to ROADMAP", "content"))
             await handle_brainstorm_hint_button(update, context)
 
@@ -506,8 +506,8 @@ class TestHandleBrainstormHintButton:
         update = make_callback_update(self.CHAT_ID, "bs:done")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm:
             mock_bm.finish = AsyncMock(return_value=(False, "No session", None))
             result = await handle_brainstorm_hint_button(update, context)
         assert result == State.BRAINSTORMING
@@ -520,8 +520,8 @@ class TestHandleBrainstormHintButton:
         update = make_callback_update(self.CHAT_ID, "bs:save")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm:
             mock_bm.finish = AsyncMock(return_value=(True, "Saved", "content"))
             await handle_brainstorm_hint_button(update, context)
         mock_bm.finish.assert_awaited_once_with(chat_id=self.CHAT_ID)
@@ -534,8 +534,8 @@ class TestHandleBrainstormHintButton:
         update = make_callback_update(self.CHAT_ID, "bs:cancel")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm:
             mock_bm.cancel = MagicMock(return_value=True)
             await handle_brainstorm_hint_button(update, context)
         update.callback_query.answer.assert_awaited_once()
@@ -548,8 +548,8 @@ class TestHandleBrainstormHintButton:
         update = make_callback_update(self.CHAT_ID, "bs:cancel")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm:
             mock_bm.cancel = MagicMock(return_value=True)
             await handle_brainstorm_hint_button(update, context)
         mock_bm.cancel.assert_called_once_with(self.CHAT_ID)
@@ -563,8 +563,8 @@ class TestHandleBrainstormHintButton:
         update = make_callback_update(self.CHAT_ID, "bs:cancel")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm:
             mock_bm.cancel = MagicMock(return_value=True)
             await handle_brainstorm_hint_button(update, context)
         call_args = update.callback_query.edit_message_text.call_args
@@ -578,8 +578,8 @@ class TestHandleBrainstormHintButton:
         update = make_callback_update(self.CHAT_ID, "bs:cancel")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm:
             mock_bm.cancel = MagicMock(return_value=True)
             result = await handle_brainstorm_hint_button(update, context)
         assert result == State.SELECT_PROJECT
@@ -593,8 +593,8 @@ class TestHandleBrainstormHintButton:
         update = make_callback_update(self.CHAT_ID, "bs:cancel")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm:
             mock_bm.cancel = MagicMock(return_value=True)
             await handle_brainstorm_hint_button(update, context)
 
@@ -611,8 +611,8 @@ class TestHandleBrainstormHintButton:
         update = make_callback_update(self.CHAT_ID, "bs:done")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm:
             mock_bm.finish = AsyncMock(return_value=(True, "Saved", "content"))
             result = await handle_brainstorm_hint_button(update, context)
         assert result == State.BRAINSTORMING
@@ -641,7 +641,7 @@ class TestFormatCompletionSummary:
         from src.telegram_bot.bot import _format_completion_summary
 
         task = self._make_task()
-        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+        with patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm:
             mock_tm.get_task_duration.return_value = "2m 30s"
             result = _format_completion_summary(task, None, [], None)
 
@@ -656,7 +656,7 @@ class TestFormatCompletionSummary:
 
         task = self._make_task()
         diff = {"files_changed": 3, "insertions": 42, "deletions": 10}
-        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+        with patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm:
             mock_tm.get_task_duration.return_value = "1m 0s"
             result = _format_completion_summary(task, diff, [], None)
 
@@ -670,7 +670,7 @@ class TestFormatCompletionSummary:
 
         task = self._make_task()
         commits = ["abc1234 fix: bug", "def5678 feat: new"]
-        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+        with patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm:
             mock_tm.get_task_duration.return_value = "5s"
             result = _format_completion_summary(task, None, commits, None)
 
@@ -683,7 +683,7 @@ class TestFormatCompletionSummary:
         from src.telegram_bot.bot import _format_completion_summary
 
         task = self._make_task()
-        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+        with patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm:
             mock_tm.get_task_duration.return_value = "10s"
             result = _format_completion_summary(task, None, [], (3, 10))
 
@@ -697,7 +697,7 @@ class TestFormatCompletionSummary:
 
         completed = self._make_task(project="proj-a", mode="build", iterations=5)
         next_t = self._make_task(project="proj-b", mode="plan", iterations=3)
-        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+        with patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm:
             mock_tm.get_task_duration.return_value = "1m 0s"
             result = _format_completion_summary(completed, None, [], None, next_task=next_t)
 
@@ -711,7 +711,7 @@ class TestFormatCompletionSummary:
         from src.telegram_bot.bot import _format_completion_summary
 
         task = self._make_task()
-        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+        with patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm:
             mock_tm.get_task_duration.return_value = "5s"
             result = _format_completion_summary(task, None, [], None, next_task=None)
 
@@ -722,7 +722,7 @@ class TestFormatCompletionSummary:
         from src.telegram_bot.bot import _format_completion_summary
 
         task = self._make_task(mode="plan")
-        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+        with patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm:
             mock_tm.get_task_duration.return_value = "5s"
             result = _format_completion_summary(task, None, [], None)
 
@@ -733,7 +733,7 @@ class TestFormatCompletionSummary:
         from src.telegram_bot.bot import _format_completion_summary
 
         task = self._make_task()
-        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+        with patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm:
             mock_tm.get_task_duration.return_value = "5s"
             result = _format_completion_summary(task, None, [], (0, 0))
 
@@ -747,7 +747,7 @@ class TestFormatCompletionSummary:
         from src.telegram_bot.bot import _format_completion_summary
 
         task = self._make_task()
-        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+        with patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm:
             mock_tm.get_task_duration.return_value = "5s"
             result = _format_completion_summary(task, None, [], (10, 10))
 
@@ -761,7 +761,7 @@ class TestFormatCompletionSummary:
 
         task = self._make_task()
         diff = {"files_changed": 0, "insertions": 0, "deletions": 0}
-        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+        with patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm:
             mock_tm.get_task_duration.return_value = "5s"
             result = _format_completion_summary(task, diff, [], None)
 
@@ -774,7 +774,7 @@ class TestFormatCompletionSummary:
         from src.telegram_bot.bot import _format_completion_summary
 
         task = self._make_task()
-        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+        with patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm:
             mock_tm.get_task_duration.return_value = "5s"
             result = _format_completion_summary(task, {}, [], None)
 
@@ -789,7 +789,7 @@ class TestFormatCompletionSummary:
         diff = {"files_changed": 5, "insertions": 100, "deletions": 20}
         commits = ["abc1234 feat: add feature", "def5678 fix: bug"]
 
-        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+        with patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm:
             mock_tm.get_task_duration.return_value = "15m 0s"
             result = _format_completion_summary(
                 task, diff, commits, (7, 10), next_task=next_t
@@ -839,11 +839,11 @@ class TestCheckTaskCompletion:
         next_t = self._make_task(project="proj-b", mode="plan", iterations=3)
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.task_manager") as mock_tm, \
-             patch("src.telegram_bot.bot.get_plan_progress", return_value=None), \
-             patch("src.telegram_bot.bot.get_diff_stats", return_value=None), \
-             patch("src.telegram_bot.bot.get_recent_commits", return_value=[]):
+        with patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm, \
+             patch("src.telegram_bot.handlers.jobs.get_plan_progress", return_value=None), \
+             patch("src.telegram_bot.handlers.jobs.get_diff_stats", return_value=None), \
+             patch("src.telegram_bot.handlers.jobs.get_recent_commits", return_value=[]):
             mock_tm.process_completed_tasks.return_value = ([(completed, next_t)], [])
             mock_tm.get_task_duration.return_value = "1m 0s"
             await check_task_completion(context)
@@ -864,8 +864,8 @@ class TestCheckTaskCompletion:
         next_t = self._make_task(project="proj-b", mode="build", iterations=5)
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.task_manager") as mock_tm:
+        with patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm:
             mock_tm.process_completed_tasks.return_value = ([(None, next_t)], [])
             await check_task_completion(context)
 
@@ -881,8 +881,8 @@ class TestCheckTaskCompletion:
 
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.task_manager") as mock_tm:
+        with patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm:
             mock_tm.process_completed_tasks.return_value = ([], [])
             await check_task_completion(context)
 
@@ -896,11 +896,11 @@ class TestCheckTaskCompletion:
         completed = self._make_task(project="proj-a")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.task_manager") as mock_tm, \
-             patch("src.telegram_bot.bot.get_plan_progress", return_value=None), \
-             patch("src.telegram_bot.bot.get_diff_stats", return_value=None), \
-             patch("src.telegram_bot.bot.get_recent_commits", return_value=[]):
+        with patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm, \
+             patch("src.telegram_bot.handlers.jobs.get_plan_progress", return_value=None), \
+             patch("src.telegram_bot.handlers.jobs.get_diff_stats", return_value=None), \
+             patch("src.telegram_bot.handlers.jobs.get_recent_commits", return_value=[]):
             mock_tm.process_completed_tasks.return_value = ([(completed, None)], [])
             mock_tm.get_task_duration.return_value = "30s"
             await check_task_completion(context)
@@ -989,11 +989,11 @@ class TestStartTaskFollowUp:
         mock_project = MagicMock()
         mock_project.name = "test-proj"
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value={
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.tasks.get_user_data", return_value={
                  "project": mock_project, "mode": "build", "iterations": 5, "idea": None
              }), \
-             patch("src.telegram_bot.bot.task_manager") as mock_tm:
+             patch("src.telegram_bot.handlers.tasks.task_manager") as mock_tm:
             mock_tm.start_task.return_value = (True, "Started")
             result = await start_task(update, context)
 
@@ -1015,11 +1015,11 @@ class TestStartTaskFollowUp:
         mock_project = MagicMock()
         mock_project.name = "test-proj"
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value={
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.tasks.get_user_data", return_value={
                  "project": mock_project, "mode": "build", "iterations": 5, "idea": None
              }), \
-             patch("src.telegram_bot.bot.task_manager") as mock_tm:
+             patch("src.telegram_bot.handlers.tasks.task_manager") as mock_tm:
             mock_tm.start_task.return_value = (True, "Started")
             await start_task(update, context)
 
@@ -1045,11 +1045,11 @@ class TestStartTaskFollowUp:
         mock_project = MagicMock()
         mock_project.name = "test-proj"
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value={
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.tasks.get_user_data", return_value={
                  "project": mock_project, "mode": "plan", "iterations": 3, "idea": None
              }), \
-             patch("src.telegram_bot.bot.task_manager") as mock_tm:
+             patch("src.telegram_bot.handlers.tasks.task_manager") as mock_tm:
             mock_tm.start_task.return_value = (True, "Queued #2")
             await start_task(update, context)
 
@@ -1078,11 +1078,11 @@ class TestStartTaskFollowUp:
         mock_project = MagicMock()
         mock_project.name = "test-proj"
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value={
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.tasks.get_user_data", return_value={
                  "project": mock_project, "mode": "build", "iterations": 5, "idea": None
              }), \
-             patch("src.telegram_bot.bot.task_manager") as mock_tm:
+             patch("src.telegram_bot.handlers.tasks.task_manager") as mock_tm:
             mock_tm.start_task.return_value = (False, "Session already running")
             await start_task(update, context)
 
@@ -1112,9 +1112,9 @@ class TestCancelBrainstormingFollowUp:
         update.message.reply_text = AsyncMock()
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm, \
-             patch("src.telegram_bot.bot.get_user_data", return_value={}):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm, \
+             patch("src.telegram_bot.handlers.brainstorm.get_user_data", return_value={}):
             mock_bm.cancel.return_value = True
             result = await cancel_brainstorming(update, context)
 
@@ -1132,9 +1132,9 @@ class TestCancelBrainstormingFollowUp:
         update.message.reply_text = AsyncMock()
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm, \
-             patch("src.telegram_bot.bot.get_user_data", return_value={}):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm, \
+             patch("src.telegram_bot.handlers.brainstorm.get_user_data", return_value={}):
             mock_bm.cancel.return_value = True
             await cancel_brainstorming(update, context)
 
@@ -1163,7 +1163,7 @@ class TestCancelFollowUp:
         update.message.reply_text = AsyncMock()
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID):
             result = await cancel(update, context)
 
         assert result == State.SELECT_PROJECT
@@ -1180,7 +1180,7 @@ class TestCancelFollowUp:
         update.message.reply_text = AsyncMock()
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID):
             await cancel(update, context)
 
         call_kwargs = update.message.reply_text.call_args[1]
@@ -1205,8 +1205,8 @@ class TestHandleBrainstormActionFollowUp:
         update = make_callback_update(self.CHAT_ID, "brainstorm:end")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value={}):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.get_user_data", return_value={}):
             result = await handle_brainstorm_action(update, context)
 
         assert result == State.SELECT_PROJECT
@@ -1220,8 +1220,8 @@ class TestHandleBrainstormActionFollowUp:
         update = make_callback_update(self.CHAT_ID, "brainstorm:end")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value={}):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.get_user_data", return_value={}):
             await handle_brainstorm_action(update, context)
 
         call_kwargs = update.callback_query.edit_message_text.call_args[1]
@@ -1240,8 +1240,8 @@ class TestHandleBrainstormActionFollowUp:
         mock_project = MagicMock()
         mock_project.name = "test-proj"
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value={"project": mock_project}):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.get_user_data", return_value={"project": mock_project}):
             await handle_brainstorm_action(update, context)
 
         call_kwargs = update.callback_query.edit_message_text.call_args[1]
@@ -1257,8 +1257,8 @@ class TestHandleBrainstormActionFollowUp:
         update = make_callback_update(self.CHAT_ID, "brainstorm:plan")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value={}):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.get_user_data", return_value={}):
             result = await handle_brainstorm_action(update, context)
 
         assert result == State.SELECT_PROJECT
@@ -1272,8 +1272,8 @@ class TestHandleBrainstormActionFollowUp:
         update = make_callback_update(self.CHAT_ID, "brainstorm:plan")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.get_user_data", return_value={}):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.brainstorm.get_user_data", return_value={}):
             await handle_brainstorm_action(update, context)
 
         call_kwargs = update.callback_query.edit_message_text.call_args[1]
@@ -1311,8 +1311,8 @@ class TestOrphanedQueueStartFollowUp:
         next_t = self._make_task(project="proj-b", mode="build", iterations=5)
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.bot.task_manager") as mock_tm:
+        with patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm:
             mock_tm.process_completed_tasks.return_value = ([(None, next_t)], [])
             await check_task_completion(context)
 
@@ -1345,7 +1345,7 @@ class TestHelpCommandFollowUp:
         update.message.reply_text = AsyncMock()
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID):
             result = await help_command(update, context)
 
         # help_command remains stateless
@@ -1371,9 +1371,9 @@ class TestRunLogRotation:
         context = make_context()
 
         with (
-            patch("src.telegram_bot.bot.rotate_logs", return_value={"deleted": 2, "freed_bytes": 1024}) as mock_rotate,
-            patch("src.telegram_bot.bot.cleanup_brainstorm_files", return_value={"deleted": 1, "freed_bytes": 512}) as mock_cleanup,
-            patch("src.telegram_bot.bot.PROJECTS_ROOT", "/tmp/test-projects"),
+            patch("src.telegram_bot.handlers.jobs.rotate_logs", return_value={"deleted": 2, "freed_bytes": 1024}) as mock_rotate,
+            patch("src.telegram_bot.handlers.jobs.cleanup_brainstorm_files", return_value={"deleted": 1, "freed_bytes": 512}) as mock_cleanup,
+            patch("src.telegram_bot.handlers.jobs.PROJECTS_ROOT", "/tmp/test-projects"),
         ):
             await run_log_rotation(context)
 
@@ -1388,9 +1388,9 @@ class TestRunLogRotation:
         context = make_context()
 
         with (
-            patch("src.telegram_bot.bot.rotate_logs", return_value={"deleted": 0, "freed_bytes": 0}),
-            patch("src.telegram_bot.bot.cleanup_brainstorm_files", return_value={"deleted": 0, "freed_bytes": 0}),
-            patch("src.telegram_bot.bot.PROJECTS_ROOT", "/tmp/test-projects"),
+            patch("src.telegram_bot.handlers.jobs.rotate_logs", return_value={"deleted": 0, "freed_bytes": 0}),
+            patch("src.telegram_bot.handlers.jobs.cleanup_brainstorm_files", return_value={"deleted": 0, "freed_bytes": 0}),
+            patch("src.telegram_bot.handlers.jobs.PROJECTS_ROOT", "/tmp/test-projects"),
         ):
             await run_log_rotation(context)
 
@@ -1429,11 +1429,11 @@ class TestCheckTaskProgress:
         context = make_context()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.jobs.STALE_THRESHOLD", 300),
             # .progress file mtime = 400s ago → stale
-            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time() - 400),
+            patch("src.telegram_bot.handlers.jobs.os.path.getmtime", return_value=time.time() - 400),
         ):
             mock_tm.active_tasks = {"/tmp/myproject": task}
             mock_tm.get_current_iteration.return_value = 2  # same as last_reported
@@ -1455,11 +1455,11 @@ class TestCheckTaskProgress:
         context = make_context()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.jobs.STALE_THRESHOLD", 300),
             # .progress file mtime = 100s ago → not stale
-            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time() - 100),
+            patch("src.telegram_bot.handlers.jobs.os.path.getmtime", return_value=time.time() - 100),
         ):
             mock_tm.active_tasks = {"/tmp/myproject": task}
             mock_tm.get_current_iteration.return_value = 2  # same iteration
@@ -1479,10 +1479,10 @@ class TestCheckTaskProgress:
         context = make_context()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
-            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time() - 400),
+            patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.jobs.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.handlers.jobs.os.path.getmtime", return_value=time.time() - 400),
         ):
             mock_tm.active_tasks = {"/tmp/myproject": task}
             mock_tm.get_current_iteration.return_value = 2
@@ -1502,11 +1502,11 @@ class TestCheckTaskProgress:
         context.bot.send_message.return_value = MagicMock(message_id=42)
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.jobs.STALE_THRESHOLD", 300),
             # Fresh .progress file
-            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time() - 10),
+            patch("src.telegram_bot.handlers.jobs.os.path.getmtime", return_value=time.time() - 10),
         ):
             mock_tm.active_tasks = {"/tmp/myproject": task}
             mock_tm.get_current_iteration.return_value = 3  # advanced from 2 → 3
@@ -1525,10 +1525,10 @@ class TestCheckTaskProgress:
         context = make_context()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
-            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time() - 400),
+            patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.jobs.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.handlers.jobs.os.path.getmtime", return_value=time.time() - 400),
         ):
             mock_tm.active_tasks = {"/tmp/myproject": task}
             mock_tm.get_current_iteration.return_value = 2
@@ -1547,10 +1547,10 @@ class TestCheckTaskProgress:
         context = make_context()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
-            patch("src.telegram_bot.bot.os.path.getmtime", side_effect=OSError("No such file")),
+            patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.jobs.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.handlers.jobs.os.path.getmtime", side_effect=OSError("No such file")),
         ):
             mock_tm.active_tasks = {"/tmp/myproject": task}
             mock_tm.get_current_iteration.return_value = 2
@@ -1570,10 +1570,10 @@ class TestCheckTaskProgress:
         context.bot.send_message.return_value = MagicMock(message_id=99)
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
-            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time()),
+            patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.jobs.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.handlers.jobs.os.path.getmtime", return_value=time.time()),
         ):
             mock_tm.active_tasks = {"/tmp/myproject": task}
             mock_tm.get_current_iteration.return_value = 1
@@ -1596,10 +1596,10 @@ class TestCheckTaskProgress:
         context = make_context()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
-            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time()),
+            patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.jobs.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.handlers.jobs.os.path.getmtime", return_value=time.time()),
         ):
             mock_tm.active_tasks = {"/tmp/myproject": task}
             mock_tm.get_current_iteration.return_value = 2
@@ -1622,8 +1622,8 @@ class TestCheckTaskProgress:
         context = make_context()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm,
         ):
             mock_tm.active_tasks = {"/tmp/myproject": task}
             mock_tm.get_current_iteration.return_value = None
@@ -1641,10 +1641,10 @@ class TestCheckTaskProgress:
         context = make_context()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
-            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time()),
+            patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.jobs.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.handlers.jobs.os.path.getmtime", return_value=time.time()),
         ):
             mock_tm.active_tasks = {"/tmp/myproject": task}
             mock_tm.get_current_iteration.return_value = 3  # same
@@ -1663,10 +1663,10 @@ class TestCheckTaskProgress:
         context.bot.send_message.return_value = MagicMock(message_id=1)
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
-            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time()),
+            patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.jobs.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.handlers.jobs.os.path.getmtime", return_value=time.time()),
         ):
             mock_tm.active_tasks = {"/tmp/myproject": task}
             mock_tm.get_current_iteration.return_value = 1
@@ -1686,10 +1686,10 @@ class TestCheckTaskProgress:
         context.bot.send_message.return_value = MagicMock(message_id=1)
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
-            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time()),
+            patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.jobs.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.handlers.jobs.os.path.getmtime", return_value=time.time()),
         ):
             mock_tm.active_tasks = {"/tmp/myproject": task}
             mock_tm.get_current_iteration.return_value = 1
@@ -1709,10 +1709,10 @@ class TestCheckTaskProgress:
         context.bot.edit_message_text.side_effect = Exception("Message not found")
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
-            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time()),
+            patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.jobs.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.handlers.jobs.os.path.getmtime", return_value=time.time()),
         ):
             mock_tm.active_tasks = {"/tmp/myproject": task}
             mock_tm.get_current_iteration.return_value = 2
@@ -1730,8 +1730,8 @@ class TestCheckTaskProgress:
         context = make_context()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm,
         ):
             mock_tm.active_tasks = {}
             await check_task_progress(context)
@@ -1749,10 +1749,10 @@ class TestCheckTaskProgress:
         context.bot.send_message.return_value = MagicMock(message_id=100)
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
-            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time()),
+            patch("src.telegram_bot.handlers.jobs.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.jobs.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.jobs.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.handlers.jobs.os.path.getmtime", return_value=time.time()),
         ):
             mock_tm.active_tasks = {
                 "/tmp/proj-a": task_a,
@@ -1796,10 +1796,10 @@ class TestHandleSync:
         context = make_context()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
             patch("src.telegram_bot.bot.get_user_data", return_value={"project": self._make_project()}),
-            patch("src.telegram_bot.bot.pull_project", return_value=(True, "Already up to date.")),
-            patch("src.telegram_bot.bot.show_project_menu", new_callable=AsyncMock, return_value=42),
+            patch("src.telegram_bot.handlers.projects.pull_project", return_value=(True, "Already up to date.")),
+            patch("src.telegram_bot.handlers.projects.show_project_menu", new_callable=AsyncMock, return_value=42),
         ):
             await handle_action(update, context)
         update.callback_query.answer.assert_awaited_once()
@@ -1814,11 +1814,11 @@ class TestHandleSync:
         project = self._make_project()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
             patch("src.telegram_bot.bot.get_user_data", return_value={"project": project}),
-            patch("src.telegram_bot.bot.pull_project", return_value=(True, "Fast-forward")),
-            patch("src.telegram_bot.bot.get_project", return_value=project),
-            patch("src.telegram_bot.bot.show_project_menu", new_callable=AsyncMock, return_value=42) as mock_menu,
+            patch("src.telegram_bot.handlers.projects.pull_project", return_value=(True, "Fast-forward")),
+            patch("src.telegram_bot.handlers.projects.get_project", return_value=project),
+            patch("src.telegram_bot.handlers.projects.show_project_menu", new_callable=AsyncMock, return_value=42) as mock_menu,
         ):
             result = await handle_action(update, context)
 
@@ -1837,11 +1837,11 @@ class TestHandleSync:
         project = self._make_project()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
             patch("src.telegram_bot.bot.get_user_data", return_value={"project": project}),
-            patch("src.telegram_bot.bot.pull_project", return_value=(False, "merge conflict")),
-            patch("src.telegram_bot.bot.get_project", return_value=project),
-            patch("src.telegram_bot.bot.show_project_menu", new_callable=AsyncMock, return_value=42),
+            patch("src.telegram_bot.handlers.projects.pull_project", return_value=(False, "merge conflict")),
+            patch("src.telegram_bot.handlers.projects.get_project", return_value=project),
+            patch("src.telegram_bot.handlers.projects.show_project_menu", new_callable=AsyncMock, return_value=42),
         ):
             result = await handle_action(update, context)
 
@@ -1859,9 +1859,9 @@ class TestHandleSync:
         context = make_context()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
             patch("src.telegram_bot.bot.get_user_data", return_value={}),
-            patch("src.telegram_bot.bot.show_projects", new_callable=AsyncMock, return_value=1) as mock_proj,
+            patch("src.telegram_bot.handlers.projects.show_projects", new_callable=AsyncMock, return_value=1) as mock_proj,
         ):
             result = await handle_action(update, context)
         mock_proj.assert_awaited_once()
@@ -1877,11 +1877,11 @@ class TestHandleSync:
         project = self._make_project()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
             patch("src.telegram_bot.bot.get_user_data", return_value={"project": project}),
-            patch("src.telegram_bot.bot.pull_project", return_value=(True, "Already up to date.")),
-            patch("src.telegram_bot.bot.get_project", return_value=project),
-            patch("src.telegram_bot.bot.show_project_menu", new_callable=AsyncMock, return_value=42),
+            patch("src.telegram_bot.handlers.projects.pull_project", return_value=(True, "Already up to date.")),
+            patch("src.telegram_bot.handlers.projects.get_project", return_value=project),
+            patch("src.telegram_bot.handlers.projects.show_project_menu", new_callable=AsyncMock, return_value=42),
         ):
             result = await handle_action(update, context)
 
@@ -1917,10 +1917,10 @@ class TestShowProjectMenuSyncButton:
         project = self._make_project()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
-            patch("src.telegram_bot.bot.check_remote_updates", return_value=0),
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.projects.brainstorm_manager") as mock_bm,
+            patch("src.telegram_bot.handlers.projects.check_remote_updates", return_value=0),
         ):
             mock_tm.get_task.return_value = None
             mock_tm.get_queue.return_value = []
@@ -1943,10 +1943,10 @@ class TestShowProjectMenuSyncButton:
         project = self._make_project()
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
-            patch("src.telegram_bot.bot.check_remote_updates", return_value=3),
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.projects.brainstorm_manager") as mock_bm,
+            patch("src.telegram_bot.handlers.projects.check_remote_updates", return_value=3),
         ):
             mock_tm.get_task.return_value = None
             mock_tm.get_queue.return_value = []
@@ -1973,10 +1973,10 @@ class TestShowProjectMenuSyncButton:
         mock_task.iterations = 5
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
-            patch("src.telegram_bot.bot.check_remote_updates", return_value=0),
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.projects.brainstorm_manager") as mock_bm,
+            patch("src.telegram_bot.handlers.projects.check_remote_updates", return_value=0),
         ):
             mock_tm.get_task.return_value = mock_task
             mock_tm.get_queue.return_value = []
@@ -2000,9 +2000,9 @@ class TestShowProjectMenuSyncButton:
         project = self._make_project(has_loop=False)
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.task_manager") as mock_tm,
-            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+            patch("src.telegram_bot.handlers.projects.brainstorm_manager") as mock_bm,
         ):
             mock_tm.get_task.return_value = None
             mock_tm.get_queue.return_value = []
@@ -2039,8 +2039,8 @@ class TestBrainstormHistoryCommand:
         user_data_store[self.CHAT_ID] = {}
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm,
         ):
             mock_bm.list_brainstorm_history.return_value = []
             result = await show_brainstorm_history(update, context)
@@ -2068,8 +2068,8 @@ class TestBrainstormHistoryCommand:
         ]
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm,
         ):
             mock_bm.list_brainstorm_history.return_value = history
             result = await show_brainstorm_history(update, context)
@@ -2098,8 +2098,8 @@ class TestBrainstormHistoryCommand:
         user_data_store[self.CHAT_ID] = {"project": mock_project}
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm,
         ):
             mock_bm.list_brainstorm_history.return_value = []
             await show_brainstorm_history(update, context)
@@ -2120,8 +2120,8 @@ class TestBrainstormHistoryCommand:
         user_data_store[self.CHAT_ID] = {}
 
         with (
-            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
-            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.brainstorm.brainstorm_manager") as mock_bm,
         ):
             mock_bm.list_brainstorm_history.return_value = []
             result = await show_brainstorm_history(update, context)

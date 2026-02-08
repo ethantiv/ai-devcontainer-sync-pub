@@ -1,7 +1,7 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 0/20 (0%)
+**Progress:** 10/20 (50%)
 **Last Verified:** 2026-02-08
 
 ## Goal
@@ -10,22 +10,22 @@ Implement current proposals from docs/ROADMAP.md: P2 (Important) reduce bot.py s
 
 ## Current Phase
 
-Phase 1: Extract Handler Modules from bot.py
+Phase 2: Pagination for Project List
 
 ## Phases
 
 ### Phase 1: Extract Handler Modules from bot.py (P2-Important)
-- [ ] Create `src/telegram_bot/handlers/` package with `__init__.py` that re-exports all handler functions needed by `bot.py`
-- [ ] Extract shared helpers to `src/telegram_bot/handlers/common.py`: `State` enum (line 162), `user_data_store` (line 178), `get_user_data()` (line 212), `authorized`/`authorized_callback` decorators (lines 181, 197), `reply_text()` (line 217), `_cancel_keyboard()` (line 235), `_nav_keyboard()` (line 263), `_brainstorm_hint_keyboard()` (line 242), `_brainstorm_hint_long_keyboard()` (line 252), `_is_brainstorm_error()` (line 230). Also include generic handlers: `cancel()` (line 1363), `help_command()` (line 1374), `handle_input_cancel()` (line 1278) — these are shared fallbacks used across all states
-- [ ] Extract project handlers to `src/telegram_bot/handlers/projects.py`: `start()` (line 280), `show_projects()` (line 292), `project_selected()` (line 333), `show_project_menu()` (line 353), `handle_name()` (line 662), `handle_clone_url()` (line 692), `handle_project_name()` (line 715), `handle_github_choice()` (line 757), plus project-related action branches from handle_action(): back, back_to_project, create_project, clone, worktree, loop_init, sync (7 of 14 branches)
-- [ ] Extract task handlers to `src/telegram_bot/handlers/tasks.py`: `handle_idea()` (line 803), `skip_idea()` (line 871), `handle_idea_button()` (line 1291), `show_iterations_menu()` (line 880), `handle_iterations()` (line 906), `handle_custom_iterations()` (line 933), `start_task()` (line 954), `show_status()` (line 1011), `show_queue()` (line 601), `handle_cancel_queue()` (line 641), plus task-related action branches: status, plan, build, attach, queue (5 of 14 branches)
-- [ ] Extract brainstorm handlers to `src/telegram_bot/handlers/brainstorm.py`: `start_brainstorming()` (line 1081), `handle_brainstorm_prompt()` (line 815), `handle_brainstorm_message()` (line 1143), `handle_brainstorm_action()` (line 1217), `handle_brainstorm_hint_button()` (line 1316), `finish_brainstorming()` (line 1183), `cancel_brainstorming()` (line 1258), `show_brainstorm_history()` (line 1034), plus brainstorm-related action branches: brainstorm, resume_brainstorm (2 of 14 branches)
-- [ ] Extract background jobs to `src/telegram_bot/handlers/jobs.py`: `_format_completion_summary()` (line 1384), `check_task_completion()` (line 1434), `check_task_progress()` (line 1515), `run_log_rotation()` (line 1574), `handle_completion_diff()` (line 1591)
-- [ ] Refactor `handle_action()` mega-dispatcher (lines 443-598, 14 branches): split into `_handle_project_action()` (7 branches), `_handle_task_action()` (5 branches), `_handle_brainstorm_action_dispatch()` (2 branches) in respective handler modules, keep thin `handle_action()` router in `bot.py` that delegates to sub-dispatchers
-- [ ] Slim down `bot.py` to thin wiring layer: imports from handler modules, `create_application()` function (currently 90 lines at 1634-1723) with ConversationHandler wiring (10 states, 5 entry points, 3 fallbacks), 1 standalone callback handler, 3 job_queue registrations — target ~150 lines total
-- [ ] Update all test imports in `test_bot.py`: 18 unique patched items (`TELEGRAM_CHAT_ID`, `STALE_THRESHOLD`, `PROJECTS_ROOT`, `task_manager`, `brainstorm_manager`, `get_user_data`, `pull_project`, `check_remote_updates`, `get_plan_progress`, `get_diff_stats`, `get_recent_commits`, `rotate_logs`, `cleanup_brainstorm_files`, `show_project_menu`, `show_projects`, `show_iterations_menu`, `get_project`, `os.path.getmtime`) across ~204 patch locations must reference new module paths. Top targets by frequency: `TELEGRAM_CHAT_ID` (69), `task_manager` (40), `get_user_data` (23), `brainstorm_manager` (21), `STALE_THRESHOLD` (13), `os.path.getmtime` (13). No other test files reference bot.py — changes isolated to test_bot.py
-- [ ] Run full test suite — all 424 Python tests must pass with zero regressions
-- **Status:** pending
+- [x] Create `src/telegram_bot/handlers/` package with `__init__.py` that re-exports all handler functions needed by `bot.py`
+- [x] Extract shared helpers to `src/telegram_bot/handlers/common.py`: `State` enum, `user_data_store`, `get_user_data()`, `authorized`/`authorized_callback` decorators, `reply_text()`, keyboard helpers (`_cancel_keyboard`, `_nav_keyboard`, `_brainstorm_hint_keyboard`, `_brainstorm_hint_long_keyboard`), `_is_brainstorm_error()`, generic handlers (`cancel`, `help_command`, `handle_input_cancel`)
+- [x] Extract project handlers to `src/telegram_bot/handlers/projects.py`: `start()`, `show_projects()`, `project_selected()`, `show_project_menu()`, `handle_name()`, `handle_clone_url()`, `handle_project_name()`, `handle_github_choice()`, plus `_handle_project_action()` sub-dispatcher (7 branches: back, back_to_project, create_project, clone, worktree, loop_init, sync)
+- [x] Extract task handlers to `src/telegram_bot/handlers/tasks.py`: `handle_idea()`, `skip_idea()`, `handle_idea_button()`, `show_iterations_menu()`, `handle_iterations()`, `handle_custom_iterations()`, `start_task()`, `show_status()`, `show_queue()`, `handle_cancel_queue()`, plus `_handle_task_action()` sub-dispatcher (5 branches: status, plan, build, attach, queue)
+- [x] Extract brainstorm handlers to `src/telegram_bot/handlers/brainstorm.py`: `start_brainstorming()`, `handle_brainstorm_prompt()`, `handle_brainstorm_message()`, `handle_brainstorm_action()`, `handle_brainstorm_hint_button()`, `finish_brainstorming()`, `cancel_brainstorming()`, `show_brainstorm_history()`, plus `_handle_brainstorm_action_dispatch()` (2 branches: brainstorm, resume_brainstorm)
+- [x] Extract background jobs to `src/telegram_bot/handlers/jobs.py`: `_format_completion_summary()`, `check_task_completion()`, `check_task_progress()`, `run_log_rotation()`, `handle_completion_diff()`
+- [x] Refactor `handle_action()` mega-dispatcher: split into `_handle_project_action()`, `_handle_task_action()`, `_handle_brainstorm_action_dispatch()` in respective handler modules, thin `handle_action()` router in `bot.py` delegates to sub-dispatchers
+- [x] Slim down `bot.py` to thin wiring layer (~187 lines): imports from handler modules, `handle_action()` router, `create_application()` with ConversationHandler wiring
+- [x] Update all test imports in `test_bot.py`: ~204 patch locations updated to reference new handler module paths
+- [x] Run full test suite — 424 Python tests pass with zero regressions
+- **Status:** complete
 
 ### Phase 2: Pagination for Project List (P3-Nice to Have)
 - [ ] Add pagination constants to `config.py`: `PROJECTS_PER_PAGE` (default 5, no env var — hardcoded is fine for UI layout)
