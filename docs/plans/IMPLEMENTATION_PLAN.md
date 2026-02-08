@@ -1,8 +1,8 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 16/43 (37%)
-**Last Verified:** 2026-02-08 — Phase 2 complete
+**Progress:** 20/43 (47%)
+**Last Verified:** 2026-02-08 — Phase 3 complete
 
 ## Goal
 
@@ -10,7 +10,7 @@ Implement all proposals from docs/ROADMAP.md across three priority tiers: P1 (Cr
 
 ## Current Phase
 
-Phase 3: Upgrade Commander.js to v14 (P2-Important)
+Phase 4: Task Queue Expiry and Retry Logic (P3-Nice to Have)
 
 ## Phases
 
@@ -37,11 +37,11 @@ Phase 3: Upgrade Commander.js to v14 (P2-Important)
 - **Status:** complete
 
 ### Phase 3: Upgrade Commander.js to v14 (P2-Important)
-- [ ] Update `src/package.json` dependency from `^12.0.0` to `^14.0.0`
-- [ ] Run `npm install --prefix src` and verify no install errors
-- [ ] Run `npm test --prefix src` — verify all 20 JS tests pass
-- [ ] Manually verify all CLI commands: `loop plan`, `loop build`, `loop run`, `loop init`, `loop cleanup`, `loop summary`, `loop update`
-- **Status:** pending
+- [x] Update `src/package.json` dependency from `^12.0.0` to `^14.0.0`
+- [x] Run `npm install --prefix src` and verify no install errors — Commander.js 14.0.3 installed
+- [x] Run `npm test --prefix src` — all 20 JS tests pass
+- [x] Manually verify all CLI commands: `loop plan`, `loop build`, `loop run`, `loop init`, `loop cleanup`, `loop summary`, `loop update` — all 7 commands verified
+- **Status:** complete
 
 ### Phase 4: Task Queue Expiry and Retry Logic (P3-Nice to Have)
 - [ ] Add `QUEUE_TTL` configurable threshold to `config.py` (env var `LOOP_QUEUE_TTL`, default 3600 seconds) — use existing `_safe_int()` helper
@@ -88,9 +88,9 @@ Phase 3: Upgrade Commander.js to v14 (P2-Important)
 | Is there retry logic for git operations? | No — all subprocess calls attempt once, catch TimeoutExpired/OSError, return immediately |
 | Is the sync/pull feature started? | No — no git pull/fetch references in telegram_bot code, no MSG_SYNC_* constants |
 | Is brainstorm history viewer started? | No — no history-related code or messages exist. Sessions removed from `.brainstorm_sessions.json` after `finish()` — only JSONL files remain |
-| What Commander.js version is installed? | ^12.0.0 in package.json (resolved to 12.1.0). All APIs used are stable across v12→v14 |
+| What Commander.js version is installed? | ^14.0.0 in package.json (resolved to 14.0.3). Upgrade from v12 complete — all APIs stable |
 | Are there any TODOs/FIXMEs in the codebase? | None — codebase is clean with no TODO, FIXME, HACK, XXX comments or skipped tests |
-| Does Commander.js upgrade require code changes? | No — only stable APIs used (.command(), .option(), .action(), .parse(), .addHelpText()). All cross-compatible with v14 |
+| Does Commander.js upgrade require code changes? | No — confirmed. v12→v14 upgrade required zero code changes. All 20 tests pass, all 7 CLI commands verified |
 
 ## Findings & Decisions
 
