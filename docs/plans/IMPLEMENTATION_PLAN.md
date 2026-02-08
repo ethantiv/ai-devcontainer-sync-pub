@@ -1,9 +1,8 @@
 # Implementation Plan
 
-**Status:** IN_PROGRESS
-**Progress:** 0/11 (0%)
+**Status:** COMPLETE
+**Progress:** 11/11 (100%)
 **Last updated:** 2026-02-08
-**Verified:** 2026-02-08 — all line numbers re-confirmed against source code
 
 ## Goal
 
@@ -14,85 +13,31 @@ From ROADMAP.md:
 
 ## Current Phase
 
-Phase 1: Remove duplicate notification from notify-telegram.sh
+All phases complete.
 
 ## Phases
 
 ### Phase 1: Remove duplicate notification from notify-telegram.sh
-- [ ] Remove `notify-telegram.sh` call from `loop.sh` cleanup trap (loop.sh lines 30-35, 6 lines) — bot.py's `check_task_completion()` already sends a richer summary with diff stats, commits, plan progress, and interactive buttons
-- [ ] Keep `notify-telegram.sh` file intact for potential standalone use; keep `loop init` symlink in `init.js` line 99
-- **Status:** pending
+- [x] Remove `notify-telegram.sh` call from `loop.sh` cleanup trap (loop.sh lines 30-35, 6 lines) — bot.py's `check_task_completion()` already sends a richer summary with diff stats, commits, plan progress, and interactive buttons
+- [x] Keep `notify-telegram.sh` file intact for potential standalone use; keep `loop init` symlink in `init.js` line 99
+- **Status:** complete
 
 ### Phase 2: Consolidate completion summary + queue start into single message
-- [ ] Add new message constant `MSG_COMPLETION_QUEUE_NEXT` in messages.py (after line 164) for the "next task started" line within the completion message
-- [ ] Add optional `next_task: Task | None = None` parameter to `_format_completion_summary()` (bot.py lines 1225-1258); when provided, append `MSG_COMPLETION_QUEUE_NEXT` line to the summary output
-- [ ] Update `check_task_completion()` (bot.py lines 1261-1322): when both `completed_task` and `next_task` exist, pass `next_task` to `_format_completion_summary()` and skip the second `send_message()` call (lines 1310-1322)
-- [ ] When only `next_task` exists (orphaned queue start, no completed task), keep sending standalone `MSG_STARTED_FROM_QUEUE` message
-- [ ] Add `MSG_COMPLETION_QUEUE_NEXT` import to bot.py imports (line 29-125)
-- **Status:** pending
+- [x] Add new message constant `MSG_COMPLETION_QUEUE_NEXT` in messages.py (after line 164) for the "next task started" line within the completion message
+- [x] Add optional `next_task: Task | None = None` parameter to `_format_completion_summary()` (bot.py); when provided, append `MSG_COMPLETION_QUEUE_NEXT` line to the summary output
+- [x] Update `check_task_completion()` (bot.py): when both `completed_task` and `next_task` exist, pass `next_task` to `_format_completion_summary()` and skip the second `send_message()` call (changed `if next_task:` to `elif next_task:`)
+- [x] When only `next_task` exists (orphaned queue start, no completed task), keep sending standalone `MSG_STARTED_FROM_QUEUE` message
+- [x] Add `MSG_COMPLETION_QUEUE_NEXT` import to bot.py imports
+- **Status:** complete
 
 ### Phase 3: Add tests for consolidated notifications
-- [ ] Add tests for `_format_completion_summary()` in `test_bot.py` verifying: basic output, with diff stats, with commits, with plan progress, and with `next_task` appended (queue next line present in output)
-- [ ] Add tests for `check_task_completion()` in `test_bot.py` verifying: single `send_message` call when task completes with queued next (not two), standalone message for orphaned queue start, no message when no tasks completed
-- [ ] Add test verifying `notify-telegram.sh` is no longer called from `loop.sh` cleanup trap (grep loop.sh for the call — shell test in `test_bot.py` or separate)
-- [ ] Run `python3 -m pytest src/telegram_bot/tests/ -v` — all tests pass (current: 221 tests)
-- **Status:** pending
+- [x] Add tests for `_format_completion_summary()` in `test_bot.py` verifying: basic output, with diff stats, with commits, with plan progress, and with `next_task` appended (queue next line present in output)
+- [x] Add tests for `check_task_completion()` in `test_bot.py` verifying: single `send_message` call when task completes with queued next (not two), standalone message for orphaned queue start, no message when no tasks completed
+- [x] Add test verifying `notify-telegram.sh` is no longer called from `loop.sh` cleanup trap (grep loop.sh for the call)
+- [x] Run `python3 -m pytest src/telegram_bot/tests/ -v` — all tests pass
+- **Status:** complete
 
 ## Findings & Decisions
-
-### Requirements
-- Reduce the number of separate Telegram messages between task completion and next queue task start from 3-4 to 1-2
-- Preserve all useful information (diff stats, commits, plan progress, interactive buttons)
-- Maintain the unified visual style (mode icons ◇/■, markdown formatting)
-- Keep the iteration progress message as-is (already uses edit-in-place pattern, sends only 1 new message + edits)
-
-### Research Findings
-
-**Current notification flow when a task completes and queue has next task:**
-
-| # | Source | Timing | Message | Type |
-|---|--------|--------|---------|------|
-| 1 | `notify-telegram.sh` via loop.sh cleanup trap | Immediate on script exit | Basic summary: mode, status, iterations/total, time, project | NEW message |
-| 2 | `check_task_completion()` in bot.py (line 1302-1307) | Within 30s (job poll) | Rich summary: iterations, time, diff stats, commits, plan progress + buttons | NEW message |
-| 3 | `check_task_completion()` in bot.py (line 1318-1322) | Same job run as #2 | "▶ Started from queue: {project} - {mode} • {iterations} iterations" | NEW message |
-| 4 | `check_task_progress()` in bot.py (lines 1325-1381) | Within 15s of new task starting | "◇/■ {project} — Iteration 1/N (elapsed)" | NEW message (then edits for subsequent iterations) |
-
-**Result: User sees 4 separate messages within ~30 seconds of a task completing.**
-
-**Problem breakdown:**
-- Message #1 (notify-telegram.sh) **duplicates** message #2 (bot.py) — 70% content overlap, bot.py version is strictly richer
-- Message #3 (queue start) could be appended to message #2 instead of sent separately
-- Message #4 (iteration progress) is already optimized (1 new message, subsequent edits) and should remain as-is
-
-**After consolidation: 2 messages** (1 completion+queue summary, 1 iteration progress)
-
-**Key code locations:**
-
-| File | Lines | Function | Change Needed |
-|------|-------|----------|---------------|
-| `src/scripts/loop.sh` | 30-35 | `cleanup()` trap | Remove `notify-telegram.sh` call |
-| `src/telegram_bot/bot.py` | 1225-1258 | `_format_completion_summary()` | Add optional `next_task` parameter |
-| `src/telegram_bot/bot.py` | 1261-1322 | `check_task_completion()` | Merge queue start into summary |
-| `src/telegram_bot/messages.py` | 161-164 | `MSG_STARTED_FROM_QUEUE` | Keep for orphaned queue; add `MSG_COMPLETION_QUEUE_NEXT` |
-
-**notify-telegram.sh vs bot.py comparison:**
-
-| Field | notify-telegram.sh | bot.py check_task_completion() |
-|-------|-------------------|-------------------------------|
-| Mode icon (◇/■) | ✓ | ✓ |
-| Project name | ✓ | ✓ |
-| Mode (plan/build) | ✓ | ✓ (in title) |
-| Status (success/completed/interrupted) | ✓ | ✗ (always "completed") |
-| Iterations | ✓ (completed/total) | ✓ (just total) |
-| Duration | ✓ | ✓ |
-| Diff stats (files, +/- lines) | ✗ | ✓ |
-| Recent commits | ✗ | ✓ |
-| Plan progress | ✗ | ✓ |
-| Interactive buttons | ✗ | ✓ |
-
-**Conclusion:** bot.py's notification is strictly superior. The only field lost is "Status" (success/completed/interrupted distinction), but this is low-value since the bot always treats task end as completion.
-
-**Coordination between paths:** Zero. No deduplication flag, no shared state, no timing guarantee. Both paths always fire independently when bot is running.
 
 ### Technical Decisions
 | Decision | Rationale |
@@ -103,11 +48,3 @@ Phase 1: Remove duplicate notification from notify-telegram.sh
 | Keep orphaned queue start as standalone message | When there's no completed task (bot restarted), the queue start notification is the only message — can't merge into nothing |
 | Keep iteration progress message (message #4) unchanged | Already optimized with edit-in-place pattern; sends 1 new message + N-1 edits. No consolidation needed |
 | Add `MSG_COMPLETION_QUEUE_NEXT` constant instead of reusing `MSG_STARTED_FROM_QUEUE` | Different formatting — inline within summary vs standalone message |
-
-### Issues Encountered
-| Issue | Resolution |
-|-------|------------|
-| notify-telegram.sh sends via direct curl to Telegram API; bot.py sends via python-telegram-bot library | Two independent notification paths with zero coordination — solved by removing the shell path |
-| Removing notify-telegram.sh call means no immediate notification (bot polls every 30s) | Acceptable trade-off: user waits up to 30s but gets a single, richer notification instead of 2 spammy ones |
-| `_format_completion_summary()` currently takes only task data, not queue info | Extend function signature to accept optional `next_task: Task` parameter |
-| `MSG_STARTED_FROM_QUEUE` is used both for standalone and merged contexts | Create separate `MSG_COMPLETION_QUEUE_NEXT` for merged context; keep `MSG_STARTED_FROM_QUEUE` for orphaned queue starts |

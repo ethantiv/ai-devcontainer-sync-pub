@@ -67,6 +67,7 @@ from .messages import (
     MSG_COMPLETION_CHANGES,
     MSG_COMPLETION_COMMITS,
     MSG_COMPLETION_ITERATIONS,
+    MSG_COMPLETION_QUEUE_NEXT,
     MSG_COMPLETION_PLAN,
     MSG_COMPLETION_TIME,
     MSG_COMPLETION_TITLE,
@@ -1227,8 +1228,13 @@ def _format_completion_summary(
     diff_stats: dict | None,
     commits: list[str],
     plan_progress: tuple[int, int] | None,
+    next_task: Task | None = None,
 ) -> str:
-    """Build a Markdown completion summary message."""
+    """Build a Markdown completion summary message.
+
+    When next_task is provided, appends a "queue next" line so the user
+    receives one consolidated message instead of two separate ones.
+    """
     icon = "◇" if task.mode == "plan" else "■"
     duration = task_manager.get_task_duration(task)
 
@@ -1255,6 +1261,15 @@ def _format_completion_summary(
         bar = "█" * bar_filled + "░" * (10 - bar_filled)
         text += MSG_COMPLETION_PLAN.format(done=done, total=total, pct=pct, bar=bar)
 
+    if next_task:
+        next_icon = "≡" if next_task.mode == "plan" else "■"
+        text += MSG_COMPLETION_QUEUE_NEXT.format(
+            icon=next_icon,
+            project=next_task.project,
+            mode=next_task.mode.title(),
+            iterations=next_task.iterations,
+        )
+
     return text
 
 
@@ -1280,7 +1295,8 @@ async def check_task_completion(context: ContextTypes.DEFAULT_TYPE) -> None:
             plan_progress = get_plan_progress(completed_task.project_path)
 
             summary = _format_completion_summary(
-                completed_task, diff_stats, commits, plan_progress
+                completed_task, diff_stats, commits, plan_progress,
+                next_task=next_task,
             )
 
             buttons = []
@@ -1306,8 +1322,8 @@ async def check_task_completion(context: ContextTypes.DEFAULT_TYPE) -> None:
                 reply_markup=reply_markup,
             )
 
-        # Notify about queued task starting
-        if next_task:
+        # Standalone queue start — only when no completed task (e.g. bot restarted)
+        elif next_task:
             icon = "≡" if next_task.mode == "plan" else "■"
             text = MSG_STARTED_FROM_QUEUE.format(
                 icon=icon,

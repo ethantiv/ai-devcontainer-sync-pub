@@ -549,3 +549,233 @@ class TestHandleBrainstormHintButton:
             mock_bm.finish = AsyncMock(return_value=(True, "Saved", "content"))
             result = await handle_brainstorm_hint_button(update, context)
         assert result == State.BRAINSTORMING
+
+
+# --- Tests for _format_completion_summary ---
+
+
+class TestFormatCompletionSummary:
+    """Tests for _format_completion_summary() output formatting."""
+
+    def _make_task(self, project="myproject", mode="build", iterations=5):
+        from src.telegram_bot.tasks import Task
+        from pathlib import Path
+        return Task(
+            project=project,
+            project_path=Path(f"/tmp/{project}"),
+            mode=mode,
+            iterations=iterations,
+            idea=None,
+            session_name=f"loop-{project}",
+        )
+
+    def test_basic_output(self):
+        """Basic summary contains project, mode, iterations, and duration."""
+        from src.telegram_bot.bot import _format_completion_summary
+
+        task = self._make_task()
+        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.get_task_duration.return_value = "2m 30s"
+            result = _format_completion_summary(task, None, [], None)
+
+        assert "myproject" in result
+        assert "Build completed" in result
+        assert "Iterations: 5" in result
+        assert "2m 30s" in result
+
+    def test_with_diff_stats(self):
+        """Summary includes change stats when diff_stats is provided."""
+        from src.telegram_bot.bot import _format_completion_summary
+
+        task = self._make_task()
+        diff = {"files_changed": 3, "insertions": 42, "deletions": 10}
+        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.get_task_duration.return_value = "1m 0s"
+            result = _format_completion_summary(task, diff, [], None)
+
+        assert "Files: 3" in result
+        assert "+42" in result
+        assert "-10" in result
+
+    def test_with_commits(self):
+        """Summary includes commit list when commits are provided."""
+        from src.telegram_bot.bot import _format_completion_summary
+
+        task = self._make_task()
+        commits = ["abc1234 fix: bug", "def5678 feat: new"]
+        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.get_task_duration.return_value = "5s"
+            result = _format_completion_summary(task, None, commits, None)
+
+        assert "abc1234 fix: bug" in result
+        assert "def5678 feat: new" in result
+        assert "Commits" in result
+
+    def test_with_plan_progress(self):
+        """Summary includes plan progress bar when plan_progress is provided."""
+        from src.telegram_bot.bot import _format_completion_summary
+
+        task = self._make_task()
+        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.get_task_duration.return_value = "10s"
+            result = _format_completion_summary(task, None, [], (3, 10))
+
+        assert "3/10" in result
+        assert "30%" in result
+        assert "Plan" in result
+
+    def test_with_next_task_appends_queue_line(self):
+        """When next_task is provided, summary includes queue-next line."""
+        from src.telegram_bot.bot import _format_completion_summary
+
+        completed = self._make_task(project="proj-a", mode="build", iterations=5)
+        next_t = self._make_task(project="proj-b", mode="plan", iterations=3)
+        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.get_task_duration.return_value = "1m 0s"
+            result = _format_completion_summary(completed, None, [], None, next_task=next_t)
+
+        assert "Next" in result
+        assert "proj-b" in result
+        assert "Plan" in result
+        assert "3 iterations" in result
+
+    def test_without_next_task_no_queue_line(self):
+        """When next_task is None, summary does not include queue-next line."""
+        from src.telegram_bot.bot import _format_completion_summary
+
+        task = self._make_task()
+        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.get_task_duration.return_value = "5s"
+            result = _format_completion_summary(task, None, [], None, next_task=None)
+
+        assert "Next" not in result
+
+    def test_plan_mode_uses_diamond_icon(self):
+        """Plan mode uses diamond icon in title."""
+        from src.telegram_bot.bot import _format_completion_summary
+
+        task = self._make_task(mode="plan")
+        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.get_task_duration.return_value = "5s"
+            result = _format_completion_summary(task, None, [], None)
+
+        assert "\u25c7" in result  # ◇
+
+
+# --- Tests for check_task_completion ---
+
+
+class TestCheckTaskCompletion:
+    """Tests for check_task_completion() notification consolidation."""
+
+    CHAT_ID = 12345
+
+    def _make_task(self, project="myproject", mode="build", iterations=5, start_commit=None):
+        from src.telegram_bot.tasks import Task
+        from pathlib import Path
+        return Task(
+            project=project,
+            project_path=Path(f"/tmp/{project}"),
+            mode=mode,
+            iterations=iterations,
+            idea=None,
+            session_name=f"loop-{project}",
+            start_commit=start_commit,
+        )
+
+    @pytest.mark.asyncio
+    async def test_completed_with_queue_sends_single_message(self):
+        """When task completes and queue has next, only one send_message call is made."""
+        from src.telegram_bot.bot import check_task_completion
+
+        completed = self._make_task(project="proj-a")
+        next_t = self._make_task(project="proj-b", mode="plan", iterations=3)
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.task_manager") as mock_tm, \
+             patch("src.telegram_bot.bot.get_plan_progress", return_value=None), \
+             patch("src.telegram_bot.bot.get_diff_stats", return_value=None), \
+             patch("src.telegram_bot.bot.get_recent_commits", return_value=[]):
+            mock_tm.process_completed_tasks.return_value = [(completed, next_t)]
+            mock_tm.get_task_duration.return_value = "1m 0s"
+            await check_task_completion(context)
+
+        # Only one message sent (consolidated), not two separate ones
+        assert context.bot.send_message.await_count == 1
+        call_kwargs = context.bot.send_message.call_args[1]
+        # The single message contains both completion and queue-next info
+        assert "proj-a" in call_kwargs["text"]
+        assert "proj-b" in call_kwargs["text"]
+        assert "Next" in call_kwargs["text"]
+
+    @pytest.mark.asyncio
+    async def test_orphaned_queue_start_sends_standalone_message(self):
+        """When no completed task but queue starts, standalone message is sent."""
+        from src.telegram_bot.bot import check_task_completion
+
+        next_t = self._make_task(project="proj-b", mode="build", iterations=5)
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.process_completed_tasks.return_value = [(None, next_t)]
+            await check_task_completion(context)
+
+        assert context.bot.send_message.await_count == 1
+        call_kwargs = context.bot.send_message.call_args[1]
+        assert "Started from queue" in call_kwargs["text"]
+        assert "proj-b" in call_kwargs["text"]
+
+    @pytest.mark.asyncio
+    async def test_no_tasks_sends_no_message(self):
+        """When no completed tasks and no queue, no messages are sent."""
+        from src.telegram_bot.bot import check_task_completion
+
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.process_completed_tasks.return_value = []
+            await check_task_completion(context)
+
+        context.bot.send_message.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_completed_without_queue_sends_one_message(self):
+        """When task completes with no queue, one completion summary is sent."""
+        from src.telegram_bot.bot import check_task_completion
+
+        completed = self._make_task(project="proj-a")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.task_manager") as mock_tm, \
+             patch("src.telegram_bot.bot.get_plan_progress", return_value=None), \
+             patch("src.telegram_bot.bot.get_diff_stats", return_value=None), \
+             patch("src.telegram_bot.bot.get_recent_commits", return_value=[]):
+            mock_tm.process_completed_tasks.return_value = [(completed, None)]
+            mock_tm.get_task_duration.return_value = "30s"
+            await check_task_completion(context)
+
+        assert context.bot.send_message.await_count == 1
+        call_kwargs = context.bot.send_message.call_args[1]
+        assert "proj-a" in call_kwargs["text"]
+        assert "Next" not in call_kwargs["text"]
+
+
+# --- Test for notify-telegram.sh removal from loop.sh ---
+
+
+class TestNotifyTelegramRemoval:
+    """Verify notify-telegram.sh is no longer called from loop.sh cleanup trap."""
+
+    def test_loop_sh_does_not_call_notify_telegram(self):
+        """loop.sh cleanup trap should not invoke notify-telegram.sh."""
+        import os
+        loop_sh = os.path.join(
+            os.path.dirname(__file__), "..", "..", "scripts", "loop.sh"
+        )
+        with open(loop_sh) as f:
+            content = f.read()
+        assert "notify-telegram.sh" not in content

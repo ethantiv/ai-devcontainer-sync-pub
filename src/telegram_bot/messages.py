@@ -162,6 +162,9 @@ MSG_STARTED_FROM_QUEUE = (
     "\u25b6 *Started from queue:*\n"
     "{icon} {project} - {mode} \u2022 {iterations} iterations"
 )
+MSG_COMPLETION_QUEUE_NEXT = (
+    "\n\u25b6 *Next:* {icon} {project} - {mode} \u2022 {iterations} iterations"
+)
 
 # Stale progress
 MSG_STALE_PROGRESS = "! *{project}* \u2014 no progress for 5 min"

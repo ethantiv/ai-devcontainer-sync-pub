@@ -26,14 +26,6 @@ cleanup() {
     node -e "require('$LOOP_ROOT/lib/summary').generateSummary('$LOG_DIR').then(s => process.stdout.write(s))" \
         > "$LOG_DIR/summary-latest.txt" 2>/dev/null || true
 
-    # Send Telegram notification
-    "$LOOP_SCRIPTS_DIR/notify-telegram.sh" \
-        --mode "$SCRIPT_NAME" \
-        --iterations "$COMPLETED_ITERATIONS" \
-        --total "$ITERATIONS" \
-        --duration "$duration" \
-        --status "$EXIT_STATUS"
-
     echo ""
     echo "[CLEANUP] Cleaning up background processes..."
     "$LOOP_SCRIPTS_DIR/cleanup.sh" 2>/dev/null || true
