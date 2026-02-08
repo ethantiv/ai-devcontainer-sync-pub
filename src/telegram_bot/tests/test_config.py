@@ -268,11 +268,11 @@ class TestConfigurableThresholds:
     """
 
     def test_stale_threshold_default(self, tmp_projects_root):
-        """STALE_THRESHOLD defaults to 300 when env var is not set."""
+        """STALE_THRESHOLD defaults to 1800 when env var is not set."""
         env = {"PROJECTS_ROOT": str(tmp_projects_root)}
         with patch.dict(os.environ, env, clear=True):
             config = _reload_config(env)
-            assert config.STALE_THRESHOLD == 300
+            assert config.STALE_THRESHOLD == 1800
 
     def test_stale_threshold_from_env(self, tmp_projects_root):
         """STALE_THRESHOLD reads LOOP_STALE_THRESHOLD env var."""
@@ -285,14 +285,14 @@ class TestConfigurableThresholds:
             assert config.STALE_THRESHOLD == 600
 
     def test_stale_threshold_invalid_falls_back(self, tmp_projects_root):
-        """Non-numeric LOOP_STALE_THRESHOLD falls back to 300."""
+        """Non-numeric LOOP_STALE_THRESHOLD falls back to 1800."""
         env = {
             "PROJECTS_ROOT": str(tmp_projects_root),
             "LOOP_STALE_THRESHOLD": "not_a_number",
         }
         with patch.dict(os.environ, env, clear=True):
             config = _reload_config(env)
-            assert config.STALE_THRESHOLD == 300
+            assert config.STALE_THRESHOLD == 1800
 
     def test_brainstorm_poll_interval_default(self, tmp_projects_root):
         """BRAINSTORM_POLL_INTERVAL defaults to 0.5."""

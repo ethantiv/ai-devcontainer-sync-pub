@@ -168,7 +168,7 @@ MSG_COMPLETION_QUEUE_NEXT = (
 )
 
 # Stale progress
-MSG_STALE_PROGRESS = "! *{project}* \u2014 no progress for 5 min"
+MSG_STALE_PROGRESS = "! *{project}* \u2014 no progress for {minutes} min"
 
 # Disk space and log rotation
 MSG_DISK_LOW = "\u26a0 *Disk space low* \u2014 {available_mb} MB free (minimum: {min_mb} MB). Cannot start task."

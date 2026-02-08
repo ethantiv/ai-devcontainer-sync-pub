@@ -41,7 +41,7 @@ TELEGRAM_CHAT_ID = _safe_int(environ.get("TELEGRAM_CHAT_ID"), 0)
 PROJECTS_ROOT = environ.get("PROJECTS_ROOT", "/home/developer/projects")
 
 # Configurable thresholds — override via environment variables
-STALE_THRESHOLD = _safe_int(environ.get("LOOP_STALE_THRESHOLD"), 300)
+STALE_THRESHOLD = _safe_int(environ.get("LOOP_STALE_THRESHOLD"), 1800)
 BRAINSTORM_POLL_INTERVAL = _safe_float(
     environ.get("LOOP_BRAINSTORM_POLL_INTERVAL"), 0.5
 )

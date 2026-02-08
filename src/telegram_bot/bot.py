@@ -1442,9 +1442,10 @@ async def check_task_progress(context: ContextTypes.DEFAULT_TYPE) -> None:
             and task_manager._is_session_running(task.session_name)
         ):
             task.stale_warned = True
+            minutes = STALE_THRESHOLD // 60
             await context.bot.send_message(
                 chat_id=TELEGRAM_CHAT_ID,
-                text=MSG_STALE_PROGRESS.format(project=task.project),
+                text=MSG_STALE_PROGRESS.format(project=task.project, minutes=minutes),
                 parse_mode="Markdown",
             )
 

@@ -1443,7 +1443,7 @@ class TestCheckTaskProgress:
         # Stale warning sent
         context.bot.send_message.assert_awaited_once()
         call_kwargs = context.bot.send_message.call_args[1]
-        assert call_kwargs["text"] == MSG_STALE_PROGRESS.format(project="myproject")
+        assert call_kwargs["text"] == MSG_STALE_PROGRESS.format(project="myproject", minutes=5)
         assert task.stale_warned is True
 
     @pytest.mark.asyncio

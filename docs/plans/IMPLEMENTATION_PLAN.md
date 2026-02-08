@@ -1,8 +1,8 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 26/43 (60%)
-**Last Verified:** 2026-02-08 — Phase 4 complete
+**Progress:** 31/43 (72%)
+**Last Verified:** 2026-02-08 — Phase 5 complete
 
 ## Goal
 
@@ -10,7 +10,7 @@ Implement all proposals from docs/ROADMAP.md across three priority tiers: P1 (Cr
 
 ## Current Phase
 
-Phase 5: Stale Threshold Default Increase (P3-Nice to Have)
+Phase 6: Sync/Pull Button in Telegram Project Menu (P3-Nice to Have)
 
 ## Phases
 
@@ -53,12 +53,12 @@ Phase 5: Stale Threshold Default Increase (P3-Nice to Have)
 - **Status:** complete
 
 ### Phase 5: Stale Threshold Default Increase (P3-Nice to Have)
-- [ ] Change `STALE_THRESHOLD` default from 300 to 1800 in `config.py` (line 44)
-- [ ] Update `MSG_STALE_PROGRESS` in `messages.py` (line 171) to use dynamic threshold display: `"! *{project}* — no progress for {minutes} min"` instead of hardcoded `"5 min"`
-- [ ] Update `bot.py::check_task_progress()` to pass threshold value to message formatting (compute `minutes = STALE_THRESHOLD // 60`)
-- [ ] Update existing tests in `test_config.py` that assert `STALE_THRESHOLD == 300` → `== 1800` (3 tests: `test_stale_threshold_default`, `test_stale_threshold_from_env`, `test_stale_threshold_invalid_falls_back`)
-- [ ] Update CLAUDE.md env var table: `LOOP_STALE_THRESHOLD` default from 300 to 1800
-- **Status:** pending
+- [x] Change `STALE_THRESHOLD` default from 300 to 1800 in `config.py` (line 44)
+- [x] Update `MSG_STALE_PROGRESS` in `messages.py` (line 171) to use dynamic threshold display: `"! *{project}* — no progress for {minutes} min"` instead of hardcoded `"5 min"`
+- [x] Update `bot.py::check_task_progress()` to pass threshold value to message formatting (compute `minutes = STALE_THRESHOLD // 60`)
+- [x] Update existing tests in `test_config.py` that assert `STALE_THRESHOLD == 300` → `== 1800` (2 tests: `test_stale_threshold_default`, `test_stale_threshold_invalid_falls_back`) + update `test_bot.py` stale message assertion for dynamic `{minutes}` format
+- [x] Update CLAUDE.md env var table: `LOOP_STALE_THRESHOLD` default from 300 to 1800, and Configurable thresholds note
+- **Status:** complete
 
 ### Phase 6: Sync/Pull Button in Telegram Project Menu (P3-Nice to Have)
 - [ ] Add `check_remote_updates(project_path)` function to `git_utils.py`: run `git fetch` then `git rev-list HEAD..@{u} --count` to detect new remote commits, return count (int), use 10s timeout — follow existing subprocess pattern
