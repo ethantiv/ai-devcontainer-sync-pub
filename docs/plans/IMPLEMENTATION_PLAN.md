@@ -3,7 +3,7 @@
 **Status:** IN_PROGRESS
 **Progress:** 0/20 (0%)
 **Last updated:** 2026-02-08
-**Verified:** 2026-02-08 — all line numbers confirmed against source code
+**Verified:** 2026-02-08 — all line numbers re-confirmed against source code (bot.py, test_bot.py, messages.py)
 
 ## Goal
 
