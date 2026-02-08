@@ -23,5 +23,8 @@ Queued tasks have no TTL — a task can sit in the queue indefinitely if earlier
 #### Increase stale task threshold from 5 to 30 minutes
 `LOOP_STALE_THRESHOLD` defaults to 300 seconds (5 minutes). In practice, Claude Code iterations — especially on large codebases or with multi-file edits — regularly exceed 5 minutes without producing new log output. This triggers false-positive stale warnings in the Telegram bot. Change the default to 1800 seconds (30 minutes) in `config.py` to better match real-world iteration durations.
 
+#### Sync/Pull button in Telegram project menu with update indicator
+Add a "Sync" button to the project menu in the Telegram bot that runs `git pull` on the selected project. On project menu open, run a lightweight `git fetch --dry-run` (or `git rev-list HEAD..@{u} --count`) in the background to detect if the remote has newer commits. If updates are available, show an indicator on the button (e.g. `"^ Sync (3 new)"`). This lets the user keep projects up-to-date without SSH-ing into the container.
+
 #### Interactive brainstorm history viewer
 Brainstorm sessions produce JSONL files in `PROJECTS_ROOT/.brainstorm/` but there is no way to review past sessions. Add a `loop brainstorm --history` CLI command (or Telegram `/brainstorm_history` command) that lists past sessions with timestamps and topics, and allows viewing the full conversation transcript.
