@@ -47,6 +47,7 @@ BRAINSTORM_POLL_INTERVAL = _safe_float(
 )
 BRAINSTORM_TIMEOUT = _safe_int(environ.get("LOOP_BRAINSTORM_TIMEOUT"), 300)
 MAX_QUEUE_SIZE = _safe_int(environ.get("LOOP_MAX_QUEUE_SIZE"), 10)
+QUEUE_TTL = _safe_int(environ.get("LOOP_QUEUE_TTL"), 3600)
 GIT_DIFF_RANGE = environ.get("LOOP_GIT_DIFF_RANGE", "HEAD~5..HEAD")
 
 # Log rotation and disk space management

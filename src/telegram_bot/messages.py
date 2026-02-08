@@ -212,6 +212,7 @@ MSG_BRAINSTORM_CMD_PROMPT_REQUIRED = (
 # --- tasks.py strings ---
 
 MSG_QUEUE_FULL = "Queue full ({max_size} tasks)"
+MSG_QUEUE_EXPIRED = "⏰ *Queue expired* — {project} {mode} ({iterations} iter) removed after {minutes} min in queue"
 MSG_QUEUED_AT = "Queued #{position}"
 MSG_CLAUDE_ENDED_NO_RESULT = "Claude ended without result:\n{tail}"
 MSG_CLAUDE_ENDED_NO_RESPONSE = "Claude ended without response"

@@ -375,6 +375,33 @@ class TestConfigurableThresholds:
             config = _reload_config(env)
             assert config.MAX_QUEUE_SIZE == 10
 
+    def test_queue_ttl_default(self, tmp_projects_root):
+        """QUEUE_TTL defaults to 3600 when env var is not set."""
+        env = {"PROJECTS_ROOT": str(tmp_projects_root)}
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.QUEUE_TTL == 3600
+
+    def test_queue_ttl_from_env(self, tmp_projects_root):
+        """QUEUE_TTL reads LOOP_QUEUE_TTL env var."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_QUEUE_TTL": "7200",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.QUEUE_TTL == 7200
+
+    def test_queue_ttl_invalid_falls_back(self, tmp_projects_root):
+        """Non-numeric LOOP_QUEUE_TTL falls back to 3600."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_QUEUE_TTL": "forever",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.QUEUE_TTL == 3600
+
     def test_git_diff_range_default(self, tmp_projects_root):
         """GIT_DIFF_RANGE defaults to 'HEAD~5..HEAD'."""
         env = {"PROJECTS_ROOT": str(tmp_projects_root)}

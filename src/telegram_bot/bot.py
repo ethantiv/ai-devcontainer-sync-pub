@@ -23,6 +23,7 @@ from .config import (
     LOG_MAX_SIZE_MB,
     LOG_RETENTION_DAYS,
     PROJECTS_ROOT,
+    QUEUE_TTL,
     STALE_THRESHOLD,
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID,
@@ -117,6 +118,7 @@ from .messages import (
     MSG_SELECT_ITERATIONS,
     MSG_SESSION_LABEL,
     MSG_STALE_PROGRESS,
+    MSG_QUEUE_EXPIRED,
     MSG_STARTED_FROM_QUEUE,
     MSG_STATUS_BTN,
     MSG_STATUS_FREE,
@@ -1339,8 +1341,23 @@ def _format_completion_summary(
 
 
 async def check_task_completion(context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Job that checks for completed tasks and starts queued ones."""
-    results = task_manager.process_completed_tasks()
+    """Job that checks for completed tasks, expired queued tasks, and starts queued ones."""
+    results, expired_tasks = task_manager.process_completed_tasks()
+
+    # Notify about expired queued tasks
+    for expired in expired_tasks:
+        minutes = QUEUE_TTL // 60
+        text = MSG_QUEUE_EXPIRED.format(
+            project=expired.project,
+            mode=expired.mode.title(),
+            iterations=expired.iterations,
+            minutes=minutes,
+        )
+        await context.bot.send_message(
+            chat_id=TELEGRAM_CHAT_ID,
+            text=text,
+            parse_mode="Markdown",
+        )
 
     for completed_task, next_task in results:
         # Send completion summary for finished task

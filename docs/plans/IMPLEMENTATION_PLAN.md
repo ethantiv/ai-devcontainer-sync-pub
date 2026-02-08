@@ -1,8 +1,8 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 20/43 (47%)
-**Last Verified:** 2026-02-08 — Phase 3 complete
+**Progress:** 26/43 (60%)
+**Last Verified:** 2026-02-08 — Phase 4 complete
 
 ## Goal
 
@@ -10,7 +10,7 @@ Implement all proposals from docs/ROADMAP.md across three priority tiers: P1 (Cr
 
 ## Current Phase
 
-Phase 4: Task Queue Expiry and Retry Logic (P3-Nice to Have)
+Phase 5: Stale Threshold Default Increase (P3-Nice to Have)
 
 ## Phases
 
@@ -44,13 +44,13 @@ Phase 4: Task Queue Expiry and Retry Logic (P3-Nice to Have)
 - **Status:** complete
 
 ### Phase 4: Task Queue Expiry and Retry Logic (P3-Nice to Have)
-- [ ] Add `QUEUE_TTL` configurable threshold to `config.py` (env var `LOOP_QUEUE_TTL`, default 3600 seconds) — use existing `_safe_int()` helper
-- [ ] Add `queued_at` timestamp checking in `TaskManager.process_completed_tasks()` — iterate queue, remove tasks where `datetime.now() - task.queued_at > QUEUE_TTL`, leverage existing `QueuedTask.queued_at` field (already persisted to `.tasks.json`)
-- [ ] Add expired task notification in `bot.py::check_task_completion()`: send message when queued task is removed due to TTL
-- [ ] Add message constants to `messages.py`: `MSG_QUEUE_EXPIRED`
-- [ ] Add retry logic with exponential backoff for `clone_repo()` in `projects.py`: max 3 retries, initial delay 2s, for `subprocess.TimeoutExpired` and specific git error patterns (network unreachable, connection reset)
-- [ ] Write tests for queue TTL expiry (expired task removal, boundary conditions) and retry logic (success after retry, max retries exceeded)
-- **Status:** pending
+- [x] Add `QUEUE_TTL` configurable threshold to `config.py` (env var `LOOP_QUEUE_TTL`, default 3600 seconds) — use existing `_safe_int()` helper
+- [x] Add `queued_at` timestamp checking in `TaskManager.process_completed_tasks()` — iterate queue, remove tasks where `datetime.now() - task.queued_at > QUEUE_TTL`, return expired list alongside completions. `process_completed_tasks()` now returns `(completions, expired)` tuple
+- [x] Add expired task notification in `bot.py::check_task_completion()`: send message when queued task is removed due to TTL
+- [x] Add message constants to `messages.py`: `MSG_QUEUE_EXPIRED`
+- [x] Add retry logic with exponential backoff for `clone_repo()` in `projects.py`: max 3 retries, initial delay 2s, for `subprocess.TimeoutExpired` and specific git error patterns (network unreachable, connection reset, could not resolve host). Partial clone dirs cleaned up between retries. OSError fails immediately
+- [x] Write tests for queue TTL expiry — 7 new tests in `TestQueueTTLExpiry` (expired removal, fresh not expired, boundary, mixed, multi-project, save triggered, return format). Retry logic — 9 new tests in `TestCloneRepoRetry` (first try, timeout retry, network unreachable, connection reset, max retries, exponential backoff, non-retryable, OSError, partial cleanup). Updated 9 existing tests for new `(completions, expired)` return format + 3 new config tests
+- **Status:** complete
 
 ### Phase 5: Stale Threshold Default Increase (P3-Nice to Have)
 - [ ] Change `STALE_THRESHOLD` default from 300 to 1800 in `config.py` (line 44)
@@ -82,10 +82,10 @@ Phase 4: Task Queue Expiry and Retry Logic (P3-Nice to Have)
 
 | Question | Answer |
 |----------|--------|
-| How many tests does test_tasks.py currently have? | 103 tests (91 + 12 new TestPersistenceConcurrent) |
-| How many total tests exist? | 365 Python (103 test_tasks + 101 test_bot + 62 test_projects + 61 test_config + 20 test_git_utils + 18 test_log_rotation) + 20 JS = 385 total |
+| How many tests does test_tasks.py currently have? | 110 tests (103 + 7 new TestQueueTTLExpiry) |
+| How many total tests exist? | 384 Python (110 test_tasks + 101 test_bot + 71 test_projects + 64 test_config + 20 test_git_utils + 18 test_log_rotation) + 20 JS = 404 total |
 | Is there any log rotation mechanism? | Yes — `log_rotation.py` module with `rotate_logs()`, `cleanup_brainstorm_files()`, `check_disk_space()`. Daily periodic job in bot.py. CLI via `loop cleanup --logs` |
-| Is there retry logic for git operations? | No — all subprocess calls attempt once, catch TimeoutExpired/OSError, return immediately |
+| Is there retry logic for git operations? | Yes — `clone_repo()` retries up to 3 times with exponential backoff (2s, 4s) on TimeoutExpired and transient git network errors. Non-retryable errors fail immediately |
 | Is the sync/pull feature started? | No — no git pull/fetch references in telegram_bot code, no MSG_SYNC_* constants |
 | Is brainstorm history viewer started? | No — no history-related code or messages exist. Sessions removed from `.brainstorm_sessions.json` after `finish()` — only JSONL files remain |
 | What Commander.js version is installed? | ^14.0.0 in package.json (resolved to 14.0.3). Upgrade from v12 complete — all APIs stable |
@@ -147,11 +147,11 @@ Phase 4: Task Queue Expiry and Retry Logic (P3-Nice to Have)
 - **Commander.js uses only stable cross-compatible APIs** — `.command()`, `.option()`, `.action()`, `.parse()`, `.addHelpText()`, negatable options. No deprecated patterns. Upgrade to v14 is zero-risk
 - **No log rotation exists anywhere** — cleanup.sh only kills dev server ports (3000, 5173, etc.), loop.sh cleanup trap only generates summary
 - **Brainstorm JSONL files accumulate indefinitely** — new file per turn (`brainstorm_{chat_id}_{uuid}.jsonl`), old files never cleaned
-- **All git subprocess calls use single-attempt pattern** — TimeoutExpired caught but no retry, consistent across git_utils.py and projects.py
-- **QueuedTask has `queued_at` field** (tasks.py) — timestamp stored and persisted to `.tasks.json` via isoformat() but never checked for expiry
+- ~~**All git subprocess calls use single-attempt pattern**~~ **DONE: clone_repo() now retries up to 3 times with exponential backoff on transient errors**
+- ~~**QueuedTask has `queued_at` field but never checked for expiry**~~ **DONE: QUEUE_TTL (default 3600s) checks in process_completed_tasks(), expired tasks removed and notified**
 - **Brainstorm session metadata lost on finish** — `_cleanup_session()` removes entry from `_sessions` dict and `.brainstorm_sessions.json`. Only JSONL files survive. Phase 7 must scan JSONL files directly or add a history log
 - **Existing test coverage gaps by priority**: (1) ~~check_task_progress() stale detection — 0 direct tests~~ **DONE: 15 tests**, (2) BrainstormManager happy paths — ~~only error-path tests (1 start, 2 respond)~~ **start() DONE: 10 tests, respond() DONE: 12 tests**, (3) ~~process_completed_tasks() workflow — 1 persistence test only~~ **DONE: 9 tests**, (4) ~~concurrent persistence — 0 tests~~ **DONE: 12 tests**, (5) ~~BrainstormManager.finish() — 0 unit tests~~ **DONE: 12 tests**, (6) ~~completion summary edge cases~~ **DONE: 5 new tests (12 total)**
-- **Per-file test breakdown (365 Python)**: test_tasks.py=103, test_bot.py=101, test_projects.py=62, test_config.py=61, test_git_utils.py=20, test_log_rotation.py=18
+- **Per-file test breakdown (384 Python)**: test_tasks.py=110, test_bot.py=101, test_projects.py=71, test_config.py=64, test_git_utils.py=20, test_log_rotation.py=18
 - **Commander.js APIs used in cli.js**: `.name()`, `.description()`, `.version()`, `.command()`, `.option()`, `.action()`, `.addHelpText('after')`, `.parse()`, plus one negatable option `--no-early-exit`. No advanced APIs (`.exitOverride()`, `.configureOutput()`, etc.). All stable across v12→v14
 - **cli.js helper functions**: `addLoopOptions(cmd)` and `addBuildOptions(cmd)` for DRY option management across plan/build/run commands
 - **No skipped or xfail tests** — all 259 Python and 20 JS tests are active and passing

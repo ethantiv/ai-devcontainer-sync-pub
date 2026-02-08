@@ -1,10 +1,14 @@
 """Project and worktree management."""
 
+import logging
 import re
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from .config import PROJECTS_ROOT
 from .messages import (
@@ -159,10 +163,23 @@ def create_worktree(project_path: Path, suffix: str) -> tuple[bool, str]:
     return True, MSG_WORKTREE_CREATED.format(name=new_name, suffix=suffix)
 
 
-def clone_repo(url: str) -> tuple[bool, str]:
-    """Clone a git repository into PROJECTS_ROOT.
+_RETRYABLE_GIT_ERRORS = ("network unreachable", "connection reset", "could not resolve host")
+_CLONE_MAX_RETRIES = 3
+_CLONE_INITIAL_DELAY = 2  # seconds
 
-    Extracts repo name from URL, clones, then runs `loop init`.
+
+def _is_retryable_clone_error(result: subprocess.CompletedProcess) -> bool:
+    """Check if a failed git clone error is transient and worth retrying."""
+    stderr = (result.stderr or "").lower()
+    return any(pattern in stderr for pattern in _RETRYABLE_GIT_ERRORS)
+
+
+def clone_repo(url: str) -> tuple[bool, str]:
+    """Clone a git repository into PROJECTS_ROOT with retry on transient errors.
+
+    Retries up to 3 times with exponential backoff (2s, 4s) on
+    TimeoutExpired and transient git network errors. Non-retryable
+    errors (e.g. repo not found) fail immediately.
 
     Returns:
         (success, message)
@@ -180,31 +197,48 @@ def clone_repo(url: str) -> tuple[bool, str]:
     if target.exists():
         return False, MSG_DIR_ALREADY_EXISTS.format(name=name)
 
-    try:
-        result = subprocess.run(
-            ["git", "clone", url, str(target)],
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-    except subprocess.TimeoutExpired:
-        return False, "Timeout cloning repository"
-    except OSError as e:
-        return False, f"git clone failed: {e}"
+    last_error = ""
+    for attempt in range(_CLONE_MAX_RETRIES):
+        if attempt > 0:
+            delay = _CLONE_INITIAL_DELAY * (2 ** (attempt - 1))
+            logger.info(f"Retrying clone (attempt {attempt + 1}/{_CLONE_MAX_RETRIES}) after {delay}s")
+            time.sleep(delay)
+            # Clean up partial clone from previous attempt
+            if target.exists():
+                shutil.rmtree(target, ignore_errors=True)
 
-    if result.returncode != 0:
+        try:
+            result = subprocess.run(
+                ["git", "clone", url, str(target)],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+        except subprocess.TimeoutExpired:
+            last_error = "Timeout cloning repository"
+            continue  # retryable
+        except OSError as e:
+            return False, f"git clone failed: {e}"  # not retryable
+
+        if result.returncode == 0:
+            # Success — run loop init
+            loop_init = _run_loop_init(target)
+            msg = MSG_CLONED.format(name=name)
+            if loop_init:
+                msg += ". " + MSG_LOOP_INITIALIZED
+            else:
+                msg += ". " + MSG_LOOP_INIT_FAILED
+            return True, msg
+
+        # Clone failed — check if retryable
+        if _is_retryable_clone_error(result):
+            last_error = f"git clone failed: {result.stderr}"
+            continue
+
+        # Non-retryable error — fail immediately
         return False, f"git clone failed: {result.stderr}"
 
-    # Auto-run loop init in the cloned repo
-    loop_init = _run_loop_init(target)
-
-    msg = MSG_CLONED.format(name=name)
-    if loop_init:
-        msg += ". " + MSG_LOOP_INITIALIZED
-    else:
-        msg += ". " + MSG_LOOP_INIT_FAILED
-
-    return True, msg
+    return False, last_error
 
 
 def validate_project_name(name: str) -> tuple[bool, str]:

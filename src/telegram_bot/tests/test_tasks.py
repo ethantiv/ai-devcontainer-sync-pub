@@ -1375,7 +1375,7 @@ class TestProcessCompletedTasks:
             patch.object(ptm, "_is_session_running", return_value=False),
             patch.object(ptm, "_save_tasks"),
         ):
-            results = ptm.process_completed_tasks()
+            results, _ = ptm.process_completed_tasks()
 
         assert "/tmp/proj" not in ptm.active_tasks
         assert len(results) == 1
@@ -1389,7 +1389,7 @@ class TestProcessCompletedTasks:
         ptm.active_tasks["/tmp/proj"] = task
 
         with patch.object(ptm, "_is_session_running", return_value=True):
-            results = ptm.process_completed_tasks()
+            results, _ = ptm.process_completed_tasks()
 
         assert "/tmp/proj" in ptm.active_tasks
         assert results == []
@@ -1433,7 +1433,7 @@ class TestProcessCompletedTasks:
                 return (True, "Started")
 
             mock_start.side_effect = lambda **kwargs: fake_start(**kwargs)
-            results = ptm.process_completed_tasks()
+            results, _ = ptm.process_completed_tasks()
 
         assert len(results) == 1
         completed, next_started = results[0]
@@ -1471,7 +1471,7 @@ class TestProcessCompletedTasks:
             patch.object(ptm, "_start_task_now", return_value=(False, "Failed")),
             patch.object(ptm, "_save_tasks"),
         ):
-            results = ptm.process_completed_tasks()
+            results, _ = ptm.process_completed_tasks()
 
         assert len(results) == 1
         completed, next_started = results[0]
@@ -1484,8 +1484,9 @@ class TestProcessCompletedTasks:
     def test_empty_active_tasks_returns_empty(self, ptm):
         """Returns empty list when there are no active tasks."""
         with patch.object(ptm, "_is_session_running", return_value=False):
-            results = ptm.process_completed_tasks()
+            results, expired = ptm.process_completed_tasks()
         assert results == []
+        assert expired == []
 
     def test_orphaned_queue_starts_task(self, ptm):
         """Orphaned queue (no active task) starts next task automatically."""
@@ -1521,7 +1522,7 @@ class TestProcessCompletedTasks:
             patch.object(ptm, "_start_task_now", side_effect=lambda **kw: fake_start_task_now(**kw)),
             patch.object(ptm, "_save_tasks"),
         ):
-            results = ptm.process_completed_tasks()
+            results, _ = ptm.process_completed_tasks()
 
         assert len(results) == 1
         completed, next_started = results[0]
@@ -1545,7 +1546,7 @@ class TestProcessCompletedTasks:
         ]
 
         with patch.object(ptm, "_is_session_running", return_value=True):
-            results = ptm.process_completed_tasks()
+            results, _ = ptm.process_completed_tasks()
 
         # Session running but no active task — could be recovering, don't start
         assert results == []
@@ -1561,7 +1562,7 @@ class TestProcessCompletedTasks:
             patch.object(ptm, "_is_session_running", return_value=False),
             patch.object(ptm, "_save_tasks"),
         ):
-            results = ptm.process_completed_tasks()
+            results, _ = ptm.process_completed_tasks()
 
         assert len(results) == 2
         projects = {r[0].project for r in results}
@@ -1569,7 +1570,7 @@ class TestProcessCompletedTasks:
         assert len(ptm.active_tasks) == 0
 
     def test_return_tuple_format(self, ptm):
-        """Return value is list of (Task|None, Task|None) tuples."""
+        """Return value is (list[(Task|None, Task|None)], list[QueuedTask])."""
         task = self._make_task()
         ptm.active_tasks["/tmp/proj"] = task
 
@@ -1577,14 +1578,190 @@ class TestProcessCompletedTasks:
             patch.object(ptm, "_is_session_running", return_value=False),
             patch.object(ptm, "_save_tasks"),
         ):
-            results = ptm.process_completed_tasks()
+            result = ptm.process_completed_tasks()
 
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        results, expired = result
         assert isinstance(results, list)
+        assert isinstance(expired, list)
         assert len(results) == 1
         completed, next_task = results[0]
         from src.telegram_bot.tasks import Task
         assert isinstance(completed, Task)
         assert next_task is None
+
+
+class TestQueueTTLExpiry:
+    """Tests for queue TTL expiry in process_completed_tasks().
+
+    Queued tasks older than QUEUE_TTL seconds are automatically removed
+    during periodic checks. Expired tasks are returned separately so
+    bot.py can notify the user.
+    """
+
+    @pytest.fixture
+    def ptm(self, tmp_path):
+        """TaskManager with PROJECTS_ROOT patched to tmp_path."""
+        with (
+            patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)),
+            patch("src.telegram_bot.tasks.check_disk_space", return_value=(True, 5000.0)),
+        ):
+            from src.telegram_bot.tasks import TaskManager
+            tm = TaskManager()
+            yield tm
+
+    def _make_queued(self, id="q1", project="proj", mode="plan",
+                     iterations=3, idea=None, queued_at=None):
+        from src.telegram_bot.tasks import QueuedTask
+        qt = QueuedTask(
+            id=id,
+            project=project,
+            project_path=Path(f"/tmp/{project}"),
+            mode=mode,
+            iterations=iterations,
+            idea=idea,
+        )
+        if queued_at is not None:
+            qt.queued_at = queued_at
+        return qt
+
+    def test_expired_task_removed_from_queue(self, ptm):
+        """Tasks older than QUEUE_TTL are removed from queue."""
+        from datetime import timedelta
+
+        # Queued 2 hours ago — well past the 1-hour default TTL
+        old_time = datetime.now() - timedelta(hours=2)
+        ptm.queues["/tmp/proj"] = [self._make_queued(queued_at=old_time)]
+
+        with (
+            patch.object(ptm, "_is_session_running", return_value=True),
+            patch.object(ptm, "_save_tasks"),
+        ):
+            _, expired = ptm.process_completed_tasks()
+
+        assert len(ptm.queues.get("/tmp/proj", [])) == 0
+        assert len(expired) == 1
+        assert expired[0].id == "q1"
+
+    def test_fresh_task_not_expired(self, ptm):
+        """Tasks within QUEUE_TTL are not removed."""
+        ptm.queues["/tmp/proj"] = [self._make_queued()]  # just created, fresh
+
+        with (
+            patch.object(ptm, "_is_session_running", return_value=True),
+            patch.object(ptm, "_save_tasks"),
+        ):
+            _, expired = ptm.process_completed_tasks()
+
+        assert len(ptm.queues.get("/tmp/proj", [])) == 1
+        assert expired == []
+
+    def test_task_just_under_ttl_not_expired(self, ptm):
+        """Task queued slightly less than QUEUE_TTL seconds ago is not expired."""
+        from datetime import timedelta
+        from src.telegram_bot.tasks import QUEUE_TTL
+
+        # 10 seconds under boundary — definitely not expired
+        just_under = datetime.now() - timedelta(seconds=QUEUE_TTL - 10)
+        ptm.queues["/tmp/proj"] = [self._make_queued(queued_at=just_under)]
+
+        with (
+            patch.object(ptm, "_is_session_running", return_value=True),
+            patch.object(ptm, "_save_tasks"),
+        ):
+            _, expired = ptm.process_completed_tasks()
+
+        assert len(ptm.queues.get("/tmp/proj", [])) == 1
+        assert expired == []
+
+    def test_mixed_expired_and_fresh_tasks(self, ptm):
+        """Only expired tasks are removed; fresh ones remain in order."""
+        from datetime import timedelta
+
+        old_time = datetime.now() - timedelta(hours=2)
+        ptm.queues["/tmp/proj"] = [
+            self._make_queued(id="old1", queued_at=old_time),
+            self._make_queued(id="fresh1"),  # just created
+            self._make_queued(id="old2", queued_at=old_time),
+        ]
+
+        with (
+            patch.object(ptm, "_is_session_running", return_value=True),
+            patch.object(ptm, "_save_tasks"),
+        ):
+            _, expired = ptm.process_completed_tasks()
+
+        remaining = ptm.queues.get("/tmp/proj", [])
+        assert len(remaining) == 1
+        assert remaining[0].id == "fresh1"
+        assert len(expired) == 2
+        expired_ids = {e.id for e in expired}
+        assert expired_ids == {"old1", "old2"}
+
+    def test_expired_tasks_across_multiple_projects(self, ptm):
+        """TTL check works across multiple project queues."""
+        from datetime import timedelta
+
+        old_time = datetime.now() - timedelta(hours=2)
+        ptm.queues["/tmp/proj-a"] = [self._make_queued(id="qa", project="proj-a", queued_at=old_time)]
+        ptm.queues["/tmp/proj-b"] = [self._make_queued(id="qb", project="proj-b")]  # fresh
+
+        with (
+            patch.object(ptm, "_is_session_running", return_value=True),
+            patch.object(ptm, "_save_tasks"),
+        ):
+            _, expired = ptm.process_completed_tasks()
+
+        assert len(ptm.queues.get("/tmp/proj-a", [])) == 0
+        assert len(ptm.queues.get("/tmp/proj-b", [])) == 1
+        assert len(expired) == 1
+        assert expired[0].id == "qa"
+
+    def test_expiry_saves_tasks(self, ptm):
+        """Removing expired tasks triggers _save_tasks()."""
+        from datetime import timedelta
+
+        old_time = datetime.now() - timedelta(hours=2)
+        ptm.queues["/tmp/proj"] = [self._make_queued(queued_at=old_time)]
+
+        with (
+            patch.object(ptm, "_is_session_running", return_value=True),
+            patch.object(ptm, "_save_tasks") as mock_save,
+        ):
+            ptm.process_completed_tasks()
+
+        mock_save.assert_called()
+
+    def test_return_format_with_completions_and_expired(self, ptm):
+        """process_completed_tasks returns (completions, expired) tuple."""
+        from datetime import timedelta
+        from src.telegram_bot.tasks import Task
+
+        old_time = datetime.now() - timedelta(hours=2)
+        ptm.queues["/tmp/proj"] = [self._make_queued(queued_at=old_time)]
+
+        # Also add a completed task
+        task = Task(
+            project="proj2",
+            project_path=Path("/tmp/proj2"),
+            mode="build",
+            iterations=5,
+            idea=None,
+            session_name="loop-proj2",
+        )
+        ptm.active_tasks["/tmp/proj2"] = task
+
+        with (
+            patch.object(ptm, "_is_session_running", return_value=False),
+            patch.object(ptm, "_save_tasks"),
+        ):
+            completions, expired = ptm.process_completed_tasks()
+
+        assert len(completions) == 1
+        assert completions[0][0].project == "proj2"
+        assert len(expired) == 1
+        assert expired[0].id == "q1"
 
 
 class TestPersistenceConcurrent:

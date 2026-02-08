@@ -844,7 +844,7 @@ class TestCheckTaskCompletion:
              patch("src.telegram_bot.bot.get_plan_progress", return_value=None), \
              patch("src.telegram_bot.bot.get_diff_stats", return_value=None), \
              patch("src.telegram_bot.bot.get_recent_commits", return_value=[]):
-            mock_tm.process_completed_tasks.return_value = [(completed, next_t)]
+            mock_tm.process_completed_tasks.return_value = ([(completed, next_t)], [])
             mock_tm.get_task_duration.return_value = "1m 0s"
             await check_task_completion(context)
 
@@ -866,7 +866,7 @@ class TestCheckTaskCompletion:
 
         with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
              patch("src.telegram_bot.bot.task_manager") as mock_tm:
-            mock_tm.process_completed_tasks.return_value = [(None, next_t)]
+            mock_tm.process_completed_tasks.return_value = ([(None, next_t)], [])
             await check_task_completion(context)
 
         assert context.bot.send_message.await_count == 1
@@ -883,7 +883,7 @@ class TestCheckTaskCompletion:
 
         with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
              patch("src.telegram_bot.bot.task_manager") as mock_tm:
-            mock_tm.process_completed_tasks.return_value = []
+            mock_tm.process_completed_tasks.return_value = ([], [])
             await check_task_completion(context)
 
         context.bot.send_message.assert_not_awaited()
@@ -901,7 +901,7 @@ class TestCheckTaskCompletion:
              patch("src.telegram_bot.bot.get_plan_progress", return_value=None), \
              patch("src.telegram_bot.bot.get_diff_stats", return_value=None), \
              patch("src.telegram_bot.bot.get_recent_commits", return_value=[]):
-            mock_tm.process_completed_tasks.return_value = [(completed, None)]
+            mock_tm.process_completed_tasks.return_value = ([(completed, None)], [])
             mock_tm.get_task_duration.return_value = "30s"
             await check_task_completion(context)
 
@@ -1313,7 +1313,7 @@ class TestOrphanedQueueStartFollowUp:
 
         with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
              patch("src.telegram_bot.bot.task_manager") as mock_tm:
-            mock_tm.process_completed_tasks.return_value = [(None, next_t)]
+            mock_tm.process_completed_tasks.return_value = ([(None, next_t)], [])
             await check_task_completion(context)
 
         call_kwargs = context.bot.send_message.call_args[1]

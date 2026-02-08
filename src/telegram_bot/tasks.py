@@ -21,6 +21,7 @@ from .config import (
     MAX_QUEUE_SIZE,
     MIN_DISK_MB,
     PROJECTS_ROOT,
+    QUEUE_TTL,
 )
 from .git_utils import get_commit_hash
 from .log_rotation import check_disk_space
@@ -420,20 +421,39 @@ class TaskManager:
 
         return None
 
-    def process_completed_tasks(self) -> list[tuple[Task | None, Task | None]]:
-        """Check for completed tasks and start next in queue.
+    def process_completed_tasks(self) -> tuple[list[tuple[Task | None, Task | None]], list[QueuedTask]]:
+        """Check for completed tasks, expire old queued tasks, and start next in queue.
 
         Returns:
-            List of (completed_task, next_started_task) tuples.
-            completed_task is None if queue was orphaned (no active task).
+            (completions, expired) where:
+            - completions: list of (completed_task, next_started_task) tuples
+            - expired: list of QueuedTask removed due to QUEUE_TTL
         """
         results: list[tuple[Task | None, Task | None]] = []
+        expired_tasks: list[QueuedTask] = []
         logger.debug(
             f"process_completed_tasks: {len(self.active_tasks)} active, "
             f"{sum(len(q) for q in self.queues.values())} queued"
         )
 
-        # 1. Check tracked active tasks
+        # 1. Remove expired queued tasks (older than QUEUE_TTL)
+        now = datetime.now()
+        for path_key in list(self.queues.keys()):
+            with self._queue_lock:
+                queue = self.queues.get(path_key, [])
+                remaining = []
+                for qt in queue:
+                    age = (now - qt.queued_at).total_seconds()
+                    if age > QUEUE_TTL:
+                        expired_tasks.append(qt)
+                        logger.info(f"Queue TTL expired: {qt.project} ({qt.mode}), age={age:.0f}s")
+                    else:
+                        remaining.append(qt)
+                self.queues[path_key] = remaining
+        if expired_tasks:
+            self._save_tasks()
+
+        # 2. Check tracked active tasks
         for path_key in list(self.active_tasks.keys()):
             task = self.active_tasks[path_key]
             if not self._is_session_running(task.session_name):
@@ -449,7 +469,7 @@ class TaskManager:
                     logger.info(f"Started next: {next_task.project} ({next_task.mode})")
                 results.append((completed_task, next_task))
 
-        # 2. Check orphaned queues (have items but no active task and no running session)
+        # 3. Check orphaned queues (have items but no active task and no running session)
         with self._queue_lock:
             orphaned_paths = [
                 path_key
@@ -470,7 +490,7 @@ class TaskManager:
                 if next_task:
                     results.append((None, next_task))
 
-        return results
+        return results, expired_tasks
 
 
 class BrainstormManager:

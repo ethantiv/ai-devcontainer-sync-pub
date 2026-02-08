@@ -658,3 +658,167 @@ class TestCreateGithubRepo:
         assert "--source=." in args
         assert "--remote=origin" in args
         assert "--push" in args
+
+
+class TestCloneRepoRetry:
+    """Tests for clone_repo() exponential backoff retry on transient errors.
+
+    clone_repo retries up to 3 times with exponential backoff (2s, 4s, 8s)
+    on TimeoutExpired and specific git network errors (network unreachable,
+    connection reset). Non-retryable errors fail immediately.
+    """
+
+    def test_success_on_first_try_no_retry(self, tmp_projects_root):
+        """Successful clone on first attempt makes only one subprocess call."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import clone_repo
+            mock_result = MagicMock(returncode=0)
+            with (
+                patch("src.telegram_bot.projects.subprocess.run", return_value=mock_result) as mock_run,
+                patch("src.telegram_bot.projects._run_loop_init", return_value=True),
+                patch("src.telegram_bot.projects.time.sleep"),
+            ):
+                success, msg = clone_repo("https://github.com/user/my-repo.git")
+            assert success is True
+            assert mock_run.call_count == 1
+
+    def test_retry_on_timeout_then_success(self, tmp_projects_root):
+        """Retries after TimeoutExpired and succeeds on second attempt."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import clone_repo
+            success_result = MagicMock(returncode=0)
+            with (
+                patch(
+                    "src.telegram_bot.projects.subprocess.run",
+                    side_effect=[
+                        subprocess.TimeoutExpired("git", 60),
+                        success_result,
+                    ],
+                ) as mock_run,
+                patch("src.telegram_bot.projects._run_loop_init", return_value=True),
+                patch("src.telegram_bot.projects.time.sleep") as mock_sleep,
+            ):
+                success, msg = clone_repo("https://github.com/user/my-repo.git")
+            assert success is True
+            assert mock_run.call_count == 2
+            mock_sleep.assert_called_once_with(2)  # initial delay
+
+    def test_retry_on_network_unreachable(self, tmp_projects_root):
+        """Retries on 'network unreachable' git error."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import clone_repo
+            fail_result = MagicMock(returncode=128, stderr="fatal: unable to access: network unreachable")
+            success_result = MagicMock(returncode=0)
+            with (
+                patch(
+                    "src.telegram_bot.projects.subprocess.run",
+                    side_effect=[fail_result, success_result],
+                ) as mock_run,
+                patch("src.telegram_bot.projects._run_loop_init", return_value=True),
+                patch("src.telegram_bot.projects.time.sleep"),
+            ):
+                success, msg = clone_repo("https://github.com/user/my-repo.git")
+            assert success is True
+            assert mock_run.call_count == 2
+
+    def test_retry_on_connection_reset(self, tmp_projects_root):
+        """Retries on 'connection reset' git error."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import clone_repo
+            fail_result = MagicMock(returncode=128, stderr="fatal: connection reset by peer")
+            success_result = MagicMock(returncode=0)
+            with (
+                patch(
+                    "src.telegram_bot.projects.subprocess.run",
+                    side_effect=[fail_result, success_result],
+                ),
+                patch("src.telegram_bot.projects._run_loop_init", return_value=True),
+                patch("src.telegram_bot.projects.time.sleep"),
+            ):
+                success, msg = clone_repo("https://github.com/user/my-repo.git")
+            assert success is True
+
+    def test_max_retries_exceeded(self, tmp_projects_root):
+        """Fails after exhausting all 3 retry attempts."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import clone_repo
+            with (
+                patch(
+                    "src.telegram_bot.projects.subprocess.run",
+                    side_effect=subprocess.TimeoutExpired("git", 60),
+                ) as mock_run,
+                patch("src.telegram_bot.projects.time.sleep") as mock_sleep,
+            ):
+                success, msg = clone_repo("https://github.com/user/my-repo.git")
+            assert success is False
+            assert "timeout" in msg.lower()
+            assert mock_run.call_count == 3  # initial + 2 retries
+            assert mock_sleep.call_count == 2  # sleep before retry 2 and 3
+
+    def test_exponential_backoff_delays(self, tmp_projects_root):
+        """Retry delays follow exponential backoff: 2s, 4s."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import clone_repo
+            with (
+                patch(
+                    "src.telegram_bot.projects.subprocess.run",
+                    side_effect=subprocess.TimeoutExpired("git", 60),
+                ),
+                patch("src.telegram_bot.projects.time.sleep") as mock_sleep,
+            ):
+                clone_repo("https://github.com/user/my-repo.git")
+            delays = [c[0][0] for c in mock_sleep.call_args_list]
+            assert delays == [2, 4]
+
+    def test_no_retry_on_non_retryable_error(self, tmp_projects_root):
+        """Non-retryable errors (e.g. 'repo not found') fail immediately."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import clone_repo
+            fail_result = MagicMock(returncode=128, stderr="fatal: repository not found")
+            with (
+                patch("src.telegram_bot.projects.subprocess.run", return_value=fail_result) as mock_run,
+                patch("src.telegram_bot.projects.time.sleep"),
+            ):
+                success, msg = clone_repo("https://github.com/user/my-repo.git")
+            assert success is False
+            assert mock_run.call_count == 1  # no retries
+
+    def test_no_retry_on_oserror(self, tmp_projects_root):
+        """OSError (git not found) fails immediately without retry."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import clone_repo
+            with (
+                patch(
+                    "src.telegram_bot.projects.subprocess.run",
+                    side_effect=OSError("git not found"),
+                ) as mock_run,
+                patch("src.telegram_bot.projects.time.sleep"),
+            ):
+                success, msg = clone_repo("https://github.com/user/my-repo.git")
+            assert success is False
+            assert mock_run.call_count == 1
+
+    def test_cleanup_partial_clone_on_retry(self, tmp_projects_root):
+        """Failed clone attempt cleans up partial directory before retry."""
+        with patch("src.telegram_bot.projects.PROJECTS_ROOT", str(tmp_projects_root)):
+            from src.telegram_bot.projects import clone_repo
+            target = tmp_projects_root / "my-repo"
+
+            call_count = 0
+            def side_effect(*args, **kwargs):
+                nonlocal call_count
+                call_count += 1
+                # First call: create partial dir and fail
+                if call_count == 1:
+                    target.mkdir(exist_ok=True)
+                    raise subprocess.TimeoutExpired("git", 60)
+                # Second call: succeed
+                return MagicMock(returncode=0)
+
+            with (
+                patch("src.telegram_bot.projects.subprocess.run", side_effect=side_effect),
+                patch("src.telegram_bot.projects._run_loop_init", return_value=True),
+                patch("src.telegram_bot.projects.time.sleep"),
+            ):
+                success, msg = clone_repo("https://github.com/user/my-repo.git")
+            assert success is True
