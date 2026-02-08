@@ -3,7 +3,7 @@
 **Status:** IN_PROGRESS
 **Progress:** 0/20 (0%)
 **Last updated:** 2026-02-08
-**Verified:** 2026-02-08 — all line numbers re-confirmed against source code (bot.py, test_bot.py, messages.py)
+**Verified:** 2026-02-08 — all line numbers re-confirmed against source code (bot.py, test_bot.py, messages.py); bs:cancel line fixed 1178→1177
 
 ## Goal
 
@@ -32,7 +32,7 @@ Phase 1
 - [ ] In `handle_input_cancel()` (bot.py line 1144): change `edit_message_text(MSG_CANCELLED)` to include inline keyboard with "Projects" button (`action:back`); return `State.SELECT_PROJECT` instead of `END`
 - [ ] In `cancel()` (bot.py line 1211): add inline keyboard with "Projects" button after cancel message; return `State.SELECT_PROJECT` instead of `END`
 - [ ] In `handle_idea_button()` idea:cancel path (bot.py line 1162): add inline keyboard with "View Project" + "Projects" buttons; return `State.SELECT_PROJECT` instead of `END`
-- [ ] In `handle_brainstorm_hint_button()` bs:cancel path (bot.py line 1178): add inline keyboard with "View Project" + "Projects" buttons; return `State.SELECT_PROJECT` instead of `END`
+- [ ] In `handle_brainstorm_hint_button()` bs:cancel path (bot.py line 1177): add inline keyboard with "View Project" + "Projects" buttons; return `State.SELECT_PROJECT` instead of `END`
 - [ ] In `handle_brainstorm_action()` `brainstorm:end` path (bot.py line 1118): add inline keyboard with "View Project" + "Projects" buttons; return `State.SELECT_PROJECT` instead of `END`
 - [ ] In `handle_brainstorm_action()` `brainstorm:plan` no-project path (bot.py line 1103): add inline keyboard with "Projects" button; return `State.SELECT_PROJECT` instead of `END`
 - **Status:** pending
@@ -73,7 +73,7 @@ Phase 1
 | `handle_input_cancel()` | 1144 | `edit_message_text(MSG_CANCELLED)` → END | Add projects button |
 | `cancel()` | 1211 | `reply_text(MSG_CANCELLED)` → END | Add projects button |
 | `handle_idea_button()` idea:cancel | 1162 | `edit_message_text(MSG_CANCELLED)` → END | Add project/projects buttons |
-| `handle_brainstorm_hint_button()` bs:cancel | 1178 | `edit_message_text(MSG_BRAINSTORM_CANCELLED)` → END | Add project/projects buttons |
+| `handle_brainstorm_hint_button()` bs:cancel | 1177 | `edit_message_text(MSG_BRAINSTORM_CANCELLED)` → END | Add project/projects buttons |
 | `handle_brainstorm_action()` end | 1118 | `edit_message_text(MSG_BRAINSTORM_SESSION_ENDED)` → END | Add project/projects buttons |
 | `handle_brainstorm_action()` no project | 1103 | `edit_message_text(MSG_NO_PROJECT_SELECTED)` → END | Add projects button |
 | `help_command()` | 1222 | `reply_text(MSG_HELP)` → None | Add projects button |
