@@ -1,3 +1,8 @@
 # User Idea
 
-Usuń pozostałość emoji w guzikach bota telegram i zastąp je symbolami spójnymi z resztą projektu.
+Przerób wszystkie komunikaty bota telegram które wymagają potwierdzania, anulowania itd na przyciski. Przykład takiej wiadomości z trybu plan: 
+Plan: Describe idea
+
+Enter a feature description or send /skip to skip.
+Send /cancel to cancel.
+Czyli mogę wpisać wiadomość ale przyciskami a nie slash commands ja pomijam lub anuluję.
