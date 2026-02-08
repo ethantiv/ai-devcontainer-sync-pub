@@ -163,7 +163,7 @@ format_stream() {
             result)
                 local result
                 result=$(echo "$line" | jq -r '.result // empty' 2>/dev/null)
-                [[ -n "$result" ]] && echo -e "\n${C_GREEN}✅ Done: ${result:0:80}${C_RESET}"
+                [[ -n "$result" ]] && echo -e "\n${C_GREEN}✓ Done: ${result:0:80}${C_RESET}"
                 ;;
         esac
     done

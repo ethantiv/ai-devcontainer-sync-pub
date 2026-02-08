@@ -35,17 +35,17 @@ format_duration() {
 
 # Map status to emoji and text
 case $STATUS in
-    success) STATUS_EMOJI="✅"; STATUS_TEXT="Success" ;;
-    completed) STATUS_EMOJI="✔️"; STATUS_TEXT="Iterations completed" ;;
-    interrupted) STATUS_EMOJI="⚠️"; STATUS_TEXT="Interrupted" ;;
-    *) STATUS_EMOJI="❓"; STATUS_TEXT="Unknown" ;;
+    success) STATUS_EMOJI="✓"; STATUS_TEXT="Success" ;;
+    completed) STATUS_EMOJI="✓"; STATUS_TEXT="Iterations completed" ;;
+    interrupted) STATUS_EMOJI="!"; STATUS_TEXT="Interrupted" ;;
+    *) STATUS_EMOJI="?"; STATUS_TEXT="Unknown" ;;
 esac
 
 # Map mode to icon
 case $MODE in
-    build) MODE_ICON="🔨" ;;
-    plan) MODE_ICON="📋" ;;
-    *) MODE_ICON="🔄" ;;
+    build) MODE_ICON="■" ;;
+    plan) MODE_ICON="◇" ;;
+    *) MODE_ICON="~" ;;
 esac
 
 # Get project name

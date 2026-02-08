@@ -203,8 +203,16 @@ class TestValidateTools:
         }
         with patch.dict(os.environ, env, clear=True):
             config = _reload_config(env)
+            # Mock Path.home (for claude check) and loop_docker.exists()
+            # so the loop warning triggers even when /opt/loop exists on host
+            orig_exists = Path.exists
+            def fake_exists(self):
+                if str(self) == "/opt/loop/scripts/loop.sh":
+                    return False
+                return orig_exists(self)
             with patch.object(config.shutil, "which", return_value=None), \
-                 patch.object(config.Path, "home", return_value=Path("/fake/home")):
+                 patch.object(config.Path, "home", return_value=Path("/fake/home")), \
+                 patch.object(Path, "exists", fake_exists):
                 errors, warnings = config.validate()
         assert any("loop" in w.lower() for w in warnings)
         assert not any("loop" in e.lower() for e in errors)
@@ -218,8 +226,14 @@ class TestValidateTools:
         }
         with patch.dict(os.environ, env, clear=True):
             config = _reload_config(env)
+            orig_exists = Path.exists
+            def fake_exists(self):
+                if str(self) == "/opt/loop/scripts/loop.sh":
+                    return False
+                return orig_exists(self)
             with patch.object(config.shutil, "which", return_value=None), \
-                 patch.object(config.Path, "home", return_value=Path("/fake/home")):
+                 patch.object(config.Path, "home", return_value=Path("/fake/home")), \
+                 patch.object(Path, "exists", fake_exists):
                 errors, warnings = config.validate()
         assert errors == []
         assert len(warnings) == 3  # claude, tmux, loop
