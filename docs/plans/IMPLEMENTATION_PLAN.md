@@ -1,7 +1,7 @@
 # Implementation Plan
 
-**Status:** IN_PROGRESS
-**Progress:** 13/17 (76%)
+**Status:** COMPLETE
+**Progress:** 17/17 (100%)
 **Last updated:** 2026-02-08
 **Line numbers verified:** 2026-02-08 (bot.py line numbers shifted +15 from Phase 2 additions)
 
@@ -14,7 +14,7 @@ From ROADMAP.md:
 
 ## Current Phase
 
-Phase 3
+All phases complete
 
 ## Phases
 
@@ -36,23 +36,23 @@ Phase 3
 - **Status:** complete
 
 ### Phase 3: Add Done/Save/Cancel buttons to BRAINSTORMING state
-- [ ] Create brainstorm button keyboards — `_brainstorm_hint_keyboard()` returns `InlineKeyboardMarkup([[InlineKeyboardButton(MSG_BRAINSTORM_DONE_BTN, callback_data="bs:done"), InlineKeyboardButton(MSG_CANCEL_BTN, callback_data="bs:cancel")]])` for short hint; `_brainstorm_hint_long_keyboard()` adds `MSG_BRAINSTORM_SAVE_BTN` ("✓ Save", `callback_data="bs:save"`) alongside Done and Cancel
-- [ ] Add `MSG_BRAINSTORM_DONE_BTN = "✓ Done"` and `MSG_BRAINSTORM_SAVE_BTN = "✓ Save"` to messages.py (near existing brainstorm button constants line 115-116)
-- [ ] Pass `reply_markup=_brainstorm_hint_keyboard()` when sending `MSG_BRAINSTORM_REPLY_HINT` after `brainstorm_manager.start()` in button flow (bot.py line 740-744)
-- [ ] Pass `reply_markup=_brainstorm_hint_long_keyboard()` when sending `MSG_BRAINSTORM_REPLY_HINT_LONG` after `/brainstorming` command flow (bot.py line 949-953)
-- [ ] Pass `reply_markup=_brainstorm_hint_keyboard()` to brainstorm reply messages in `handle_brainstorm_message()` (bot.py line 991-994) — append hint text and buttons after Claude's response
-- [ ] Pass `reply_markup=_brainstorm_hint_keyboard()` when sending `MSG_BRAINSTORM_RESUME` (bot.py line 477-479)
-- [ ] Add `CallbackQueryHandler(handle_brainstorm_hint_button, pattern=r"^bs:")` to BRAINSTORMING state. Handler: `bs:done` and `bs:save` → call `finish_brainstorming()` logic; `bs:cancel` → call `cancel_brainstorming()` logic. Must answer callback query and edit message (not reply, since it's a callback).
-- [ ] Remove slash command text from messages: MSG_BRAINSTORM_REPLY_HINT (line 108), MSG_BRAINSTORM_REPLY_HINT_LONG (line 110-112), MSG_BRAINSTORM_RESUME (line 102), MSG_SESSION_ALREADY_ACTIVE (line 217), MSG_NO_ACTIVE_BRAINSTORM (line 219)
-- **Status:** pending
+- [x] Create brainstorm button keyboards — `_brainstorm_hint_keyboard()` and `_brainstorm_hint_long_keyboard()` (bot.py)
+- [x] Add `MSG_BRAINSTORM_DONE_BTN = "✓ Done"` and `MSG_BRAINSTORM_SAVE_BTN = "✓ Save"` to messages.py
+- [x] Pass `reply_markup=_brainstorm_hint_keyboard()` when sending `MSG_BRAINSTORM_REPLY_HINT` after `brainstorm_manager.start()` in button flow
+- [x] Pass `reply_markup=_brainstorm_hint_long_keyboard()` when sending `MSG_BRAINSTORM_REPLY_HINT_LONG` after `/brainstorming` command flow
+- [x] Pass `reply_markup=_brainstorm_hint_keyboard()` to brainstorm reply messages in `handle_brainstorm_message()` — appends hint text and buttons after Claude's response
+- [x] Pass `reply_markup=_brainstorm_hint_keyboard()` when sending `MSG_BRAINSTORM_RESUME`
+- [x] Add `CallbackQueryHandler(handle_brainstorm_hint_button, pattern=r"^bs:")` to BRAINSTORMING state
+- [x] Remove slash command text from messages: MSG_BRAINSTORM_REPLY_HINT, MSG_BRAINSTORM_REPLY_HINT_LONG, MSG_BRAINSTORM_RESUME, MSG_SESSION_ALREADY_ACTIVE
+- **Status:** complete
 
 ### Phase 4: Add tests for new button handlers
 - [x] Create `src/telegram_bot/tests/test_bot.py` with test utilities — `make_callback_update(chat_id, data)` and `make_context()` helpers
 - [x] Add tests for `handle_input_cancel` callback — 3 tests verify answer, edit, return END
 - [x] Add tests for `handle_idea_button` callback — 6 tests verify skip (answer, set idea=None, show_iterations_menu) and cancel (answer, edit, return END) + 2 message constant tests
-- [ ] Add tests for `handle_brainstorm_hint_button` callback — verify `bs:done`/`bs:save` trigger finish logic; `bs:cancel` triggers cancel logic
-- [ ] Run `python3 -m pytest src/telegram_bot/tests/ -v` — all tests pass (existing 195 + new)
-- **Status:** in_progress
+- [x] Add tests for `handle_brainstorm_hint_button` callback — 11 tests verify `bs:done`/`bs:save` trigger finish logic; `bs:cancel` triggers cancel logic; keyboard helpers tested (4 tests); message constants verified (9 tests)
+- [x] Run `python3 -m pytest src/telegram_bot/tests/ -v` — all 226 tests pass
+- **Status:** complete
 
 ## Findings & Decisions
 

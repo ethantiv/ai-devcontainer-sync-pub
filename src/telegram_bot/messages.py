@@ -95,19 +95,20 @@ MSG_BRAINSTORM_RESUME = (
     "~ *Resuming brainstorming session*\n\n"
     "Project: `{project}`\n"
     "Started: {time}\n\n"
-    "_Continue the discussion. Use /done to save, /cancel to cancel._"
+    "_Continue the discussion or tap a button below._"
 )
 MSG_BRAINSTORM_THINKING = "~ *Brainstorming*\n\nProject: `{project}`\n_{status}_"
 MSG_BRAINSTORM_STARTING = "Starting Claude..."
 MSG_BRAINSTORM_CLAUDE_THINKING = "Claude thinking..."
 MSG_BRAINSTORM_REPLY_HINT = (
-    "_Reply to continue. Use /done to save, /cancel to cancel._"
+    "_Reply to continue or tap a button below._"
 )
 MSG_BRAINSTORM_REPLY_HINT_LONG = (
-    "_Reply to continue. Use /done or /save to save to ROADMAP.md, "
-    "or /cancel to cancel._"
+    "_Reply to continue or tap a button below._"
 )
 MSG_BRAINSTORM_SAVING = "\u2026 _Saving IDEA..._"
+MSG_BRAINSTORM_DONE_BTN = "\u2713 Done"
+MSG_BRAINSTORM_SAVE_BTN = "\u2713 Save"
 MSG_BRAINSTORM_RUN_PLAN_BTN = "\u25c7 Run Plan"
 MSG_BRAINSTORM_END_BTN = "\u00b7 Finish"
 MSG_BRAINSTORM_WHAT_NEXT = "\u2713 *{message}*\n\nWhat would you like to do next?"
@@ -207,7 +208,7 @@ MSG_QUEUED_AT = "Queued #{position}"
 MSG_CLAUDE_ENDED_NO_RESULT = "Claude ended without result:\n{tail}"
 MSG_CLAUDE_ENDED_NO_RESPONSE = "Claude ended without response"
 MSG_TIMEOUT_WAITING = "Timeout waiting for Claude response"
-MSG_SESSION_ALREADY_ACTIVE = "Brainstorming session already active. Use /done or /cancel."
+MSG_SESSION_ALREADY_ACTIVE = "Brainstorming session already active. Finish or cancel the current one first."
 MSG_FAILED_TO_START_CLAUDE = "Failed to start Claude"
 MSG_NO_ACTIVE_BRAINSTORM = "No active brainstorming session. Use /brainstorming <prompt>."
 MSG_SESSION_NOT_READY = "Brainstorming session is not ready."

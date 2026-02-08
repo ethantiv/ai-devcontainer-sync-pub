@@ -286,3 +286,266 @@ class TestHandleIdeaButton:
         with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
             result = await handle_idea_button(update, context)
         assert result == ConversationHandler.END
+
+
+# --- Tests for brainstorm hint keyboards ---
+
+
+class TestBrainstormHintKeyboard:
+    """Tests for _brainstorm_hint_keyboard() and _brainstorm_hint_long_keyboard()."""
+
+    def test_short_keyboard_has_done_and_cancel(self):
+        """Short keyboard has Done + Cancel buttons."""
+        from src.telegram_bot.bot import _brainstorm_hint_keyboard
+
+        kb = _brainstorm_hint_keyboard()
+        assert len(kb.inline_keyboard) == 1
+        buttons = kb.inline_keyboard[0]
+        assert len(buttons) == 2
+        assert buttons[0].callback_data == "bs:done"
+        assert buttons[1].callback_data == "bs:cancel"
+
+    def test_short_keyboard_button_text(self):
+        """Short keyboard buttons use correct MSG constants."""
+        from src.telegram_bot.bot import _brainstorm_hint_keyboard
+        from src.telegram_bot.messages import MSG_BRAINSTORM_DONE_BTN, MSG_CANCEL_BTN
+
+        kb = _brainstorm_hint_keyboard()
+        buttons = kb.inline_keyboard[0]
+        assert buttons[0].text == MSG_BRAINSTORM_DONE_BTN
+        assert buttons[1].text == MSG_CANCEL_BTN
+
+    def test_long_keyboard_has_done_save_cancel(self):
+        """Long keyboard has Done + Save + Cancel buttons."""
+        from src.telegram_bot.bot import _brainstorm_hint_long_keyboard
+
+        kb = _brainstorm_hint_long_keyboard()
+        assert len(kb.inline_keyboard) == 1
+        buttons = kb.inline_keyboard[0]
+        assert len(buttons) == 3
+        assert buttons[0].callback_data == "bs:done"
+        assert buttons[1].callback_data == "bs:save"
+        assert buttons[2].callback_data == "bs:cancel"
+
+    def test_long_keyboard_button_text(self):
+        """Long keyboard buttons use correct MSG constants."""
+        from src.telegram_bot.bot import _brainstorm_hint_long_keyboard
+        from src.telegram_bot.messages import (
+            MSG_BRAINSTORM_DONE_BTN,
+            MSG_BRAINSTORM_SAVE_BTN,
+            MSG_CANCEL_BTN,
+        )
+
+        kb = _brainstorm_hint_long_keyboard()
+        buttons = kb.inline_keyboard[0]
+        assert buttons[0].text == MSG_BRAINSTORM_DONE_BTN
+        assert buttons[1].text == MSG_BRAINSTORM_SAVE_BTN
+        assert buttons[2].text == MSG_CANCEL_BTN
+
+
+# --- Tests for brainstorm message constants (no slash commands) ---
+
+
+class TestBrainstormMessageConstantsNoSlashCommands:
+    """Verify slash command text removed from Phase 3 brainstorm message constants."""
+
+    def test_brainstorm_reply_hint_no_done_command(self):
+        """MSG_BRAINSTORM_REPLY_HINT should not contain '/done'."""
+        from src.telegram_bot.messages import MSG_BRAINSTORM_REPLY_HINT
+        assert "/done" not in MSG_BRAINSTORM_REPLY_HINT
+
+    def test_brainstorm_reply_hint_no_cancel_command(self):
+        """MSG_BRAINSTORM_REPLY_HINT should not contain '/cancel'."""
+        from src.telegram_bot.messages import MSG_BRAINSTORM_REPLY_HINT
+        assert "/cancel" not in MSG_BRAINSTORM_REPLY_HINT
+
+    def test_brainstorm_reply_hint_long_no_done_command(self):
+        """MSG_BRAINSTORM_REPLY_HINT_LONG should not contain '/done'."""
+        from src.telegram_bot.messages import MSG_BRAINSTORM_REPLY_HINT_LONG
+        assert "/done" not in MSG_BRAINSTORM_REPLY_HINT_LONG
+
+    def test_brainstorm_reply_hint_long_no_save_command(self):
+        """MSG_BRAINSTORM_REPLY_HINT_LONG should not contain '/save'."""
+        from src.telegram_bot.messages import MSG_BRAINSTORM_REPLY_HINT_LONG
+        assert "/save" not in MSG_BRAINSTORM_REPLY_HINT_LONG
+
+    def test_brainstorm_reply_hint_long_no_cancel_command(self):
+        """MSG_BRAINSTORM_REPLY_HINT_LONG should not contain '/cancel'."""
+        from src.telegram_bot.messages import MSG_BRAINSTORM_REPLY_HINT_LONG
+        assert "/cancel" not in MSG_BRAINSTORM_REPLY_HINT_LONG
+
+    def test_brainstorm_resume_no_done_command(self):
+        """MSG_BRAINSTORM_RESUME should not contain '/done'."""
+        from src.telegram_bot.messages import MSG_BRAINSTORM_RESUME
+        assert "/done" not in MSG_BRAINSTORM_RESUME
+
+    def test_brainstorm_resume_no_cancel_command(self):
+        """MSG_BRAINSTORM_RESUME should not contain '/cancel'."""
+        from src.telegram_bot.messages import MSG_BRAINSTORM_RESUME
+        assert "/cancel" not in MSG_BRAINSTORM_RESUME
+
+    def test_session_already_active_no_done_command(self):
+        """MSG_SESSION_ALREADY_ACTIVE should not contain '/done'."""
+        from src.telegram_bot.messages import MSG_SESSION_ALREADY_ACTIVE
+        assert "/done" not in MSG_SESSION_ALREADY_ACTIVE
+
+    def test_session_already_active_no_cancel_command(self):
+        """MSG_SESSION_ALREADY_ACTIVE should not contain '/cancel'."""
+        from src.telegram_bot.messages import MSG_SESSION_ALREADY_ACTIVE
+        assert "/cancel" not in MSG_SESSION_ALREADY_ACTIVE
+
+
+# --- Tests for handle_brainstorm_hint_button ---
+
+
+class TestHandleBrainstormHintButton:
+    """Tests for handle_brainstorm_hint_button callback handler (bs:done, bs:save, bs:cancel)."""
+
+    CHAT_ID = 12345
+
+    @pytest.mark.asyncio
+    async def test_done_answers_callback_query(self):
+        """bs:done handler answers the callback query."""
+        from src.telegram_bot.bot import handle_brainstorm_hint_button
+
+        update = make_callback_update(self.CHAT_ID, "bs:done")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+            mock_bm.finish = AsyncMock(return_value=(True, "Saved", "content"))
+            await handle_brainstorm_hint_button(update, context)
+        update.callback_query.answer.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_done_calls_finish(self):
+        """bs:done triggers brainstorm_manager.finish()."""
+        from src.telegram_bot.bot import handle_brainstorm_hint_button
+
+        update = make_callback_update(self.CHAT_ID, "bs:done")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+            mock_bm.finish = AsyncMock(return_value=(True, "Saved", "content"))
+            await handle_brainstorm_hint_button(update, context)
+        mock_bm.finish.assert_awaited_once_with(chat_id=self.CHAT_ID)
+
+    @pytest.mark.asyncio
+    async def test_done_success_shows_what_next(self):
+        """bs:done on success shows 'what next' message with action buttons."""
+        from src.telegram_bot.bot import handle_brainstorm_hint_button
+        from src.telegram_bot.messages import MSG_BRAINSTORM_WHAT_NEXT
+
+        update = make_callback_update(self.CHAT_ID, "bs:done")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+            mock_bm.finish = AsyncMock(return_value=(True, "Saved to ROADMAP", "content"))
+            await handle_brainstorm_hint_button(update, context)
+
+        call_args = update.callback_query.edit_message_text.call_args
+        # edit_message_text called with positional text arg
+        expected = MSG_BRAINSTORM_WHAT_NEXT.format(message="Saved to ROADMAP")
+        actual_text = call_args[0][0] if call_args[0] else call_args[1].get("text", "")
+        assert expected in actual_text
+
+    @pytest.mark.asyncio
+    async def test_done_failure_shows_error(self):
+        """bs:done on failure shows error message and stays in BRAINSTORMING."""
+        from src.telegram_bot.bot import handle_brainstorm_hint_button, State
+
+        update = make_callback_update(self.CHAT_ID, "bs:done")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+            mock_bm.finish = AsyncMock(return_value=(False, "No session", None))
+            result = await handle_brainstorm_hint_button(update, context)
+        assert result == State.BRAINSTORMING
+
+    @pytest.mark.asyncio
+    async def test_save_calls_finish(self):
+        """bs:save also triggers brainstorm_manager.finish() (same as done)."""
+        from src.telegram_bot.bot import handle_brainstorm_hint_button
+
+        update = make_callback_update(self.CHAT_ID, "bs:save")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+            mock_bm.finish = AsyncMock(return_value=(True, "Saved", "content"))
+            await handle_brainstorm_hint_button(update, context)
+        mock_bm.finish.assert_awaited_once_with(chat_id=self.CHAT_ID)
+
+    @pytest.mark.asyncio
+    async def test_cancel_answers_callback_query(self):
+        """bs:cancel handler answers the callback query."""
+        from src.telegram_bot.bot import handle_brainstorm_hint_button
+
+        update = make_callback_update(self.CHAT_ID, "bs:cancel")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+            mock_bm.cancel = MagicMock(return_value=True)
+            await handle_brainstorm_hint_button(update, context)
+        update.callback_query.answer.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_cancel_calls_brainstorm_cancel(self):
+        """bs:cancel triggers brainstorm_manager.cancel()."""
+        from src.telegram_bot.bot import handle_brainstorm_hint_button
+
+        update = make_callback_update(self.CHAT_ID, "bs:cancel")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+            mock_bm.cancel = MagicMock(return_value=True)
+            await handle_brainstorm_hint_button(update, context)
+        mock_bm.cancel.assert_called_once_with(self.CHAT_ID)
+
+    @pytest.mark.asyncio
+    async def test_cancel_shows_cancelled_message(self):
+        """bs:cancel edits message to show cancelled text."""
+        from src.telegram_bot.bot import handle_brainstorm_hint_button
+        from src.telegram_bot.messages import MSG_BRAINSTORM_CANCELLED
+
+        update = make_callback_update(self.CHAT_ID, "bs:cancel")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+            mock_bm.cancel = MagicMock(return_value=True)
+            await handle_brainstorm_hint_button(update, context)
+        update.callback_query.edit_message_text.assert_awaited_once_with(MSG_BRAINSTORM_CANCELLED)
+
+    @pytest.mark.asyncio
+    async def test_cancel_returns_conversation_end(self):
+        """bs:cancel returns ConversationHandler.END."""
+        from src.telegram_bot.bot import handle_brainstorm_hint_button
+
+        update = make_callback_update(self.CHAT_ID, "bs:cancel")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+            mock_bm.cancel = MagicMock(return_value=True)
+            result = await handle_brainstorm_hint_button(update, context)
+        assert result == ConversationHandler.END
+
+    @pytest.mark.asyncio
+    async def test_done_success_returns_brainstorming_state(self):
+        """bs:done on success returns BRAINSTORMING state (for post-action buttons)."""
+        from src.telegram_bot.bot import handle_brainstorm_hint_button, State
+
+        update = make_callback_update(self.CHAT_ID, "bs:done")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+            mock_bm.finish = AsyncMock(return_value=(True, "Saved", "content"))
+            result = await handle_brainstorm_hint_button(update, context)
+        assert result == State.BRAINSTORMING

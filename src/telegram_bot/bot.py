@@ -39,6 +39,7 @@ from .messages import (
     MSG_BRAINSTORM_CMD_PROMPT_REQUIRED,
     MSG_BRAINSTORM_CMD_USAGE,
     MSG_BRAINSTORM_CLAUDE_THINKING,
+    MSG_BRAINSTORM_DONE_BTN,
     MSG_BRAINSTORM_END_BTN,
     MSG_BRAINSTORM_ENTER_TOPIC,
     MSG_BRAINSTORM_HEADER,
@@ -48,6 +49,7 @@ from .messages import (
     MSG_BRAINSTORM_REPLY_HINT_LONG,
     MSG_BRAINSTORM_RESUME,
     MSG_BRAINSTORM_RUN_PLAN_BTN,
+    MSG_BRAINSTORM_SAVE_BTN,
     MSG_BRAINSTORM_SAVING,
     MSG_BRAINSTORM_SESSION_ENDED,
     MSG_BRAINSTORM_STARTING,
@@ -217,6 +219,27 @@ def _cancel_keyboard(callback_data: str) -> InlineKeyboardMarkup:
     """Return a single-button cancel keyboard for text-input states."""
     return InlineKeyboardMarkup(
         [[InlineKeyboardButton(MSG_CANCEL_BTN, callback_data=callback_data)]]
+    )
+
+
+def _brainstorm_hint_keyboard() -> InlineKeyboardMarkup:
+    """Return Done + Cancel keyboard for brainstorm multi-turn replies."""
+    return InlineKeyboardMarkup(
+        [[
+            InlineKeyboardButton(MSG_BRAINSTORM_DONE_BTN, callback_data="bs:done"),
+            InlineKeyboardButton(MSG_CANCEL_BTN, callback_data="bs:cancel"),
+        ]]
+    )
+
+
+def _brainstorm_hint_long_keyboard() -> InlineKeyboardMarkup:
+    """Return Done + Save + Cancel keyboard for first brainstorm response via /brainstorming."""
+    return InlineKeyboardMarkup(
+        [[
+            InlineKeyboardButton(MSG_BRAINSTORM_DONE_BTN, callback_data="bs:done"),
+            InlineKeyboardButton(MSG_BRAINSTORM_SAVE_BTN, callback_data="bs:save"),
+            InlineKeyboardButton(MSG_CANCEL_BTN, callback_data="bs:cancel"),
+        ]]
     )
 
 
@@ -500,6 +523,7 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 time=session.started_at.strftime('%H:%M %d.%m'),
             ),
             parse_mode="Markdown",
+            reply_markup=_brainstorm_hint_keyboard(),
         )
         return State.BRAINSTORMING
 
@@ -761,6 +785,7 @@ async def handle_brainstorm_prompt(update: Update, context: ContextTypes.DEFAULT
                 f"\u203a *Claude:*\n\n{status}\n\n"
                 + MSG_BRAINSTORM_REPLY_HINT,
                 parse_mode="Markdown",
+                reply_markup=_brainstorm_hint_keyboard(),
             )
             return State.BRAINSTORMING
 
@@ -971,6 +996,7 @@ async def start_brainstorming(update: Update, context: ContextTypes.DEFAULT_TYPE
                 f"\u203a *Claude:*\n\n{status}\n\n"
                 + MSG_BRAINSTORM_REPLY_HINT_LONG,
                 parse_mode="Markdown",
+                reply_markup=_brainstorm_hint_long_keyboard(),
             )
             return State.BRAINSTORMING
 
@@ -1010,8 +1036,10 @@ async def handle_brainstorm_message(update: Update, context: ContextTypes.DEFAUL
 
             await thinking_msg.delete()
             await update.message.reply_text(
-                f"\u203a *Claude:*\n\n{status}",
+                f"\u203a *Claude:*\n\n{status}\n\n"
+                + MSG_BRAINSTORM_REPLY_HINT,
                 parse_mode="Markdown",
+                reply_markup=_brainstorm_hint_keyboard(),
             )
             return State.BRAINSTORMING
 
@@ -1132,6 +1160,47 @@ async def handle_idea_button(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # idea:cancel
     await query.edit_message_text(MSG_CANCELLED)
     return ConversationHandler.END
+
+
+@authorized_callback
+async def handle_brainstorm_hint_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle Done/Save/Cancel button press in BRAINSTORMING state."""
+    query = update.callback_query
+    assert query is not None
+    assert query.data is not None
+    assert update.effective_chat is not None
+    await query.answer()
+
+    if query.data == "bs:cancel":
+        brainstorm_manager.cancel(update.effective_chat.id)
+        await query.edit_message_text(MSG_BRAINSTORM_CANCELLED)
+        return ConversationHandler.END
+
+    # bs:done or bs:save — both trigger finish
+    success, message, idea_content = await brainstorm_manager.finish(
+        chat_id=update.effective_chat.id
+    )
+
+    if not success:
+        await query.edit_message_text(f"\u2717 {message}", parse_mode="Markdown")
+        return State.BRAINSTORMING
+
+    # Show buttons for next action (same as finish_brainstorming)
+    buttons = [
+        [
+            InlineKeyboardButton(MSG_BRAINSTORM_RUN_PLAN_BTN, callback_data="brainstorm:plan"),
+            InlineKeyboardButton(MSG_BRAINSTORM_END_BTN, callback_data="brainstorm:end"),
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(buttons)
+
+    await query.edit_message_text(
+        MSG_BRAINSTORM_WHAT_NEXT.format(message=message),
+        reply_markup=reply_markup,
+        parse_mode="Markdown",
+    )
+
+    return State.BRAINSTORMING
 
 
 @authorized
@@ -1413,6 +1482,7 @@ def create_application() -> Application:
                 CommandHandler("done", finish_brainstorming),
                 CommandHandler("save", finish_brainstorming),
                 CommandHandler("cancel", cancel_brainstorming),
+                CallbackQueryHandler(handle_brainstorm_hint_button, pattern=r"^bs:"),
                 CallbackQueryHandler(handle_brainstorm_action, pattern=r"^brainstorm:"),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_brainstorm_message),
             ],
