@@ -1,7 +1,7 @@
 # Implementation Plan
 
-**Status:** IN_PROGRESS
-**Progress:** 10/20 (50%)
+**Status:** COMPLETE
+**Progress:** 20/20 (100%)
 **Last Verified:** 2026-02-08
 
 ## Goal
@@ -28,17 +28,17 @@ Phase 2: Pagination for Project List
 - **Status:** complete
 
 ### Phase 2: Pagination for Project List (P3-Nice to Have)
-- [ ] Add pagination constants to `config.py`: `PROJECTS_PER_PAGE` (default 5, no env var — hardcoded is fine for UI layout)
-- [ ] Add message constants to `messages.py`: `MSG_PAGE_PREV_BTN` ("< Prev"), `MSG_PAGE_NEXT_BTN` ("Next >"), `MSG_PAGE_INDICATOR` ("Page {current}/{total}")
-- [ ] Add page state to `user_data`: store `projects_page` (int, default 0) in `get_user_data()` dict, reset to 0 on `/start` and `/projects`
-- [ ] Refactor `show_projects()` in project handler module: slice `projects[page*5:(page+1)*5]`, add Prev/Next navigation row with `callback_data="page:prev"` and `page:next`, show page indicator in message text, preserve Create/Clone footer on every page
-- [ ] Add `handle_page_navigation()` callback handler for `page:prev`/`page:next` patterns — update `user_data["projects_page"]`, call `show_projects()`
-- [ ] Register page navigation handler in `State.SELECT_PROJECT` state mapping
-- [ ] Write tests for pagination: page boundaries (first/last page), button visibility (no Prev on first, no Next on last), page state reset on /start, empty projects, single page (<=5 projects), multi-page navigation
-- [ ] Write tests for page navigation handler: prev/next callbacks, boundary clamping
-- [ ] Run full test suite — all tests must pass
-- [ ] Update `COMMANDS.md` if project list behavior description needs updating
-- **Status:** pending
+- [x] Add pagination constants to `config.py`: `PROJECTS_PER_PAGE` (default 5, hardcoded — no env var needed for UI layout)
+- [x] Add message constants to `messages.py`: `MSG_PAGE_PREV_BTN` ("◀ Prev"), `MSG_PAGE_NEXT_BTN` ("Next ▶"), `MSG_PAGE_INDICATOR` ("Page {current}/{total}")
+- [x] Add page state to `user_data`: `projects_page` (int, default 0), reset to 0 in `start()` on `/start` and `/projects`
+- [x] Refactor `show_projects()` in `handlers/projects.py`: paginate with `PROJECTS_PER_PAGE`, add Prev/Next navigation row with `callback_data="page:prev"` and `page:next`, page indicator in message text, Create/Clone footer on every page, out-of-range page clamping
+- [x] Add `handle_page_navigation()` callback handler in `handlers/projects.py` for `page:prev`/`page:next` — updates `user_data["projects_page"]`, calls `show_projects()`
+- [x] Register page navigation handler in `State.SELECT_PROJECT` state mapping (`bot.py`)
+- [x] Write tests for pagination (10 tests): page boundaries, button visibility (no Prev on first, no Next on last), page indicator, page state reset on /start, empty projects, single page, multi-page navigation, out-of-range clamping
+- [x] Write tests for page navigation handler (4 tests): prev/next callbacks, boundary clamping in both directions
+- [x] Run full test suite — 438 tests pass (424 original + 14 new pagination tests)
+- [x] Update `COMMANDS.md` — added Prev/Next buttons and New project button to project list section
+- **Status:** complete
 
 ## Key Questions
 

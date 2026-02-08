@@ -2127,3 +2127,429 @@ class TestBrainstormHistoryCommand:
             result = await show_brainstorm_history(update, context)
 
         assert result == State.SELECT_PROJECT
+
+
+# --- Tests for project list pagination ---
+
+
+class TestShowProjectsPagination:
+    """Tests for paginated project list in show_projects()."""
+
+    CHAT_ID = 12345
+
+    def _make_project(self, name, is_worktree=False):
+        """Create a mock project."""
+        project = MagicMock()
+        project.name = name
+        project.path = Path(f"/tmp/{name}")
+        project.is_worktree = is_worktree
+        return project
+
+    def _make_projects(self, count):
+        """Create a list of mock projects."""
+        return [self._make_project(f"proj-{i}") for i in range(count)]
+
+    @pytest.mark.asyncio
+    async def test_single_page_no_nav_buttons(self):
+        """When <= 5 projects, no Prev/Next buttons should appear."""
+        from src.telegram_bot.bot import show_projects, user_data_store
+
+        projects = self._make_projects(3)
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        update.callback_query = None
+        context = make_context()
+
+        user_data_store[self.CHAT_ID] = {}
+
+        with (
+            patch("src.telegram_bot.handlers.projects.list_projects", return_value=projects),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+        ):
+            mock_tm.check_running.return_value = False
+            await show_projects(update, context)
+
+        call_kwargs = update.message.reply_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        all_data = [b.callback_data for row in markup.inline_keyboard for b in row]
+
+        assert "page:prev" not in all_data
+        assert "page:next" not in all_data
+
+    @pytest.mark.asyncio
+    async def test_first_page_shows_next_no_prev(self):
+        """First page of multi-page list shows Next but not Prev."""
+        from src.telegram_bot.bot import show_projects, user_data_store
+
+        projects = self._make_projects(8)
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        update.callback_query = None
+        context = make_context()
+
+        user_data_store[self.CHAT_ID] = {"projects_page": 0}
+
+        with (
+            patch("src.telegram_bot.handlers.projects.list_projects", return_value=projects),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+        ):
+            mock_tm.check_running.return_value = False
+            await show_projects(update, context)
+
+        call_kwargs = update.message.reply_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        all_data = [b.callback_data for row in markup.inline_keyboard for b in row]
+
+        # Should show only 5 project buttons (not all 8)
+        project_buttons = [d for d in all_data if d.startswith("project:")]
+        assert len(project_buttons) == 5
+
+        assert "page:next" in all_data
+        assert "page:prev" not in all_data
+
+    @pytest.mark.asyncio
+    async def test_last_page_shows_prev_no_next(self):
+        """Last page shows Prev but not Next."""
+        from src.telegram_bot.bot import show_projects, user_data_store
+
+        projects = self._make_projects(8)
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        update.callback_query = None
+        context = make_context()
+
+        # Page 1 = second page (0-indexed), last page for 8 items with 5/page
+        user_data_store[self.CHAT_ID] = {"projects_page": 1}
+
+        with (
+            patch("src.telegram_bot.handlers.projects.list_projects", return_value=projects),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+        ):
+            mock_tm.check_running.return_value = False
+            await show_projects(update, context)
+
+        call_kwargs = update.message.reply_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        all_data = [b.callback_data for row in markup.inline_keyboard for b in row]
+
+        # Should show only 3 project buttons (items 5-7)
+        project_buttons = [d for d in all_data if d.startswith("project:")]
+        assert len(project_buttons) == 3
+
+        assert "page:prev" in all_data
+        assert "page:next" not in all_data
+
+    @pytest.mark.asyncio
+    async def test_middle_page_shows_both_buttons(self):
+        """Middle page shows both Prev and Next."""
+        from src.telegram_bot.bot import show_projects, user_data_store
+
+        projects = self._make_projects(12)
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        update.callback_query = None
+        context = make_context()
+
+        # Page 1 = middle page for 12 items with 5/page (pages: 0, 1, 2)
+        user_data_store[self.CHAT_ID] = {"projects_page": 1}
+
+        with (
+            patch("src.telegram_bot.handlers.projects.list_projects", return_value=projects),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+        ):
+            mock_tm.check_running.return_value = False
+            await show_projects(update, context)
+
+        call_kwargs = update.message.reply_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        all_data = [b.callback_data for row in markup.inline_keyboard for b in row]
+
+        assert "page:prev" in all_data
+        assert "page:next" in all_data
+
+    @pytest.mark.asyncio
+    async def test_page_indicator_in_message_text(self):
+        """Message text includes page indicator for multi-page lists."""
+        from src.telegram_bot.bot import show_projects, user_data_store
+
+        projects = self._make_projects(8)
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        update.callback_query = None
+        context = make_context()
+
+        user_data_store[self.CHAT_ID] = {"projects_page": 0}
+
+        with (
+            patch("src.telegram_bot.handlers.projects.list_projects", return_value=projects),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+        ):
+            mock_tm.check_running.return_value = False
+            await show_projects(update, context)
+
+        call_args = update.message.reply_text.call_args
+        text = call_args[0][0]
+        assert "Page 1/2" in text
+
+    @pytest.mark.asyncio
+    async def test_no_page_indicator_single_page(self):
+        """No page indicator when all projects fit on one page."""
+        from src.telegram_bot.bot import show_projects, user_data_store
+
+        projects = self._make_projects(3)
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        update.callback_query = None
+        context = make_context()
+
+        user_data_store[self.CHAT_ID] = {}
+
+        with (
+            patch("src.telegram_bot.handlers.projects.list_projects", return_value=projects),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+        ):
+            mock_tm.check_running.return_value = False
+            await show_projects(update, context)
+
+        call_args = update.message.reply_text.call_args
+        text = call_args[0][0]
+        assert "Page " not in text
+
+    @pytest.mark.asyncio
+    async def test_create_clone_footer_on_every_page(self):
+        """Create/Clone buttons appear on every page."""
+        from src.telegram_bot.bot import show_projects, user_data_store
+        from src.telegram_bot.messages import MSG_CREATE_PROJECT_BTN, MSG_CLONE_REPO_BTN
+
+        projects = self._make_projects(8)
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        update.callback_query = None
+        context = make_context()
+
+        # Test on page 1 (second page)
+        user_data_store[self.CHAT_ID] = {"projects_page": 1}
+
+        with (
+            patch("src.telegram_bot.handlers.projects.list_projects", return_value=projects),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+        ):
+            mock_tm.check_running.return_value = False
+            await show_projects(update, context)
+
+        call_kwargs = update.message.reply_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        all_data = [b.callback_data for row in markup.inline_keyboard for b in row]
+
+        assert "action:create_project" in all_data
+        assert "action:clone" in all_data
+
+    @pytest.mark.asyncio
+    async def test_page_state_reset_on_start(self):
+        """Page state resets to 0 when /start is called."""
+        from src.telegram_bot.bot import start, user_data_store
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        update.callback_query = None
+        context = make_context()
+
+        # Set page to non-zero
+        user_data_store[self.CHAT_ID] = {"projects_page": 3}
+
+        with (
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.projects.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.projects.list_projects", return_value=[]),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+        ):
+            mock_tm.check_running.return_value = False
+            await start(update, context)
+
+        assert user_data_store[self.CHAT_ID].get("projects_page", 0) == 0
+
+    @pytest.mark.asyncio
+    async def test_out_of_range_page_clamps_to_last(self):
+        """If page is beyond available pages, clamp to last page."""
+        from src.telegram_bot.bot import show_projects, user_data_store
+
+        projects = self._make_projects(3)
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        update.callback_query = None
+        context = make_context()
+
+        # Page 10 is way beyond what 3 projects need (1 page)
+        user_data_store[self.CHAT_ID] = {"projects_page": 10}
+
+        with (
+            patch("src.telegram_bot.handlers.projects.list_projects", return_value=projects),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+        ):
+            mock_tm.check_running.return_value = False
+            await show_projects(update, context)
+
+        call_kwargs = update.message.reply_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        project_buttons = [
+            b.callback_data for row in markup.inline_keyboard
+            for b in row if b.callback_data.startswith("project:")
+        ]
+        # Should show all 3 projects (clamped to page 0)
+        assert len(project_buttons) == 3
+
+    @pytest.mark.asyncio
+    async def test_empty_projects_no_pagination(self):
+        """Empty project list shows Create/Clone, no pagination."""
+        from src.telegram_bot.bot import show_projects, user_data_store
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        update.callback_query = None
+        context = make_context()
+
+        user_data_store[self.CHAT_ID] = {}
+
+        with (
+            patch("src.telegram_bot.handlers.projects.list_projects", return_value=[]),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+        ):
+            mock_tm.check_running.return_value = False
+            await show_projects(update, context)
+
+        call_kwargs = update.message.reply_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        all_data = [b.callback_data for row in markup.inline_keyboard for b in row]
+
+        assert "page:prev" not in all_data
+        assert "page:next" not in all_data
+
+
+class TestHandlePageNavigation:
+    """Tests for page navigation callback handler."""
+
+    CHAT_ID = 12345
+
+    def _make_projects(self, count):
+        projects = []
+        for i in range(count):
+            p = MagicMock()
+            p.name = f"proj-{i}"
+            p.path = Path(f"/tmp/proj-{i}")
+            p.is_worktree = False
+            projects.append(p)
+        return projects
+
+    @pytest.mark.asyncio
+    async def test_next_increments_page(self):
+        """page:next increments projects_page and re-renders."""
+        from src.telegram_bot.bot import handle_page_navigation, user_data_store, State
+
+        projects = self._make_projects(12)
+        update = make_callback_update(self.CHAT_ID, "page:next")
+        context = make_context()
+
+        user_data_store[self.CHAT_ID] = {"projects_page": 0}
+
+        with (
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.projects.list_projects", return_value=projects),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+        ):
+            mock_tm.check_running.return_value = False
+            result = await handle_page_navigation(update, context)
+
+        assert user_data_store[self.CHAT_ID]["projects_page"] == 1
+        assert result == State.SELECT_PROJECT
+
+    @pytest.mark.asyncio
+    async def test_prev_decrements_page(self):
+        """page:prev decrements projects_page."""
+        from src.telegram_bot.bot import handle_page_navigation, user_data_store, State
+
+        projects = self._make_projects(12)
+        update = make_callback_update(self.CHAT_ID, "page:prev")
+        context = make_context()
+
+        user_data_store[self.CHAT_ID] = {"projects_page": 1}
+
+        with (
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.projects.list_projects", return_value=projects),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+        ):
+            mock_tm.check_running.return_value = False
+            result = await handle_page_navigation(update, context)
+
+        assert user_data_store[self.CHAT_ID]["projects_page"] == 0
+        assert result == State.SELECT_PROJECT
+
+    @pytest.mark.asyncio
+    async def test_prev_clamps_to_zero(self):
+        """page:prev on first page stays at 0."""
+        from src.telegram_bot.bot import handle_page_navigation, user_data_store
+
+        projects = self._make_projects(12)
+        update = make_callback_update(self.CHAT_ID, "page:prev")
+        context = make_context()
+
+        user_data_store[self.CHAT_ID] = {"projects_page": 0}
+
+        with (
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.projects.list_projects", return_value=projects),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+        ):
+            mock_tm.check_running.return_value = False
+            await handle_page_navigation(update, context)
+
+        assert user_data_store[self.CHAT_ID]["projects_page"] == 0
+
+    @pytest.mark.asyncio
+    async def test_next_clamps_to_last_page(self):
+        """page:next on last page stays on last page."""
+        from src.telegram_bot.bot import handle_page_navigation, user_data_store
+
+        projects = self._make_projects(8)  # 2 pages (0, 1)
+        update = make_callback_update(self.CHAT_ID, "page:next")
+        context = make_context()
+
+        user_data_store[self.CHAT_ID] = {"projects_page": 1}
+
+        with (
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.projects.list_projects", return_value=projects),
+            patch("src.telegram_bot.handlers.projects.task_manager") as mock_tm,
+        ):
+            mock_tm.check_running.return_value = False
+            await handle_page_navigation(update, context)
+
+        assert user_data_store[self.CHAT_ID]["projects_page"] == 1

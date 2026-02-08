@@ -38,6 +38,8 @@ The bot uses inline keyboard buttons for most interactions:
 - **▸ Project** - Standalone repo
 - **↳ Project** - Worktree
 - **◉ Project** - Running task
+- **◀ Prev** / **Next ▶** - Page navigation (shown when >5 projects)
+- **+ New project** - Create a new project
 - **↓ Clone repo** - Clone a git repository
 
 ### Project Menu

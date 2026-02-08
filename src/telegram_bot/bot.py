@@ -43,6 +43,7 @@ from .handlers import (
     handle_input_cancel,
     handle_iterations,
     handle_name,
+    handle_page_navigation,
     handle_project_name,
     help_command,
     project_selected,
@@ -109,6 +110,7 @@ def create_application() -> Application:
         states={
             State.SELECT_PROJECT: [
                 CallbackQueryHandler(project_selected, pattern=r"^project:"),
+                CallbackQueryHandler(handle_page_navigation, pattern=r"^page:"),
                 CallbackQueryHandler(handle_action, pattern=r"^action:"),
             ],
             State.PROJECT_MENU: [

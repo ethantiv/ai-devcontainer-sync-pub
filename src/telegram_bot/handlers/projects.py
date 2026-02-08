@@ -5,7 +5,7 @@ from pathlib import Path
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
-from ..config import PROJECTS_ROOT, TELEGRAM_CHAT_ID
+from ..config import PROJECTS_PER_PAGE, PROJECTS_ROOT, TELEGRAM_CHAT_ID
 from ..git_utils import check_remote_updates, pull_project
 from ..messages import (
     MSG_ACTIVE_BRAINSTORM,
@@ -19,6 +19,9 @@ from ..messages import (
     MSG_CLONE_REPO_BTN,
     MSG_CLONING_REPO,
     MSG_CREATE_PROJECT_BTN,
+    MSG_PAGE_INDICATOR,
+    MSG_PAGE_NEXT_BTN,
+    MSG_PAGE_PREV_BTN,
     MSG_CREATING_PROJECT,
     MSG_ENTER_PROJECT_NAME,
     MSG_ENTER_REPO_URL,
@@ -85,11 +88,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text(MSG_UNAUTHORIZED)
         return ConversationHandler.END
 
+    # Reset page to first page on explicit /start or /projects
+    user_data = get_user_data(chat_id)
+    user_data["projects_page"] = 0
+
     return await show_projects(update, context)
 
 
 async def show_projects(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:  # noqa: ARG001
-    """Show list of projects as buttons."""
+    """Show list of projects as buttons with pagination."""
     projects = list_projects()
 
     if not projects:
@@ -103,8 +110,21 @@ async def show_projects(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         await reply_text(update, MSG_NO_PROJECTS, reply_markup=reply_markup, parse_mode=None)
         return State.SELECT_PROJECT
 
+    # Pagination state
+    chat_id = update.effective_chat.id if update.effective_chat else 0
+    user_data = get_user_data(chat_id)
+    total_pages = max(1, -(-len(projects) // PROJECTS_PER_PAGE))  # ceil division
+    page = user_data.get("projects_page", 0)
+    # Clamp page to valid range
+    page = max(0, min(page, total_pages - 1))
+    user_data["projects_page"] = page
+
+    # Slice projects for current page
+    start_idx = page * PROJECTS_PER_PAGE
+    page_projects = projects[start_idx : start_idx + PROJECTS_PER_PAGE]
+
     buttons = []
-    for project in projects:
+    for project in page_projects:
         label = project.name
         if task_manager.check_running(project.path):
             label = f"\u25c9 {label}"
@@ -118,14 +138,50 @@ async def show_projects(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     # Arrange buttons in rows of 2
     keyboard = [buttons[i : i + 2] for i in range(0, len(buttons), 2)]
+
+    # Prev/Next navigation row (only when multiple pages)
+    if total_pages > 1:
+        nav_row = []
+        if page > 0:
+            nav_row.append(InlineKeyboardButton(MSG_PAGE_PREV_BTN, callback_data="page:prev"))
+        if page < total_pages - 1:
+            nav_row.append(InlineKeyboardButton(MSG_PAGE_NEXT_BTN, callback_data="page:next"))
+        keyboard.append(nav_row)
+
     keyboard.append([
         InlineKeyboardButton(MSG_CREATE_PROJECT_BTN, callback_data="action:create_project"),
         InlineKeyboardButton(MSG_CLONE_REPO_BTN, callback_data="action:clone"),
     ])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await reply_text(update, MSG_AVAILABLE_PROJECTS, reply_markup=reply_markup)
+    # Message text with optional page indicator
+    text = MSG_AVAILABLE_PROJECTS
+    if total_pages > 1:
+        text += f"\n{MSG_PAGE_INDICATOR.format(current=page + 1, total=total_pages)}"
+
+    await reply_text(update, text, reply_markup=reply_markup)
     return State.SELECT_PROJECT
+
+
+@authorized_callback
+async def handle_page_navigation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle page:prev / page:next callbacks for project list pagination."""
+    query = update.callback_query
+    assert query is not None
+    assert query.data is not None
+    await query.answer()
+
+    direction = query.data.replace("page:", "")
+    user_data = get_user_data(update.effective_chat.id)
+    page = user_data.get("projects_page", 0)
+
+    if direction == "next":
+        user_data["projects_page"] = page + 1
+    elif direction == "prev":
+        user_data["projects_page"] = max(0, page - 1)
+
+    # show_projects will clamp the page if out of range
+    return await show_projects(update, context)
 
 
 @authorized_callback
