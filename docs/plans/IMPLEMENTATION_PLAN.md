@@ -1,9 +1,9 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 10/17 (59%)
+**Progress:** 13/17 (76%)
 **Last updated:** 2026-02-08
-**Line numbers verified:** 2026-02-08 (all bot.py and messages.py references confirmed accurate)
+**Line numbers verified:** 2026-02-08 (bot.py line numbers shifted +15 from Phase 2 additions)
 
 ## Goal
 
@@ -14,7 +14,7 @@ From ROADMAP.md:
 
 ## Current Phase
 
-Phase 2
+Phase 3
 
 ## Phases
 
@@ -30,10 +30,10 @@ Phase 2
 - **Status:** complete
 
 ### Phase 2: Add Skip + Cancel buttons to ENTER_IDEA state
-- [ ] Add `→ Skip` + `✗ Cancel` inline buttons to `ENTER_IDEA` prompt — create keyboard with `[[InlineKeyboardButton(MSG_GITHUB_SKIP_BTN, callback_data="idea:skip"), InlineKeyboardButton(MSG_CANCEL_BTN, callback_data="idea:cancel")]]` and pass as `reply_markup` to `query.edit_message_text()` (bot.py line 435). Note: reuse existing `MSG_GITHUB_SKIP_BTN` ("→ Skip") or create `MSG_SKIP_BTN` if label differs.
-- [ ] Add `CallbackQueryHandler(handle_idea_button, pattern=r"^idea:")` to ENTER_IDEA state. Handler: `idea:skip` → set `user_data["idea"] = None` and call `show_iterations_menu()`; `idea:cancel` → reply MSG_CANCELLED and return END.
-- [ ] Remove "/skip" and "/cancel" text from MSG_PLAN_ENTER_IDEA (messages.py line 82-83)
-- **Status:** pending
+- [x] Add `→ Skip` + `✗ Cancel` inline buttons to `ENTER_IDEA` prompt — reused `MSG_GITHUB_SKIP_BTN` (bot.py line 449-455)
+- [x] Add `CallbackQueryHandler(handle_idea_button, pattern=r"^idea:")` to ENTER_IDEA state (bot.py line 1382)
+- [x] Remove "/skip" and "/cancel" text from MSG_PLAN_ENTER_IDEA (messages.py line 78-80)
+- **Status:** complete
 
 ### Phase 3: Add Done/Save/Cancel buttons to BRAINSTORMING state
 - [ ] Create brainstorm button keyboards — `_brainstorm_hint_keyboard()` returns `InlineKeyboardMarkup([[InlineKeyboardButton(MSG_BRAINSTORM_DONE_BTN, callback_data="bs:done"), InlineKeyboardButton(MSG_CANCEL_BTN, callback_data="bs:cancel")]])` for short hint; `_brainstorm_hint_long_keyboard()` adds `MSG_BRAINSTORM_SAVE_BTN` ("✓ Save", `callback_data="bs:save"`) alongside Done and Cancel
@@ -49,9 +49,9 @@ Phase 2
 ### Phase 4: Add tests for new button handlers
 - [x] Create `src/telegram_bot/tests/test_bot.py` with test utilities — `make_callback_update(chat_id, data)` and `make_context()` helpers
 - [x] Add tests for `handle_input_cancel` callback — 3 tests verify answer, edit, return END
-- [ ] Add tests for `handle_idea_button` callback — verify `idea:skip` sets user_data and transitions to SELECT_ITERATIONS; `idea:cancel` sends MSG_CANCELLED and returns END
+- [x] Add tests for `handle_idea_button` callback — 6 tests verify skip (answer, set idea=None, show_iterations_menu) and cancel (answer, edit, return END) + 2 message constant tests
 - [ ] Add tests for `handle_brainstorm_hint_button` callback — verify `bs:done`/`bs:save` trigger finish logic; `bs:cancel` triggers cancel logic
-- [ ] Run `python3 -m pytest src/telegram_bot/tests/ -v` — all tests pass (existing 180 + new)
+- [ ] Run `python3 -m pytest src/telegram_bot/tests/ -v` — all tests pass (existing 195 + new)
 - **Status:** in_progress
 
 ## Findings & Decisions

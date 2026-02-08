@@ -77,8 +77,7 @@ MSG_LOOP_INIT_FAIL = "\u2717 Loop init failed in {name}"
 # Plan flow
 MSG_PLAN_ENTER_IDEA = (
     "*Plan: Describe idea*\n\n"
-    "Enter a feature description or send /skip to skip.\n"
-    "Send /cancel to cancel."
+    "Enter a feature description or tap Skip."
 )
 
 # Attach

@@ -442,9 +442,18 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     if action == "plan":
         user_data["mode"] = "plan"
+        idea_keyboard = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(MSG_GITHUB_SKIP_BTN, callback_data="idea:skip"),
+                    InlineKeyboardButton(MSG_CANCEL_BTN, callback_data="idea:cancel"),
+                ]
+            ]
+        )
         await query.edit_message_text(
             MSG_PLAN_ENTER_IDEA,
             parse_mode="Markdown",
+            reply_markup=idea_keyboard,
         )
         return State.ENTER_IDEA
 
@@ -1107,6 +1116,24 @@ async def handle_input_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE
     return ConversationHandler.END
 
 
+@authorized_callback
+async def handle_idea_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle Skip/Cancel button press in ENTER_IDEA state."""
+    query = update.callback_query
+    assert query is not None
+    await query.answer()
+
+    if query.data == "idea:skip":
+        assert update.effective_chat is not None
+        user_data = get_user_data(update.effective_chat.id)
+        user_data["idea"] = None
+        return await show_iterations_menu(update, context)
+
+    # idea:cancel
+    await query.edit_message_text(MSG_CANCELLED)
+    return ConversationHandler.END
+
+
 @authorized
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancel current operation."""
@@ -1359,7 +1386,7 @@ def create_application() -> Application:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_clone_url),
             ],
             State.ENTER_IDEA: [
-                CallbackQueryHandler(handle_input_cancel, pattern=r"^input:cancel$"),
+                CallbackQueryHandler(handle_idea_button, pattern=r"^idea:"),
                 CommandHandler("cancel", cancel),
                 CommandHandler("skip", skip_idea),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_idea),

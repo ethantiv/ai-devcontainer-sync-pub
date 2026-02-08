@@ -186,3 +186,103 @@ class TestMessageConstantsNoSlashCommands:
         """MSG_ENTER_ITERATIONS should not contain '/cancel'."""
         from src.telegram_bot.messages import MSG_ENTER_ITERATIONS
         assert "/cancel" not in MSG_ENTER_ITERATIONS
+
+    def test_plan_enter_idea_no_skip_command(self):
+        """MSG_PLAN_ENTER_IDEA should not contain '/skip' — replaced by inline button."""
+        from src.telegram_bot.messages import MSG_PLAN_ENTER_IDEA
+        assert "/skip" not in MSG_PLAN_ENTER_IDEA
+
+    def test_plan_enter_idea_no_cancel_command(self):
+        """MSG_PLAN_ENTER_IDEA should not contain '/cancel' — replaced by inline button."""
+        from src.telegram_bot.messages import MSG_PLAN_ENTER_IDEA
+        assert "/cancel" not in MSG_PLAN_ENTER_IDEA
+
+
+# --- Tests for handle_idea_button ---
+
+
+class TestHandleIdeaButton:
+    """Tests for handle_idea_button callback handler (idea:skip, idea:cancel)."""
+
+    CHAT_ID = 12345
+
+    @pytest.mark.asyncio
+    async def test_skip_answers_callback_query(self):
+        """idea:skip handler answers the callback query."""
+        from src.telegram_bot.bot import handle_idea_button
+
+        update = make_callback_update(self.CHAT_ID, "idea:skip")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value={}) as mock_gud, \
+             patch("src.telegram_bot.bot.show_iterations_menu", new_callable=AsyncMock, return_value=42):
+            await handle_idea_button(update, context)
+        update.callback_query.answer.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_skip_sets_idea_to_none(self):
+        """idea:skip sets user_data['idea'] to None (skip means no idea)."""
+        from src.telegram_bot.bot import handle_idea_button
+
+        update = make_callback_update(self.CHAT_ID, "idea:skip")
+        context = make_context()
+        user_data = {"idea": "something"}
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value=user_data), \
+             patch("src.telegram_bot.bot.show_iterations_menu", new_callable=AsyncMock, return_value=42):
+            await handle_idea_button(update, context)
+        assert user_data["idea"] is None
+
+    @pytest.mark.asyncio
+    async def test_skip_calls_show_iterations_menu(self):
+        """idea:skip transitions to iterations menu."""
+        from src.telegram_bot.bot import handle_idea_button
+
+        update = make_callback_update(self.CHAT_ID, "idea:skip")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value={}), \
+             patch("src.telegram_bot.bot.show_iterations_menu", new_callable=AsyncMock, return_value=42) as mock_menu:
+            result = await handle_idea_button(update, context)
+        mock_menu.assert_awaited_once_with(update, context)
+        assert result == 42
+
+    @pytest.mark.asyncio
+    async def test_cancel_answers_callback_query(self):
+        """idea:cancel handler answers the callback query."""
+        from src.telegram_bot.bot import handle_idea_button
+
+        update = make_callback_update(self.CHAT_ID, "idea:cancel")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+            await handle_idea_button(update, context)
+        update.callback_query.answer.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_cancel_edits_message_with_cancelled(self):
+        """idea:cancel edits message to show MSG_CANCELLED."""
+        from src.telegram_bot.bot import handle_idea_button
+        from src.telegram_bot.messages import MSG_CANCELLED
+
+        update = make_callback_update(self.CHAT_ID, "idea:cancel")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+            await handle_idea_button(update, context)
+        update.callback_query.edit_message_text.assert_awaited_once_with(MSG_CANCELLED)
+
+    @pytest.mark.asyncio
+    async def test_cancel_returns_conversation_end(self):
+        """idea:cancel returns ConversationHandler.END."""
+        from src.telegram_bot.bot import handle_idea_button
+
+        update = make_callback_update(self.CHAT_ID, "idea:cancel")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+            result = await handle_idea_button(update, context)
+        assert result == ConversationHandler.END
