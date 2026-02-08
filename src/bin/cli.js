@@ -58,7 +58,8 @@ Examples:
 program
   .command('cleanup')
   .description('Kill processes on dev server ports (3000, 5173, 8080, etc.)')
-  .action(() => cleanup());
+  .option('--logs', 'Rotate and prune log files instead of killing processes')
+  .action((opts) => cleanup({ logs: opts.logs }));
 
 program
   .command('summary')
@@ -84,6 +85,7 @@ Examples:
   $ loop run -I "Add auth"  Plan with seed idea, then build
   $ loop summary            Show summary of last loop run
   $ loop cleanup            Kill dev server processes
+  $ loop cleanup --logs     Rotate and prune log files
   $ loop update             Refresh symlinks after package update`);
 
 program.parse();

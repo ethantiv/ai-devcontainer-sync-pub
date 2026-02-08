@@ -1272,3 +1272,41 @@ class TestHelpCommandFollowUp:
         markup = call_kwargs["reply_markup"]
         button_texts = [b.text for row in markup.inline_keyboard for b in row]
         assert MSG_PROJECTS_LIST_BTN in button_texts
+
+
+# --- Tests for run_log_rotation ---
+
+
+class TestRunLogRotation:
+    """Tests for run_log_rotation() periodic job."""
+
+    @pytest.mark.asyncio
+    async def test_calls_rotate_logs_and_cleanup(self):
+        """run_log_rotation calls both rotate_logs and cleanup_brainstorm_files."""
+        from src.telegram_bot.bot import run_log_rotation
+
+        context = make_context()
+
+        with (
+            patch("src.telegram_bot.bot.rotate_logs", return_value={"deleted": 2, "freed_bytes": 1024}) as mock_rotate,
+            patch("src.telegram_bot.bot.cleanup_brainstorm_files", return_value={"deleted": 1, "freed_bytes": 512}) as mock_cleanup,
+            patch("src.telegram_bot.bot.PROJECTS_ROOT", "/tmp/test-projects"),
+        ):
+            await run_log_rotation(context)
+
+        mock_rotate.assert_called_once()
+        mock_cleanup.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_no_error_when_nothing_deleted(self):
+        """run_log_rotation succeeds silently when no files are deleted."""
+        from src.telegram_bot.bot import run_log_rotation
+
+        context = make_context()
+
+        with (
+            patch("src.telegram_bot.bot.rotate_logs", return_value={"deleted": 0, "freed_bytes": 0}),
+            patch("src.telegram_bot.bot.cleanup_brainstorm_files", return_value={"deleted": 0, "freed_bytes": 0}),
+            patch("src.telegram_bot.bot.PROJECTS_ROOT", "/tmp/test-projects"),
+        ):
+            await run_log_rotation(context)

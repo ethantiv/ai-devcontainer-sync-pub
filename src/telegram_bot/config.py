@@ -49,6 +49,11 @@ BRAINSTORM_TIMEOUT = _safe_int(environ.get("LOOP_BRAINSTORM_TIMEOUT"), 300)
 MAX_QUEUE_SIZE = _safe_int(environ.get("LOOP_MAX_QUEUE_SIZE"), 10)
 GIT_DIFF_RANGE = environ.get("LOOP_GIT_DIFF_RANGE", "HEAD~5..HEAD")
 
+# Log rotation and disk space management
+LOG_RETENTION_DAYS = _safe_int(environ.get("LOOP_LOG_RETENTION_DAYS"), 7)
+LOG_MAX_SIZE_MB = _safe_int(environ.get("LOOP_LOG_MAX_SIZE_MB"), 500)
+MIN_DISK_MB = _safe_int(environ.get("LOOP_MIN_DISK_MB"), 500)
+
 # Developer mode — disables Telegram bot in dev containers
 DEV_MODE = _is_truthy(environ.get("DEV_MODE"))
 

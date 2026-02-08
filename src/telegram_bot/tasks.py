@@ -19,10 +19,13 @@ from .config import (
     BRAINSTORM_POLL_INTERVAL,
     BRAINSTORM_TIMEOUT,
     MAX_QUEUE_SIZE,
+    MIN_DISK_MB,
     PROJECTS_ROOT,
 )
 from .git_utils import get_commit_hash
+from .log_rotation import check_disk_space
 from .messages import (
+    MSG_DISK_LOW,
     ERR_NO_RESULT,
     ERR_NO_SESSION,
     ERR_NOT_READY,
@@ -255,6 +258,13 @@ class TaskManager:
         """
         session_name = self._session_name(project)
         path_key = str(project_path)
+
+        # Refuse to start when disk space is critically low
+        ok, available_mb = check_disk_space(project_path, min_mb=MIN_DISK_MB)
+        if not ok:
+            return False, MSG_DISK_LOW.format(
+                available_mb=int(available_mb), min_mb=MIN_DISK_MB
+            )
 
         # If session running, add to queue instead
         if self._is_session_running(session_name):

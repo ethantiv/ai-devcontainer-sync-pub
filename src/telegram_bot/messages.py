@@ -170,6 +170,10 @@ MSG_COMPLETION_QUEUE_NEXT = (
 # Stale progress
 MSG_STALE_PROGRESS = "! *{project}* \u2014 no progress for 5 min"
 
+# Disk space and log rotation
+MSG_DISK_LOW = "\u26a0 *Disk space low* \u2014 {available_mb} MB free (minimum: {min_mb} MB). Cannot start task."
+MSG_LOG_ROTATION_COMPLETE = "\u2713 Log rotation complete: {deleted} files removed, {freed_mb:.1f} MB freed"
+
 # Diff
 MSG_DIFF_TITLE = "\u0394 *Changes in {project}:*\n\n```\n{diff}\n```"
 MSG_NO_DATA = "No data"

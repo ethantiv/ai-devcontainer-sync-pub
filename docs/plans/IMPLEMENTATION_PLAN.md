@@ -1,8 +1,8 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 0/43 (0%)
-**Last Verified:** 2026-02-08 — re-verified with full codebase analysis (bot.py, tasks.py, config.py, messages.py, projects.py, git_utils.py, cli.js, all test files)
+**Progress:** 9/43 (21%)
+**Last Verified:** 2026-02-08 — Phase 1 completed
 
 ## Goal
 
@@ -10,21 +10,21 @@ Implement all proposals from docs/ROADMAP.md across three priority tiers: P1 (Cr
 
 ## Current Phase
 
-Phase 1: Log Rotation and Disk Space Management (P1-Critical)
+Phase 2: Improve Async Test Coverage (P2-Important)
 
 ## Phases
 
 ### Phase 1: Log Rotation and Disk Space Management (P1-Critical)
-- [ ] Add env var constants to `config.py`: `LOG_RETENTION_DAYS` (env `LOOP_LOG_RETENTION_DAYS`, default 7), `LOG_MAX_SIZE_MB` (env `LOOP_LOG_MAX_SIZE_MB`, default 500), `MIN_DISK_MB` (env `LOOP_MIN_DISK_MB`, default 500) — use existing `_safe_int()` helper
-- [ ] Add `log_rotation.py` module to `src/telegram_bot/` with `rotate_logs(projects_root)`: scan `loop/logs/` directories across all projects in PROJECTS_ROOT, delete JSONL files older than `LOG_RETENTION_DAYS`; if total size exceeds `LOG_MAX_SIZE_MB`, delete oldest files first
-- [ ] Add `cleanup_brainstorm_files(projects_root)` to `log_rotation.py`: scan `PROJECTS_ROOT/.brainstorm/` for JSONL files not referenced by `.brainstorm_sessions.json`, delete orphaned files
-- [ ] Add `check_disk_space(path)` to `log_rotation.py`: use `shutil.disk_usage()` to check available space, return `(ok, available_mb)` tuple — warn when below `MIN_DISK_MB`
-- [ ] Integrate disk space check into `TaskManager.start_task()` — refuse to start tasks when disk is critically low, return `(False, MSG_DISK_LOW)` error
-- [ ] Add `loop cleanup --logs` subcommand: add `--logs` option to `cleanup` command in `src/bin/cli.js`, spawn Python `log_rotation.py` via subprocess (same pattern as `cleanup.js` spawning `cleanup.sh`)
-- [ ] Register periodic log rotation job in `bot.py` via `job_queue.run_repeating()` — daily interval (86400s), call `rotate_logs()` + `cleanup_brainstorm_files()`
-- [ ] Add message constants to `messages.py`: `MSG_DISK_LOW`, `MSG_LOG_ROTATION_COMPLETE`
-- [ ] Write tests for `log_rotation.py`: retention by age, retention by size, brainstorm cleanup, disk space check, edge cases (empty dirs, missing dirs)
-- **Status:** pending
+- [x] Add env var constants to `config.py`: `LOG_RETENTION_DAYS` (env `LOOP_LOG_RETENTION_DAYS`, default 7), `LOG_MAX_SIZE_MB` (env `LOOP_LOG_MAX_SIZE_MB`, default 500), `MIN_DISK_MB` (env `LOOP_MIN_DISK_MB`, default 500) — use existing `_safe_int()` helper
+- [x] Add `log_rotation.py` module to `src/telegram_bot/` with `rotate_logs(projects_root)`: scan `loop/logs/` directories across all projects in PROJECTS_ROOT, delete JSONL files older than `LOG_RETENTION_DAYS`; if total size exceeds `LOG_MAX_SIZE_MB`, delete oldest files first
+- [x] Add `cleanup_brainstorm_files(projects_root)` to `log_rotation.py`: scan `PROJECTS_ROOT/.brainstorm/` for JSONL files not referenced by `.brainstorm_sessions.json`, delete orphaned files
+- [x] Add `check_disk_space(path)` to `log_rotation.py`: use `shutil.disk_usage()` to check available space, return `(ok, available_mb)` tuple — warn when below `MIN_DISK_MB`
+- [x] Integrate disk space check into `TaskManager.start_task()` — refuse to start tasks when disk is critically low, return `(False, MSG_DISK_LOW)` error
+- [x] Add `loop cleanup --logs` subcommand: add `--logs` option to `cleanup` command in `src/bin/cli.js`, spawn Python `log_rotation.py` via subprocess (same pattern as `cleanup.js` spawning `cleanup.sh`)
+- [x] Register periodic log rotation job in `bot.py` via `job_queue.run_repeating()` — daily interval (86400s), call `rotate_logs()` + `cleanup_brainstorm_files()`
+- [x] Add message constants to `messages.py`: `MSG_DISK_LOW`, `MSG_LOG_ROTATION_COMPLETE`
+- [x] Write tests for `log_rotation.py`: retention by age, retention by size, brainstorm cleanup, disk space check, edge cases (empty dirs, missing dirs)
+- **Status:** complete
 
 ### Phase 2: Improve Async Test Coverage (P2-Important)
 - [ ] Add tests for `TaskManager.process_completed_tasks()`: completed session detection (tmux gone → task completed), active task removal, queue-next start via `_start_next_in_queue()`, return tuple format `list[(completed_task, next_task)]` — currently only 1 test (`test_save_called_after_process_completed`)
@@ -83,8 +83,8 @@ Phase 1: Log Rotation and Disk Space Management (P1-Critical)
 | Question | Answer |
 |----------|--------|
 | How many tests does test_tasks.py currently have? | 46 tests (ROADMAP says "only 3" — outdated; tests were significantly expanded) |
-| How many total tests exist? | 259 Python (46 test_tasks + 79 test_bot + 62 test_projects + 52 test_config + 20 test_git_utils) + 20 JS = 279 total. All active, no skipped/flaky tests |
-| Is there any log rotation mechanism? | None — confirmed by codebase search. No rotation, pruning, or disk checks exist |
+| How many total tests exist? | 290 Python (48 test_tasks + 81 test_bot + 62 test_projects + 61 test_config + 20 test_git_utils + 18 test_log_rotation) + 20 JS = 310 total |
+| Is there any log rotation mechanism? | Yes — `log_rotation.py` module with `rotate_logs()`, `cleanup_brainstorm_files()`, `check_disk_space()`. Daily periodic job in bot.py. CLI via `loop cleanup --logs` |
 | Is there retry logic for git operations? | No — all subprocess calls attempt once, catch TimeoutExpired/OSError, return immediately |
 | Is the sync/pull feature started? | No — no git pull/fetch references in telegram_bot code, no MSG_SYNC_* constants |
 | Is brainstorm history viewer started? | No — no history-related code or messages exist. Sessions removed from `.brainstorm_sessions.json` after `finish()` — only JSONL files remain |
@@ -141,7 +141,7 @@ Phase 1: Log Rotation and Disk Space Management (P1-Critical)
 ### Research Findings
 
 - **test_tasks.py has 46 tests** (not 3 as ROADMAP states) — tests were significantly expanded since ROADMAP was written
-- **Total test suite: 279 tests** (259 Python across 5 files + 20 JS in summary.test.js) — all active, no skipped/flaky tests
+- **Total test suite: 310 tests** (290 Python across 6 files + 20 JS in summary.test.js) — all active, no skipped/flaky tests
 - **Codebase has zero TODOs/FIXMEs** — all functions fully implemented, no stubs or placeholders
 - **MSG_STALE_PROGRESS hardcodes "5 min"** (messages.py:171) — must be made dynamic when threshold changes
 - **Commander.js uses only stable cross-compatible APIs** — `.command()`, `.option()`, `.action()`, `.parse()`, `.addHelpText()`, negatable options. No deprecated patterns. Upgrade to v14 is zero-risk
@@ -151,7 +151,7 @@ Phase 1: Log Rotation and Disk Space Management (P1-Critical)
 - **QueuedTask has `queued_at` field** (tasks.py) — timestamp stored and persisted to `.tasks.json` via isoformat() but never checked for expiry
 - **Brainstorm session metadata lost on finish** — `_cleanup_session()` removes entry from `_sessions` dict and `.brainstorm_sessions.json`. Only JSONL files survive. Phase 7 must scan JSONL files directly or add a history log
 - **Existing test coverage gaps by priority**: (1) check_task_progress() stale detection — 0 direct tests, (2) BrainstormManager happy paths — only error-path tests (1 start, 2 respond), (3) process_completed_tasks() workflow — 1 persistence test only, no state transition tests, (4) concurrent persistence — 0 tests, (5) BrainstormManager.finish() — 0 unit tests (only integration mocks in bot handlers)
-- **Per-file test breakdown (259 Python)**: test_tasks.py=46, test_bot.py=79, test_projects.py=62, test_config.py=52, test_git_utils.py=20
+- **Per-file test breakdown (290 Python)**: test_tasks.py=48, test_bot.py=81, test_projects.py=62, test_config.py=61, test_git_utils.py=20, test_log_rotation.py=18
 - **Commander.js APIs used in cli.js**: `.name()`, `.description()`, `.version()`, `.command()`, `.option()`, `.action()`, `.addHelpText('after')`, `.parse()`, plus one negatable option `--no-early-exit`. No advanced APIs (`.exitOverride()`, `.configureOutput()`, etc.). All stable across v12→v14
 - **cli.js helper functions**: `addLoopOptions(cmd)` and `addBuildOptions(cmd)` for DRY option management across plan/build/run commands
 - **No skipped or xfail tests** — all 259 Python and 20 JS tests are active and passing

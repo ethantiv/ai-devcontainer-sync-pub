@@ -20,11 +20,14 @@ from telegram.ext import (
 
 from .config import (
     GIT_DIFF_RANGE,
+    LOG_MAX_SIZE_MB,
+    LOG_RETENTION_DAYS,
     PROJECTS_ROOT,
     STALE_THRESHOLD,
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID,
 )
+from .log_rotation import cleanup_brainstorm_files, rotate_logs
 from .git_utils import get_diff_stats, get_plan_progress, get_recent_commits
 from .messages import (
     BRAINSTORM_ERROR_CODES,
@@ -1459,6 +1462,23 @@ async def check_task_progress(context: ContextTypes.DEFAULT_TYPE) -> None:
                 logger.debug(f"Could not edit progress message for {task.project}")
 
 
+async def run_log_rotation(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Daily job that rotates log files and cleans up orphaned brainstorm files."""
+    projects_root = Path(PROJECTS_ROOT)
+    log_result = rotate_logs(projects_root, retention_days=LOG_RETENTION_DAYS, max_size_mb=LOG_MAX_SIZE_MB)
+    bs_result = cleanup_brainstorm_files(projects_root)
+
+    total_deleted = log_result["deleted"] + bs_result["deleted"]
+    total_freed = log_result["freed_bytes"] + bs_result["freed_bytes"]
+
+    if total_deleted > 0:
+        logger.info(
+            "Log rotation: %d files removed, %.1f MB freed",
+            total_deleted,
+            total_freed / (1024 * 1024),
+        )
+
+
 async def handle_completion_diff(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle 'Podsumowanie zmian' button from completion summary."""
     query = update.callback_query
@@ -1582,7 +1602,8 @@ def create_application() -> Application:
     if app.job_queue:
         app.job_queue.run_repeating(check_task_completion, interval=30, first=10)
         app.job_queue.run_repeating(check_task_progress, interval=15, first=15)
-        logger.info("JobQueue registered: check_task_completion every 30s, check_task_progress every 15s")
+        app.job_queue.run_repeating(run_log_rotation, interval=86400, first=60)
+        logger.info("JobQueue registered: check_task_completion every 30s, check_task_progress every 15s, run_log_rotation daily")
     else:
         logger.warning(
             "JobQueue is None! Queue processing disabled. "

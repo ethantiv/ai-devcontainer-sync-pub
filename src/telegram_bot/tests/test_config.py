@@ -523,6 +523,95 @@ class TestDevMode:
         assert not any("DEV_MODE" in w for w in warnings)
 
 
+class TestLogRotationConfig:
+    """Log rotation config constants parsed from environment variables.
+
+    Three constants for log management: retention by age, max total size,
+    and minimum free disk space threshold.
+    """
+
+    def test_log_retention_days_default(self, tmp_projects_root):
+        """LOG_RETENTION_DAYS defaults to 7 when env var is not set."""
+        env = {"PROJECTS_ROOT": str(tmp_projects_root)}
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.LOG_RETENTION_DAYS == 7
+
+    def test_log_retention_days_from_env(self, tmp_projects_root):
+        """LOG_RETENTION_DAYS reads LOOP_LOG_RETENTION_DAYS env var."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_LOG_RETENTION_DAYS": "14",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.LOG_RETENTION_DAYS == 14
+
+    def test_log_retention_days_invalid_falls_back(self, tmp_projects_root):
+        """Non-numeric LOOP_LOG_RETENTION_DAYS falls back to 7."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_LOG_RETENTION_DAYS": "forever",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.LOG_RETENTION_DAYS == 7
+
+    def test_log_max_size_mb_default(self, tmp_projects_root):
+        """LOG_MAX_SIZE_MB defaults to 500 when env var is not set."""
+        env = {"PROJECTS_ROOT": str(tmp_projects_root)}
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.LOG_MAX_SIZE_MB == 500
+
+    def test_log_max_size_mb_from_env(self, tmp_projects_root):
+        """LOG_MAX_SIZE_MB reads LOOP_LOG_MAX_SIZE_MB env var."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_LOG_MAX_SIZE_MB": "1000",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.LOG_MAX_SIZE_MB == 1000
+
+    def test_log_max_size_mb_invalid_falls_back(self, tmp_projects_root):
+        """Non-numeric LOOP_LOG_MAX_SIZE_MB falls back to 500."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_LOG_MAX_SIZE_MB": "big",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.LOG_MAX_SIZE_MB == 500
+
+    def test_min_disk_mb_default(self, tmp_projects_root):
+        """MIN_DISK_MB defaults to 500 when env var is not set."""
+        env = {"PROJECTS_ROOT": str(tmp_projects_root)}
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.MIN_DISK_MB == 500
+
+    def test_min_disk_mb_from_env(self, tmp_projects_root):
+        """MIN_DISK_MB reads LOOP_MIN_DISK_MB env var."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_MIN_DISK_MB": "1000",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.MIN_DISK_MB == 1000
+
+    def test_min_disk_mb_invalid_falls_back(self, tmp_projects_root):
+        """Non-numeric LOOP_MIN_DISK_MB falls back to 500."""
+        env = {
+            "PROJECTS_ROOT": str(tmp_projects_root),
+            "LOOP_MIN_DISK_MB": "plenty",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = _reload_config(env)
+            assert config.MIN_DISK_MB == 500
+
+
 class TestRequirementsTxt:
     """requirements.txt exists and declares python-telegram-bot dependency.
 

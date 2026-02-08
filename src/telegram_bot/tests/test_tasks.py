@@ -13,8 +13,11 @@ from src.telegram_bot.messages import ERR_SESSION_ACTIVE, ERR_NO_SESSION, ERR_NO
 
 @pytest.fixture
 def task_manager(tmp_path):
-    """Create a TaskManager with mocked tmux calls."""
-    with patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)):
+    """Create a TaskManager with mocked tmux calls and disk space check."""
+    with (
+        patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)),
+        patch("src.telegram_bot.tasks.check_disk_space", return_value=(True, 5000.0)),
+    ):
         from src.telegram_bot.tasks import TaskManager
         tm = TaskManager()
         yield tm
@@ -84,6 +87,27 @@ class TestTaskManagerQueue:
 
     def test_get_queue_returns_empty_for_unknown_project(self, task_manager):
         assert task_manager.get_queue(Path("/tmp/unknown")) == []
+
+    def test_start_task_refuses_when_disk_low(self, task_manager):
+        """start_task() returns (False, MSG_DISK_LOW) when disk space is critically low."""
+        with (
+            patch.object(task_manager, "_is_session_running", return_value=False),
+            patch("src.telegram_bot.tasks.check_disk_space", return_value=(False, 100.0)),
+        ):
+            success, msg = task_manager.start_task("proj", Path("/tmp/proj"), "build", 5)
+        assert success is False
+        assert "Disk space low" in msg
+
+    def test_start_task_proceeds_when_disk_ok(self, task_manager):
+        """start_task() proceeds normally when disk space is sufficient."""
+        with (
+            patch.object(task_manager, "_is_session_running", return_value=False),
+            patch.object(task_manager, "_start_task_now", return_value=(True, "Started")),
+            patch("src.telegram_bot.tasks.check_disk_space", return_value=(True, 5000.0)),
+        ):
+            success, msg = task_manager.start_task("proj", Path("/tmp/proj"), "build", 5)
+        assert success is True
+        assert msg == "Started"
 
 
 class TestTaskManagerIsSessionRunning:
@@ -495,7 +519,10 @@ class TestTaskManagerPersistence:
         Uses a context manager-style fixture so the patch stays active
         for the entire test method.
         """
-        with patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)):
+        with (
+            patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)),
+            patch("src.telegram_bot.tasks.check_disk_space", return_value=(True, 5000.0)),
+        ):
             from src.telegram_bot.tasks import TaskManager
             tm = TaskManager()
             tm._tmp_path = tmp_path  # convenience ref for assertions
