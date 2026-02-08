@@ -16,14 +16,14 @@ Phase 1: Extract Handler Modules from bot.py
 
 ### Phase 1: Extract Handler Modules from bot.py (P2-Important)
 - [ ] Create `src/telegram_bot/handlers/` package with `__init__.py` that re-exports all handler functions needed by `bot.py`
-- [ ] Extract shared helpers to `src/telegram_bot/handlers/common.py`: `State` enum, `user_data_store`, `get_user_data()`, `authorized`/`authorized_callback` decorators, `reply_text()`, `_cancel_keyboard()`, `_nav_keyboard()`, `_brainstorm_hint_keyboard()`, `_brainstorm_hint_long_keyboard()`, `_is_brainstorm_error()`
-- [ ] Extract project handlers to `src/telegram_bot/handlers/projects.py`: `start()`, `show_projects()`, `project_selected()`, `show_project_menu()`, `handle_name()`, `handle_clone_url()`, `handle_project_name()`, `handle_github_choice()`, `handle_action()` project-related branches (create_project, clone, worktree, loop_init, sync, back, back_to_project, status)
-- [ ] Extract task handlers to `src/telegram_bot/handlers/tasks.py`: `handle_idea()`, `skip_idea()`, `handle_idea_button()`, `show_iterations_menu()`, `handle_iterations()`, `handle_custom_iterations()`, `start_task()`, `show_status()`, `show_queue()`, `handle_cancel_queue()`, `handle_action()` task-related branches (plan, build, attach, queue)
-- [ ] Extract brainstorm handlers to `src/telegram_bot/handlers/brainstorm.py`: `start_brainstorming()`, `handle_brainstorm_prompt()`, `handle_brainstorm_message()`, `handle_brainstorm_action()`, `handle_brainstorm_hint_button()`, `finish_brainstorming()`, `cancel_brainstorming()`, `show_brainstorm_history()`, `handle_action()` brainstorm-related branches (brainstorm, resume_brainstorm)
-- [ ] Extract background jobs to `src/telegram_bot/handlers/jobs.py`: `_format_completion_summary()`, `check_task_completion()`, `check_task_progress()`, `run_log_rotation()`, `handle_completion_diff()`
-- [ ] Refactor `handle_action()` mega-dispatcher: split into `_handle_project_action()`, `_handle_task_action()`, `_handle_brainstorm_action_dispatch()` in respective handler modules, keep thin `handle_action()` router in `bot.py` that delegates to sub-dispatchers
-- [ ] Slim down `bot.py` to thin wiring layer: imports from handler modules, `create_application()` function only — target ~150 lines
-- [ ] Update all test imports: `test_bot.py` patches must reference new module paths (e.g. `src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID`)
+- [ ] Extract shared helpers to `src/telegram_bot/handlers/common.py`: `State` enum (line 162), `user_data_store` (line 178), `get_user_data()` (line 212), `authorized`/`authorized_callback` decorators (lines 181, 197), `reply_text()` (line 217), `_cancel_keyboard()` (line 235), `_nav_keyboard()` (line 263), `_brainstorm_hint_keyboard()` (line 242), `_brainstorm_hint_long_keyboard()` (line 252), `_is_brainstorm_error()` (line 230). Also include generic handlers: `cancel()` (line 1363), `help_command()` (line 1374), `handle_input_cancel()` (line 1278) — these are shared fallbacks used across all states
+- [ ] Extract project handlers to `src/telegram_bot/handlers/projects.py`: `start()` (line 280), `show_projects()` (line 292), `project_selected()` (line 333), `show_project_menu()` (line 353), `handle_name()` (line 662), `handle_clone_url()` (line 692), `handle_project_name()` (line 715), `handle_github_choice()` (line 757), plus project-related action branches from handle_action(): back, back_to_project, create_project, clone, worktree, loop_init, sync (7 of 14 branches)
+- [ ] Extract task handlers to `src/telegram_bot/handlers/tasks.py`: `handle_idea()` (line 803), `skip_idea()` (line 871), `handle_idea_button()` (line 1291), `show_iterations_menu()` (line 880), `handle_iterations()` (line 906), `handle_custom_iterations()` (line 933), `start_task()` (line 954), `show_status()` (line 1011), `show_queue()` (line 601), `handle_cancel_queue()` (line 641), plus task-related action branches: status, plan, build, attach, queue (5 of 14 branches)
+- [ ] Extract brainstorm handlers to `src/telegram_bot/handlers/brainstorm.py`: `start_brainstorming()` (line 1081), `handle_brainstorm_prompt()` (line 815), `handle_brainstorm_message()` (line 1143), `handle_brainstorm_action()` (line 1217), `handle_brainstorm_hint_button()` (line 1316), `finish_brainstorming()` (line 1183), `cancel_brainstorming()` (line 1258), `show_brainstorm_history()` (line 1034), plus brainstorm-related action branches: brainstorm, resume_brainstorm (2 of 14 branches)
+- [ ] Extract background jobs to `src/telegram_bot/handlers/jobs.py`: `_format_completion_summary()` (line 1384), `check_task_completion()` (line 1434), `check_task_progress()` (line 1515), `run_log_rotation()` (line 1574), `handle_completion_diff()` (line 1591)
+- [ ] Refactor `handle_action()` mega-dispatcher (lines 443-598, 14 branches): split into `_handle_project_action()` (7 branches), `_handle_task_action()` (5 branches), `_handle_brainstorm_action_dispatch()` (2 branches) in respective handler modules, keep thin `handle_action()` router in `bot.py` that delegates to sub-dispatchers
+- [ ] Slim down `bot.py` to thin wiring layer: imports from handler modules, `create_application()` function (currently 90 lines at 1634-1723) with ConversationHandler wiring (10 states, 5 entry points, 3 fallbacks), 1 standalone callback handler, 3 job_queue registrations — target ~150 lines total
+- [ ] Update all test imports in `test_bot.py`: 18 unique patched items (`TELEGRAM_CHAT_ID`, `STALE_THRESHOLD`, `PROJECTS_ROOT`, `task_manager`, `brainstorm_manager`, `get_user_data`, `pull_project`, `check_remote_updates`, `get_plan_progress`, `get_diff_stats`, `get_recent_commits`, `rotate_logs`, `cleanup_brainstorm_files`, `show_project_menu`, `show_projects`, `show_iterations_menu`, `get_project`, `os.path.getmtime`) across ~100 patch locations must reference new module paths. No other test files reference bot.py — changes isolated to test_bot.py
 - [ ] Run full test suite — all 424 Python tests must pass with zero regressions
 - **Status:** pending
 
@@ -45,7 +45,7 @@ Phase 1: Extract Handler Modules from bot.py
 | Question | Answer |
 |----------|--------|
 | Is P1 project creation UI already implemented? | Yes — fully implemented. Backend (validate_project_name, create_project, create_github_repo in projects.py), UI flow (handle_project_name at bot.py:715, handle_github_choice at bot.py:756), states (ENTER_PROJECT_NAME, GITHUB_CHOICE), 16 MSG_* constants (messages.py:256-283), and "Create project" button in project list (bot.py:299,323). ROADMAP entry is stale |
-| How big is bot.py? | 1,724 lines — largest file in codebase. Contains 40+ handler functions, 3 background jobs, 12+ action dispatcher branches, all inline |
+| How big is bot.py? | 1,724 lines — largest file in codebase. Contains 45 functions (41 async + 4 regular), 3 background jobs, 14 action dispatcher branches, all inline |
 | Is there a handlers/ directory? | No — flat module layout. No existing handler extraction pattern |
 | What modules exist in telegram_bot? | bot.py (1724), tasks.py (975), projects.py (380), messages.py (283), log_rotation.py (173), git_utils.py (171), config.py (134), run.py (37), __init__.py (1) |
 | Does show_projects() have pagination? | No — renders all projects in one message with 2-column grid. No page state, no prev/next buttons |
@@ -53,7 +53,9 @@ Phase 1: Extract Handler Modules from bot.py
 | How many tests exist? | 424 Python (test_bot=114, test_tasks=123, test_projects=71, test_config=64, test_git_utils=34, test_log_rotation=18) + 20 JS = 444 total |
 | Are there tests for project creation handlers? | Only 2 lightweight tests in test_bot.py (cancel keyboard presence at line 162, no /cancel in message at line 197). Backend has 10+ tests in test_projects.py. No direct tests for handle_project_name() or handle_github_choice() handler logic |
 | Any TODOs/FIXMEs/skipped tests? | None — codebase is clean |
-| How does handle_action() work? | Mega-dispatcher (bot.py:443-598, 155 lines) with 12+ if-branches routing callback_data prefixed with "action:" to different flows. Mixes project, task, and brainstorm actions |
+| How does handle_action() work? | Mega-dispatcher (bot.py:443-598, 155 lines) with exactly 14 if-branches routing callback_data prefixed with "action:" to different flows: 7 project (back, back_to_project, create_project, clone, worktree, loop_init, sync), 5 task (status, plan, build, attach, queue), 2 brainstorm (brainstorm, resume_brainstorm) |
+| Are there unaccounted functions? | 3 functions were missing from handler groups: `cancel()` (line 1363), `help_command()` (line 1374), `handle_input_cancel()` (line 1278) — generic fallback handlers, assigned to common.py |
+| What patch locations need updating? | test_bot.py has 18 unique patched items across ~100 locations. No other test files reference bot.py — changes fully isolated |
 
 ## Findings & Decisions
 
@@ -78,16 +80,19 @@ Phase 1: Extract Handler Modules from bot.py
 
 ### Research Findings
 
-- **bot.py is 1,724 lines** with 40+ handler functions — the largest file by far
-- **handle_action() is a 155-line mega-dispatcher** (lines 443-598) handling 12+ actions via sequential if-branches mixing project, task, and brainstorm logic
+- **bot.py is 1,724 lines** with 45 functions (41 async handlers + 4 regular) — the largest file by far
+- **handle_action() is a 155-line mega-dispatcher** (lines 443-598) with exactly 14 if-branches: 7 project (back, back_to_project, create_project, clone, worktree, loop_init, sync), 5 task (status, plan, build, attach, queue), 2 brainstorm (brainstorm, resume_brainstorm)
 - **Handler groups are cleanly separable** by domain: projects (280-799, ~520 lines), tasks (601-659 + 802-1030, ~290 lines), brainstorm (1034-1359, ~325 lines), jobs (1384-1631, ~250 lines), shared helpers (181-278, ~100 lines)
+- **3 functions missing from original handler groups**: `cancel()` (line 1363), `help_command()` (line 1374), `handle_input_cancel()` (line 1278) — generic fallback/cancel handlers used across all states, should go to `common.py`
 - **No circular import risk**: bot.py imports from config, messages, tasks, projects, git_utils, log_rotation — all one-way. Extracting handlers won't create circular dependencies as long as `common.py` has shared state/helpers
-- **test_bot.py patches `TELEGRAM_CHAT_ID` in bot module namespace** — must update to new module path after extraction
+- **test_bot.py has 18 unique patched items** across ~100 patch locations: module constants (`TELEGRAM_CHAT_ID`, `STALE_THRESHOLD`, `PROJECTS_ROOT`), manager instances (`task_manager`, `brainstorm_manager`), functions imported from other modules (`pull_project`, `check_remote_updates`, `get_plan_progress`, `get_diff_stats`, `get_recent_commits`, `rotate_logs`, `cleanup_brainstorm_files`), UI functions (`show_project_menu`, `show_projects`, `show_iterations_menu`, `get_project`), helpers (`get_user_data`, `os.path.getmtime`). No other test files reference bot.py — test changes fully isolated to test_bot.py
 - **`user_data_store` is a module-level dict** shared across all handlers — must live in `common.py`
 - **Existing pagination in brainstorm history** (bot.py:1034) is non-interactive (static text "...and N more"), not a reusable pattern
-- **11 out of 16 bot handlers have zero test coverage** — handler extraction is a good opportunity to improve testability but test expansion is NOT in scope for this plan (not in ROADMAP)
-- **Per-file test breakdown**: test_bot.py=114, test_tasks.py=123, test_projects.py=71, test_config.py=64, test_git_utils.py=34, test_log_rotation.py=18
+- **Codebase is clean**: zero TODO/FIXME/HACK comments, zero skipped/xfail tests, zero NotImplementedError, only 3 legitimate `# noqa: ARG001` for unused Telegram handler params
+- **Per-file test breakdown**: test_bot.py=114, test_tasks.py=123, test_projects.py=71, test_config.py=64, test_git_utils.py=34, test_log_rotation.py=18 (424 total)
+- **create_application()** is 90 lines (1634-1723): builds ConversationHandler with 5 entry points, 10 states, 3 fallbacks, 1 standalone callback handler, 3 job_queue registrations. After extraction: ~150 lines for bot.py (imports + create_application)
 - **ConversationHandler state machine** (bot.py:1638-1704) maps 10 states to handler functions — must import from handler modules after extraction
+- **No pagination infrastructure exists**: no `PROJECTS_PER_PAGE` in config.py, no `MSG_PAGE_*` in messages.py, no page state in user_data, no `handle_page_navigation()`, no `page:prev`/`page:next` callback patterns registered
 
 ### Technical Decisions
 | Decision | Rationale |
@@ -105,8 +110,9 @@ Phase 1: Extract Handler Modules from bot.py
 | Issue | Resolution |
 |-------|------------|
 | ROADMAP P1 says project creation UI not built | Verified: fully implemented (bot.py:715-799, messages.py:256-283). ROADMAP is stale — P1 requires no work |
-| handle_action() mixes all domains | Plan splits into sub-dispatchers per handler module, thin router in bot.py |
-| test_bot.py patches module-level constants | Phase 1 task 9 explicitly covers updating all test imports after extraction |
+| handle_action() mixes all domains | Plan splits 14 branches into 3 sub-dispatchers per handler module, thin router in bot.py |
+| test_bot.py patches module-level constants | 18 unique patched items across ~100 locations in test_bot.py. Phase 1 task 9 explicitly covers updating all test imports after extraction. No other test files reference bot.py |
+| 3 functions missing from handler groups | `cancel()`, `help_command()`, `handle_input_cancel()` are generic fallbacks — assigned to common.py in updated plan |
 | Brainstorm history pagination is non-interactive | P3 implements proper interactive pagination with Prev/Next buttons — different from existing brainstorm history pattern |
 
 ### Resources
