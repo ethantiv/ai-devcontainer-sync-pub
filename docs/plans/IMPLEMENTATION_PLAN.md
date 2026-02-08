@@ -81,8 +81,8 @@ Phase 1: Log Rotation and Disk Space Management (P1-Critical)
 
 | Question | Answer |
 |----------|--------|
-| How many tests does test_tasks.py currently have? | 43 tests (ROADMAP says "only 3" — outdated; tests were significantly expanded) |
-| How many total tests exist? | 235 (215 Python across 5 files + 20 JS in summary.test.js) |
+| How many tests does test_tasks.py currently have? | 46 tests (ROADMAP says "only 3" — outdated; tests were significantly expanded) |
+| How many total tests exist? | 259 Python (46 test_tasks + 79 test_bot + 62 test_projects + 52 test_config + 20 test_git_utils) + 20 JS = 279 total. All active, no skipped/flaky tests |
 | Is there any log rotation mechanism? | None — confirmed by codebase search. No rotation, pruning, or disk checks exist |
 | Is there retry logic for git operations? | No — all subprocess calls attempt once, catch TimeoutExpired/OSError, return immediately |
 | Is the sync/pull feature started? | No — no git pull/fetch references in telegram_bot code, no MSG_SYNC_* constants |
@@ -139,8 +139,8 @@ Phase 1: Log Rotation and Disk Space Management (P1-Critical)
 
 ### Research Findings
 
-- **test_tasks.py has 43 tests** (not 3 as ROADMAP states) — tests were significantly expanded since ROADMAP was written
-- **Total test suite: 235 tests** (215 Python + 20 JS) — all active, no skipped/flaky tests
+- **test_tasks.py has 46 tests** (not 3 as ROADMAP states) — tests were significantly expanded since ROADMAP was written
+- **Total test suite: 279 tests** (259 Python across 5 files + 20 JS in summary.test.js) — all active, no skipped/flaky tests
 - **Codebase has zero TODOs/FIXMEs** — all functions fully implemented, no stubs or placeholders
 - **MSG_STALE_PROGRESS hardcodes "5 min"** (messages.py:171) — must be made dynamic when threshold changes
 - **Commander.js uses only stable cross-compatible APIs** — `.command()`, `.option()`, `.action()`, `.parse()`, `.addHelpText()`, negatable options. No deprecated patterns. Upgrade to v14 is zero-risk
@@ -149,7 +149,8 @@ Phase 1: Log Rotation and Disk Space Management (P1-Critical)
 - **All git subprocess calls use single-attempt pattern** — TimeoutExpired caught but no retry, consistent across git_utils.py and projects.py
 - **QueuedTask has `queued_at` field** (tasks.py) — timestamp stored and persisted to `.tasks.json` via isoformat() but never checked for expiry
 - **Brainstorm session metadata lost on finish** — `_cleanup_session()` removes entry from `_sessions` dict and `.brainstorm_sessions.json`. Only JSONL files survive. Phase 7 must scan JSONL files directly or add a history log
-- **Existing test coverage gaps by priority**: (1) check_task_progress() stale detection — 0 tests, (2) BrainstormManager happy paths — error cases only, (3) process_completed_tasks() workflow — 1 basic test, (4) concurrent persistence — 0 tests
+- **Existing test coverage gaps by priority**: (1) check_task_progress() stale detection — 0 direct tests, (2) BrainstormManager happy paths — only error-path tests (1 start, 2 respond), (3) process_completed_tasks() workflow — 1 persistence test only, no state transition tests, (4) concurrent persistence — 0 tests, (5) BrainstormManager.finish() — 0 unit tests (only integration mocks in bot handlers)
+- **Per-file test breakdown (259 Python)**: test_tasks.py=46, test_bot.py=79, test_projects.py=62, test_config.py=52, test_git_utils.py=20
 
 ### Technical Decisions
 | Decision | Rationale |
@@ -167,7 +168,7 @@ Phase 1: Log Rotation and Disk Space Management (P1-Critical)
 ### Issues Encountered
 | Issue | Resolution |
 |-------|------------|
-| ROADMAP test count outdated ("only 3 tests") | Verified actual count: 43 tests in test_tasks.py, 235 total. Plan focuses on remaining gaps |
+| ROADMAP test count outdated ("only 3 tests") | Verified actual count: 46 tests in test_tasks.py, 279 total (259 Python + 20 JS). Plan focuses on remaining gaps |
 | MSG_STALE_PROGRESS hardcodes "5 min" | Plan includes dynamic formatting task in Phase 5 |
 | QueuedTask.queued_at exists but unused for TTL | Leverage existing field in Phase 4 — no schema change needed |
 | Brainstorm sessions not persisted after finish() | Phase 7 must scan JSONL files in `.brainstorm/` for metadata — cannot rely on sessions.json |
