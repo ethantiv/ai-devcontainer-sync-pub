@@ -56,8 +56,7 @@ MSG_ITERATION_LABEL = "Iteration"
 # Clone flow
 MSG_ENTER_REPO_URL = (
     "*Enter repository URL:*\n\n"
-    "E.g. `https://github.com/user/repo.git`\n\n"
-    "Send /cancel to cancel."
+    "E.g. `https://github.com/user/repo.git`"
 )
 MSG_ENTER_REPO_URL_EMPTY = "\u2717 Enter repository URL."
 MSG_CLONING_REPO = "\u2026 Cloning repository..."
@@ -66,8 +65,7 @@ MSG_CLONING_REPO = "\u2026 Cloning repository..."
 MSG_ENTER_WORKTREE_NAME = (
     "*Enter worktree name:*\n\n"
     "Will create: `{project}-{{name}}`\n"
-    "Branch: `{{name}}`\n\n"
-    "Send /cancel to cancel."
+    "Branch: `{{name}}`"
 )
 MSG_INVALID_NAME = "Invalid name. Use letters, digits, hyphens and underscores."
 MSG_NO_PROJECT_SELECTED = "\u2717 No project selected."
@@ -90,8 +88,7 @@ MSG_ATTACH_SESSION = "\u25b6 *Attach to session:*\n\n`tmux attach -t {session}`"
 MSG_BRAINSTORM_HEADER = (
     "~ *Brainstorming*\n\n"
     "Project: `{project}`\n\n"
-    "Describe a topic/idea to discuss:\n\n"
-    "Send /cancel to cancel."
+    "Describe a topic/idea to discuss:"
 )
 MSG_BRAINSTORM_ENTER_TOPIC = "\u2717 Enter a brainstorming topic."
 MSG_BRAINSTORM_NO_SESSION = "\u2717 No active brainstorming session for this project."
@@ -124,10 +121,7 @@ MSG_BRAINSTORM_NO_ACTIVE = "No active brainstorming session."
 MSG_CUSTOM_AMOUNT_BTN = "Custom amount..."
 MSG_CANCEL_BTN = "\u2717 Cancel"
 MSG_SELECT_ITERATIONS = "# *Select number of iterations:*\n\nProject: `{project}`\nMode: {mode}"
-MSG_ENTER_ITERATIONS = (
-    "# *Enter number of iterations:*\n\n"
-    "Send /cancel to cancel."
-)
+MSG_ENTER_ITERATIONS = "# *Enter number of iterations:*"
 
 # Task started / queued
 MSG_TASK_STARTED = "{icon} *Task started*\n\n"
@@ -238,8 +232,7 @@ MSG_CREATE_PROJECT_BTN = "+ New project"
 MSG_ENTER_PROJECT_NAME = (
     "*Enter project name:*\n\n"
     "Use lowercase letters, digits and hyphens (e.g. `my-app`).\n"
-    "Must start with a letter or digit.\n\n"
-    "Send /cancel to cancel."
+    "Must start with a letter or digit."
 )
 MSG_CREATING_PROJECT = "\u2026 Creating project..."
 MSG_PROJECT_CREATED = "\u2713 Project *{name}* created"

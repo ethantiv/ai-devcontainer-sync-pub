@@ -213,6 +213,13 @@ def _is_brainstorm_error(error_code: str | None) -> bool:
     return error_code is not None and error_code in BRAINSTORM_ERROR_CODES
 
 
+def _cancel_keyboard(callback_data: str) -> InlineKeyboardMarkup:
+    """Return a single-button cancel keyboard for text-input states."""
+    return InlineKeyboardMarkup(
+        [[InlineKeyboardButton(MSG_CANCEL_BTN, callback_data=callback_data)]]
+    )
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle /start and /projects commands."""
     assert update.effective_chat is not None
@@ -395,6 +402,7 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         await query.edit_message_text(
             MSG_ENTER_PROJECT_NAME,
             parse_mode="Markdown",
+            reply_markup=_cancel_keyboard("input:cancel"),
         )
         return State.ENTER_PROJECT_NAME
 
@@ -402,6 +410,7 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         await query.edit_message_text(
             MSG_ENTER_REPO_URL,
             parse_mode="Markdown",
+            reply_markup=_cancel_keyboard("input:cancel"),
         )
         return State.ENTER_URL
 
@@ -410,6 +419,7 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             await query.edit_message_text(
                 MSG_ENTER_WORKTREE_NAME.format(project=project.name),
                 parse_mode="Markdown",
+                reply_markup=_cancel_keyboard("input:cancel"),
             )
             return State.ENTER_NAME
         return await show_projects(update, context)
@@ -459,6 +469,7 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         await query.edit_message_text(
             MSG_BRAINSTORM_HEADER.format(project=project.name),
             parse_mode="Markdown",
+            reply_markup=_cancel_keyboard("input:cancel"),
         )
         return State.ENTER_BRAINSTORM_PROMPT
 
@@ -806,6 +817,7 @@ async def handle_iterations(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await query.edit_message_text(
             MSG_ENTER_ITERATIONS,
             parse_mode="Markdown",
+            reply_markup=_cancel_keyboard("iter:cancel"),
         )
         return State.SELECT_ITERATIONS
 
@@ -1085,6 +1097,16 @@ async def cancel_brainstorming(update: Update, context: ContextTypes.DEFAULT_TYP
     return ConversationHandler.END
 
 
+@authorized_callback
+async def handle_input_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle cancel button press in text-input states."""
+    query = update.callback_query
+    assert query is not None
+    await query.answer()
+    await query.edit_message_text(MSG_CANCELLED)
+    return ConversationHandler.END
+
+
 @authorized
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancel current operation."""
@@ -1327,19 +1349,23 @@ def create_application() -> Application:
                 CallbackQueryHandler(project_selected, pattern=r"^project:"),
             ],
             State.ENTER_NAME: [
+                CallbackQueryHandler(handle_input_cancel, pattern=r"^input:cancel$"),
                 CommandHandler("cancel", cancel),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_name),
             ],
             State.ENTER_URL: [
+                CallbackQueryHandler(handle_input_cancel, pattern=r"^input:cancel$"),
                 CommandHandler("cancel", cancel),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_clone_url),
             ],
             State.ENTER_IDEA: [
+                CallbackQueryHandler(handle_input_cancel, pattern=r"^input:cancel$"),
                 CommandHandler("cancel", cancel),
                 CommandHandler("skip", skip_idea),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_idea),
             ],
             State.ENTER_BRAINSTORM_PROMPT: [
+                CallbackQueryHandler(handle_input_cancel, pattern=r"^input:cancel$"),
                 CommandHandler("cancel", cancel),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_brainstorm_prompt),
             ],
@@ -1349,6 +1375,7 @@ def create_application() -> Application:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_custom_iterations),
             ],
             State.ENTER_PROJECT_NAME: [
+                CallbackQueryHandler(handle_input_cancel, pattern=r"^input:cancel$"),
                 CommandHandler("cancel", cancel),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_project_name),
             ],

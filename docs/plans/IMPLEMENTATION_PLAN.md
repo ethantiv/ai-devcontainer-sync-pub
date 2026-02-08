@@ -1,7 +1,7 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 0/17 (0%)
+**Progress:** 10/17 (59%)
 **Last updated:** 2026-02-08
 **Line numbers verified:** 2026-02-08 (all bot.py and messages.py references confirmed accurate)
 
@@ -14,20 +14,20 @@ From ROADMAP.md:
 
 ## Current Phase
 
-Phase 1
+Phase 2
 
 ## Phases
 
 ### Phase 1: Add inline Cancel button to text-input states
-- [ ] Create cancel keyboard helper — `_cancel_keyboard(callback_data)` returns `InlineKeyboardMarkup([[InlineKeyboardButton(MSG_CANCEL_BTN, callback_data=callback_data)]])` (bot.py, near existing helpers ~line 210)
-- [ ] Add cancel button to `ENTER_PROJECT_NAME` prompt — pass `reply_markup=_cancel_keyboard("input:cancel")` to `query.edit_message_text()` (bot.py line 395)
-- [ ] Add cancel button to `ENTER_URL` prompt — pass `reply_markup=_cancel_keyboard("input:cancel")` to `query.edit_message_text()` (bot.py line 402)
-- [ ] Add cancel button to `ENTER_NAME` prompt — pass `reply_markup=_cancel_keyboard("input:cancel")` to `query.edit_message_text()` (bot.py line 410)
-- [ ] Add cancel button to `ENTER_BRAINSTORM_PROMPT` prompt — pass `reply_markup=_cancel_keyboard("input:cancel")` to `query.edit_message_text()` (bot.py line 459)
-- [ ] Add cancel button to `SELECT_ITERATIONS` custom input prompt — pass `reply_markup=_cancel_keyboard("iter:cancel")` to `query.edit_message_text()` (bot.py line 806). Note: reuse existing `iter:cancel` pattern already handled by `handle_iterations()`.
-- [ ] Add `CallbackQueryHandler(handle_input_cancel, pattern=r"^input:cancel$")` to states: ENTER_NAME, ENTER_URL, ENTER_PROJECT_NAME, ENTER_BRAINSTORM_PROMPT. Handler calls `cancel()` equivalent — replies with MSG_CANCELLED and returns ConversationHandler.END. Also answer the callback query.
-- [ ] Remove "/cancel" text from 5 message constants in messages.py: MSG_ENTER_WORKTREE_NAME (line 70), MSG_ENTER_REPO_URL (line 60), MSG_ENTER_PROJECT_NAME (line 242), MSG_BRAINSTORM_HEADER (line 94), MSG_ENTER_ITERATIONS (line 129)
-- **Status:** pending
+- [x] Create cancel keyboard helper — `_cancel_keyboard(callback_data)` (bot.py line 216)
+- [x] Add cancel button to `ENTER_PROJECT_NAME` prompt (bot.py line 401)
+- [x] Add cancel button to `ENTER_URL` prompt (bot.py line 409)
+- [x] Add cancel button to `ENTER_NAME` prompt (bot.py line 417)
+- [x] Add cancel button to `ENTER_BRAINSTORM_PROMPT` prompt (bot.py line 466)
+- [x] Add cancel button to `SELECT_ITERATIONS` custom input prompt (bot.py line 823)
+- [x] Add `CallbackQueryHandler(handle_input_cancel, pattern=r"^input:cancel$")` to 5 states
+- [x] Remove "/cancel" text from 5 message constants in messages.py
+- **Status:** complete
 
 ### Phase 2: Add Skip + Cancel buttons to ENTER_IDEA state
 - [ ] Add `→ Skip` + `✗ Cancel` inline buttons to `ENTER_IDEA` prompt — create keyboard with `[[InlineKeyboardButton(MSG_GITHUB_SKIP_BTN, callback_data="idea:skip"), InlineKeyboardButton(MSG_CANCEL_BTN, callback_data="idea:cancel")]]` and pass as `reply_markup` to `query.edit_message_text()` (bot.py line 435). Note: reuse existing `MSG_GITHUB_SKIP_BTN` ("→ Skip") or create `MSG_SKIP_BTN` if label differs.
@@ -47,12 +47,12 @@ Phase 1
 - **Status:** pending
 
 ### Phase 4: Add tests for new button handlers
-- [ ] Create `src/telegram_bot/tests/test_bot.py` with test utilities — mock `Update`, `CallbackQuery`, `Context`, `Message` using `AsyncMock`. Create helpers: `make_callback_update(chat_id, data)` and `make_message_update(chat_id, text)`.
-- [ ] Add tests for `handle_input_cancel` callback — verify it answers query, sends MSG_CANCELLED, returns END for each of the 4 states
+- [x] Create `src/telegram_bot/tests/test_bot.py` with test utilities — `make_callback_update(chat_id, data)` and `make_context()` helpers
+- [x] Add tests for `handle_input_cancel` callback — 3 tests verify answer, edit, return END
 - [ ] Add tests for `handle_idea_button` callback — verify `idea:skip` sets user_data and transitions to SELECT_ITERATIONS; `idea:cancel` sends MSG_CANCELLED and returns END
 - [ ] Add tests for `handle_brainstorm_hint_button` callback — verify `bs:done`/`bs:save` trigger finish logic; `bs:cancel` triggers cancel logic
 - [ ] Run `python3 -m pytest src/telegram_bot/tests/ -v` — all tests pass (existing 180 + new)
-- **Status:** pending
+- **Status:** in_progress
 
 ## Findings & Decisions
 
