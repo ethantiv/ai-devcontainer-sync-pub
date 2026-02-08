@@ -728,6 +728,86 @@ class TestFormatCompletionSummary:
 
         assert "\u25c7" in result  # ◇
 
+    def test_plan_progress_zero_total_no_crash(self):
+        """Plan progress (0, 0) doesn't crash with ZeroDivisionError, shows 0%."""
+        from src.telegram_bot.bot import _format_completion_summary
+
+        task = self._make_task()
+        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.get_task_duration.return_value = "5s"
+            result = _format_completion_summary(task, None, [], (0, 0))
+
+        assert "0/0" in result
+        assert "0%" in result
+        # Progress bar should be all empty blocks
+        assert "░░░░░░░░░░" in result
+
+    def test_plan_progress_all_complete(self):
+        """Plan progress with all tasks done shows 100% and full bar."""
+        from src.telegram_bot.bot import _format_completion_summary
+
+        task = self._make_task()
+        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.get_task_duration.return_value = "5s"
+            result = _format_completion_summary(task, None, [], (10, 10))
+
+        assert "10/10" in result
+        assert "100%" in result
+        assert "██████████" in result
+
+    def test_diff_stats_with_zero_changes(self):
+        """Diff stats with all zeros are still displayed (task touched files but net zero)."""
+        from src.telegram_bot.bot import _format_completion_summary
+
+        task = self._make_task()
+        diff = {"files_changed": 0, "insertions": 0, "deletions": 0}
+        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.get_task_duration.return_value = "5s"
+            result = _format_completion_summary(task, diff, [], None)
+
+        assert "Files: 0" in result
+        assert "+0" in result
+        assert "-0" in result
+
+    def test_empty_diff_stats_dict_is_falsy(self):
+        """Empty dict {} is falsy, so changes section is omitted."""
+        from src.telegram_bot.bot import _format_completion_summary
+
+        task = self._make_task()
+        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.get_task_duration.return_value = "5s"
+            result = _format_completion_summary(task, {}, [], None)
+
+        assert "Changes" not in result
+
+    def test_all_sections_combined(self):
+        """Full summary with all optional sections populated."""
+        from src.telegram_bot.bot import _format_completion_summary
+
+        task = self._make_task(project="full-proj", mode="build", iterations=10)
+        next_t = self._make_task(project="next-proj", mode="plan", iterations=3)
+        diff = {"files_changed": 5, "insertions": 100, "deletions": 20}
+        commits = ["abc1234 feat: add feature", "def5678 fix: bug"]
+
+        with patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.get_task_duration.return_value = "15m 0s"
+            result = _format_completion_summary(
+                task, diff, commits, (7, 10), next_task=next_t
+            )
+
+        # All sections present
+        assert "full-proj" in result
+        assert "Build completed" in result
+        assert "Iterations: 10" in result
+        assert "15m 0s" in result
+        assert "Files: 5" in result
+        assert "+100" in result
+        assert "abc1234 feat: add feature" in result
+        assert "7/10" in result
+        assert "70%" in result
+        assert "Next" in result
+        assert "next-proj" in result
+
 
 # --- Tests for check_task_completion ---
 

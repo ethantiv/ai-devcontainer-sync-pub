@@ -1587,6 +1587,316 @@ class TestProcessCompletedTasks:
         assert next_task is None
 
 
+class TestPersistenceConcurrent:
+    """Tests for task persistence under concurrent scenarios.
+
+    Covers: save during queue operations, load with mixed valid/stale tasks,
+    atomic write verification (os.replace pattern), _queue_lock behavior.
+    """
+
+    @pytest.fixture
+    def ptm(self, tmp_path):
+        """Create a TaskManager with PROJECTS_ROOT patched to tmp_path."""
+        with (
+            patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)),
+            patch("src.telegram_bot.tasks.check_disk_space", return_value=(True, 5000.0)),
+        ):
+            from src.telegram_bot.tasks import TaskManager
+            tm = TaskManager()
+            tm._tmp_path = tmp_path
+            yield tm
+
+    def _make_task(self, project="proj", mode="build", iterations=5,
+                   session_name=None, idea=None):
+        from src.telegram_bot.tasks import Task
+        return Task(
+            project=project,
+            project_path=Path(f"/tmp/{project}"),
+            mode=mode,
+            iterations=iterations,
+            idea=idea,
+            session_name=session_name or f"loop-{project}",
+        )
+
+    def _make_queued(self, id="q1", project="proj", mode="plan",
+                     iterations=3, idea=None):
+        from src.telegram_bot.tasks import QueuedTask
+        return QueuedTask(
+            id=id,
+            project=project,
+            project_path=Path(f"/tmp/{project}"),
+            mode=mode,
+            iterations=iterations,
+            idea=idea,
+        )
+
+    def test_save_during_queue_add_is_consistent(self, ptm):
+        """Saving while adding to queue produces consistent file state.
+
+        Queue operations hold _queue_lock; _save_tasks acquires it separately
+        for the queue portion, so the file always reflects a complete snapshot.
+        """
+        ptm.active_tasks["/tmp/proj"] = self._make_task()
+        ptm.queues["/tmp/proj"] = [
+            self._make_queued(id="q1"),
+            self._make_queued(id="q2"),
+        ]
+        ptm._save_tasks()
+
+        data = json.loads((ptm._tmp_path / ".tasks.json").read_text())
+        assert "/tmp/proj" in data["active_tasks"]
+        assert len(data["queues"]["/tmp/proj"]) == 2
+        assert data["queues"]["/tmp/proj"][0]["id"] == "q1"
+        assert data["queues"]["/tmp/proj"][1]["id"] == "q2"
+
+    def test_save_preserves_queue_order_after_pop(self, ptm):
+        """After popping from queue front, save reflects correct order."""
+        ptm.queues["/tmp/proj"] = [
+            self._make_queued(id="q1"),
+            self._make_queued(id="q2"),
+            self._make_queued(id="q3"),
+        ]
+
+        with ptm._queue_lock:
+            ptm.queues["/tmp/proj"].pop(0)
+
+        ptm._save_tasks()
+        data = json.loads((ptm._tmp_path / ".tasks.json").read_text())
+        ids = [q["id"] for q in data["queues"]["/tmp/proj"]]
+        assert ids == ["q2", "q3"]
+
+    def test_save_with_empty_queue_after_cancel(self, ptm):
+        """Cancelling last queued task results in empty queue in saved state."""
+        ptm.queues["/tmp/proj"] = [self._make_queued(id="q1")]
+
+        with ptm._queue_lock:
+            ptm.queues["/tmp/proj"].pop(0)
+
+        ptm._save_tasks()
+        data = json.loads((ptm._tmp_path / ".tasks.json").read_text())
+        assert data["queues"]["/tmp/proj"] == []
+
+    def test_load_mixed_valid_and_stale_tasks(self, tmp_path):
+        """Load restores valid tasks and removes stale ones in the same file."""
+        from src.telegram_bot.tasks import Task
+
+        with patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)):
+            from src.telegram_bot.tasks import TaskManager
+            tm = TaskManager()
+
+            # Two active tasks — one valid, one stale
+            tm.active_tasks["/tmp/alive"] = Task(
+                project="alive",
+                project_path=Path("/tmp/alive"),
+                mode="build",
+                iterations=5,
+                idea=None,
+                session_name="loop-alive",
+            )
+            tm.active_tasks["/tmp/dead"] = Task(
+                project="dead",
+                project_path=Path("/tmp/dead"),
+                mode="plan",
+                iterations=3,
+                idea=None,
+                session_name="loop-dead",
+            )
+            tm._save_tasks()
+
+            # Load: alive session running, dead session gone
+            tm2 = TaskManager.__new__(TaskManager)
+            tm2.active_tasks = {}
+            tm2.queues = {}
+            tm2._queue_lock = __import__("threading").Lock()
+
+            def session_check(name):
+                return name == "loop-alive"
+
+            with patch.object(tm2, "_is_session_running", side_effect=session_check):
+                tm2._load_tasks()
+
+        assert "/tmp/alive" in tm2.active_tasks
+        assert tm2.active_tasks["/tmp/alive"].project == "alive"
+        assert "/tmp/dead" not in tm2.active_tasks
+
+    def test_load_cleans_stale_and_preserves_queues(self, tmp_path):
+        """Load removes stale active tasks but preserves queues for those projects."""
+        from src.telegram_bot.tasks import Task, QueuedTask
+
+        with patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)):
+            from src.telegram_bot.tasks import TaskManager
+            tm = TaskManager()
+
+            tm.active_tasks["/tmp/proj"] = Task(
+                project="proj",
+                project_path=Path("/tmp/proj"),
+                mode="build",
+                iterations=5,
+                idea=None,
+                session_name="loop-proj",
+            )
+            tm.queues["/tmp/proj"] = [
+                QueuedTask(
+                    id="q1",
+                    project="proj",
+                    project_path=Path("/tmp/proj"),
+                    mode="plan",
+                    iterations=3,
+                    idea=None,
+                ),
+            ]
+            tm._save_tasks()
+
+            tm2 = TaskManager.__new__(TaskManager)
+            tm2.active_tasks = {}
+            tm2.queues = {}
+            tm2._queue_lock = __import__("threading").Lock()
+            with patch.object(tm2, "_is_session_running", return_value=False):
+                tm2._load_tasks()
+
+        # Active task removed (stale), queue preserved
+        assert "/tmp/proj" not in tm2.active_tasks
+        assert len(tm2.queues.get("/tmp/proj", [])) == 1
+        assert tm2.queues["/tmp/proj"][0].id == "q1"
+
+    def test_atomic_write_no_tmp_on_success(self, ptm):
+        """Successful save leaves no .tmp file behind (atomic os.replace)."""
+        ptm.active_tasks["/tmp/proj"] = self._make_task()
+        ptm._save_tasks()
+
+        assert (ptm._tmp_path / ".tasks.json").exists()
+        assert not (ptm._tmp_path / ".tasks.json.tmp").exists()
+
+    def test_atomic_write_content_valid_json(self, ptm):
+        """Saved file contains valid JSON that can be round-tripped."""
+        ptm.active_tasks["/tmp/proj"] = self._make_task(idea="test idea")
+        ptm.queues["/tmp/proj"] = [self._make_queued(id="q1", idea="queue idea")]
+        ptm._save_tasks()
+
+        raw = (ptm._tmp_path / ".tasks.json").read_text()
+        data = json.loads(raw)  # Must not raise
+        assert "active_tasks" in data
+        assert "queues" in data
+        assert data["active_tasks"]["/tmp/proj"]["idea"] == "test idea"
+        assert data["queues"]["/tmp/proj"][0]["idea"] == "queue idea"
+
+    def test_save_survives_os_replace_failure(self, ptm):
+        """When os.replace fails (e.g., permission error), save logs warning but doesn't crash."""
+        ptm.active_tasks["/tmp/proj"] = self._make_task()
+
+        import os as _os
+        with patch("src.telegram_bot.tasks.os.replace", side_effect=OSError("Permission denied")):
+            ptm._save_tasks()  # Should not raise
+
+    def test_queue_lock_not_held_during_file_write(self, ptm):
+        """_save_tasks releases _queue_lock before file I/O to prevent deadlocks.
+
+        The lock is only held during queue dict serialization, not during
+        the tmp file write + os.replace operation.
+        """
+        ptm.queues["/tmp/proj"] = [self._make_queued()]
+
+        original_write = Path.write_text
+        lock_held_during_write = []
+
+        def spy_write(self_path, content, *args, **kwargs):
+            # Check if lock is held (non-blocking acquire returns False if held)
+            acquired = ptm._queue_lock.acquire(blocking=False)
+            if acquired:
+                ptm._queue_lock.release()
+                lock_held_during_write.append(False)
+            else:
+                lock_held_during_write.append(True)
+            return original_write(self_path, content, *args, **kwargs)
+
+        with patch.object(Path, "write_text", spy_write):
+            ptm._save_tasks()
+
+        # Lock should NOT be held during file write
+        assert lock_held_during_write and not any(lock_held_during_write)
+
+    def test_load_restores_queued_at_timestamps(self, tmp_path):
+        """Load preserves queued_at timestamps through round-trip serialization."""
+        from src.telegram_bot.tasks import QueuedTask
+
+        with patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)):
+            from src.telegram_bot.tasks import TaskManager
+            tm = TaskManager()
+
+            qt = QueuedTask(
+                id="q1",
+                project="proj",
+                project_path=Path("/tmp/proj"),
+                mode="plan",
+                iterations=3,
+                idea=None,
+                queued_at=datetime(2026, 1, 15, 10, 30, 0),
+            )
+            tm.queues["/tmp/proj"] = [qt]
+            tm._save_tasks()
+
+            tm2 = TaskManager.__new__(TaskManager)
+            tm2.active_tasks = {}
+            tm2.queues = {}
+            tm2._queue_lock = __import__("threading").Lock()
+            tm2._load_tasks()
+
+        restored = tm2.queues["/tmp/proj"][0]
+        assert restored.queued_at == datetime(2026, 1, 15, 10, 30, 0)
+
+    def test_load_restores_started_at_and_fields(self, tmp_path):
+        """Load preserves started_at, last_reported_iteration, and stale_warned."""
+        from src.telegram_bot.tasks import Task
+
+        with patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)):
+            from src.telegram_bot.tasks import TaskManager
+            tm = TaskManager()
+
+            task = Task(
+                project="proj",
+                project_path=Path("/tmp/proj"),
+                mode="build",
+                iterations=5,
+                idea=None,
+                session_name="loop-proj",
+                last_reported_iteration=3,
+                stale_warned=True,
+                started_at=datetime(2026, 1, 15, 14, 0, 0),
+                status="running",
+            )
+            tm.active_tasks["/tmp/proj"] = task
+            tm._save_tasks()
+
+            tm2 = TaskManager.__new__(TaskManager)
+            tm2.active_tasks = {}
+            tm2.queues = {}
+            tm2._queue_lock = __import__("threading").Lock()
+            with patch.object(tm2, "_is_session_running", return_value=True):
+                tm2._load_tasks()
+
+        restored = tm2.active_tasks["/tmp/proj"]
+        assert restored.last_reported_iteration == 3
+        assert restored.stale_warned is True
+        assert restored.started_at == datetime(2026, 1, 15, 14, 0, 0)
+        assert restored.status == "running"
+
+    def test_save_multiple_projects_independent(self, ptm):
+        """Multiple projects are saved and loaded independently."""
+        ptm.active_tasks["/tmp/projA"] = self._make_task(project="projA", session_name="loop-projA")
+        ptm.active_tasks["/tmp/projB"] = self._make_task(project="projB", session_name="loop-projB")
+        ptm.queues["/tmp/projA"] = [self._make_queued(id="qA", project="projA")]
+        ptm.queues["/tmp/projB"] = [
+            self._make_queued(id="qB1", project="projB"),
+            self._make_queued(id="qB2", project="projB"),
+        ]
+        ptm._save_tasks()
+
+        data = json.loads((ptm._tmp_path / ".tasks.json").read_text())
+        assert len(data["active_tasks"]) == 2
+        assert len(data["queues"]["/tmp/projA"]) == 1
+        assert len(data["queues"]["/tmp/projB"]) == 2
+
+
 class TestBrainstormManagerFinish:
     """Tests for BrainstormManager.finish() — session lookup, tmux cleanup,
     ROADMAP.md writing, _cleanup_session() call, return (success, message, content) tuple.

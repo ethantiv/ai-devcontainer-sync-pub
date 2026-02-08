@@ -1,8 +1,8 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 14/43 (33%)
-**Last Verified:** 2026-02-08 — Phase 2 in progress
+**Progress:** 16/43 (37%)
+**Last Verified:** 2026-02-08 — Phase 2 complete
 
 ## Goal
 
@@ -10,7 +10,7 @@ Implement all proposals from docs/ROADMAP.md across three priority tiers: P1 (Cr
 
 ## Current Phase
 
-Phase 2: Improve Async Test Coverage (P2-Important)
+Phase 3: Upgrade Commander.js to v14 (P2-Important)
 
 ## Phases
 
@@ -32,9 +32,9 @@ Phase 2: Improve Async Test Coverage (P2-Important)
 - [x] Add tests for `BrainstormManager.start()` async generator happy path: tmux session creation, initial prompt passing, JSONL output polling, session_id capture from `_parse_stream_json()`, status yields `(error_code, response, is_final)` — 10 new tests in `TestBrainstormManagerStartHappyPath` (happy path 3-tuple flow, session registration, session_id capture, brainstorm prefix, save persistence, tmux failure cleanup, timeout cleanup, no-result cleanup, status transitions, output file path)
 - [x] Add tests for `BrainstormManager.respond()` async generator happy path: session continuation with `--resume`, prompt writing to tmux, response polling — 12 new tests in `TestBrainstormManagerRespondHappyPath` (yield format, session_id update, status transitions, last_response, resume_session_id passing, output file per turn, save persistence, tmux failure error+status, timeout error, responding status during wait, session_id preservation when None)
 - [x] Add tests for `BrainstormManager.finish()` unit tests: session lookup, tmux cleanup, `_cleanup_session()` call, return `(success, message, content)` tuple — 12 new tests in `TestBrainstormManagerFinish` (no-session error, session-not-ready cleanup, tmux start failure, resume+summary_prompt args, timeout error, no-result error, ROADMAP.md write, docs dir creation, return tuple format, cleanup on success, session removal, cleanup on every error path)
-- [ ] Add tests for task persistence round-trip under concurrent scenarios: save during queue operations, load with mixed valid/stale tasks, atomic write verification (`os.replace` pattern), `_queue_lock` behavior
-- [ ] Add tests for completion summary edge cases: `None` diff_stats, empty commits list, plan progress `(0, 0)`, `None` plan progress — currently 7 tests covering basic/diff/commits/progress/next_task/mode
-- **Status:** in_progress
+- [x] Add tests for task persistence round-trip under concurrent scenarios: save during queue operations, load with mixed valid/stale tasks, atomic write verification (`os.replace` pattern), `_queue_lock` behavior — 12 new tests in `TestPersistenceConcurrent` (save consistency, queue order after pop, empty queue after cancel, mixed valid/stale load, stale cleanup preserves queues, atomic write no tmp, valid JSON round-trip, os.replace failure resilience, lock not held during write, queued_at timestamps, started_at/fields, multi-project independence)
+- [x] Add tests for completion summary edge cases: `None` diff_stats, empty commits list, plan progress `(0, 0)`, `None` plan progress — 5 new tests added to `TestFormatCompletionSummary` (zero-total plan progress no crash, all-complete 100% bar, zero-change diff stats, empty dict falsy, all sections combined) — total now 12 tests
+- **Status:** complete
 
 ### Phase 3: Upgrade Commander.js to v14 (P2-Important)
 - [ ] Update `src/package.json` dependency from `^12.0.0` to `^14.0.0`
@@ -82,8 +82,8 @@ Phase 2: Improve Async Test Coverage (P2-Important)
 
 | Question | Answer |
 |----------|--------|
-| How many tests does test_tasks.py currently have? | 91 tests (79 + 12 new BrainstormManager.finish() unit tests) |
-| How many total tests exist? | 348 Python (91 test_tasks + 96 test_bot + 62 test_projects + 61 test_config + 20 test_git_utils + 18 test_log_rotation) + 20 JS = 368 total |
+| How many tests does test_tasks.py currently have? | 103 tests (91 + 12 new TestPersistenceConcurrent) |
+| How many total tests exist? | 365 Python (103 test_tasks + 101 test_bot + 62 test_projects + 61 test_config + 20 test_git_utils + 18 test_log_rotation) + 20 JS = 385 total |
 | Is there any log rotation mechanism? | Yes — `log_rotation.py` module with `rotate_logs()`, `cleanup_brainstorm_files()`, `check_disk_space()`. Daily periodic job in bot.py. CLI via `loop cleanup --logs` |
 | Is there retry logic for git operations? | No — all subprocess calls attempt once, catch TimeoutExpired/OSError, return immediately |
 | Is the sync/pull feature started? | No — no git pull/fetch references in telegram_bot code, no MSG_SYNC_* constants |
@@ -150,8 +150,8 @@ Phase 2: Improve Async Test Coverage (P2-Important)
 - **All git subprocess calls use single-attempt pattern** — TimeoutExpired caught but no retry, consistent across git_utils.py and projects.py
 - **QueuedTask has `queued_at` field** (tasks.py) — timestamp stored and persisted to `.tasks.json` via isoformat() but never checked for expiry
 - **Brainstorm session metadata lost on finish** — `_cleanup_session()` removes entry from `_sessions` dict and `.brainstorm_sessions.json`. Only JSONL files survive. Phase 7 must scan JSONL files directly or add a history log
-- **Existing test coverage gaps by priority**: (1) ~~check_task_progress() stale detection — 0 direct tests~~ **DONE: 15 tests**, (2) BrainstormManager happy paths — ~~only error-path tests (1 start, 2 respond)~~ **start() DONE: 10 tests, respond() DONE: 12 tests**, (3) ~~process_completed_tasks() workflow — 1 persistence test only~~ **DONE: 9 tests**, (4) concurrent persistence — 0 tests, (5) ~~BrainstormManager.finish() — 0 unit tests~~ **DONE: 12 tests**
-- **Per-file test breakdown (348 Python)**: test_tasks.py=91, test_bot.py=96, test_projects.py=62, test_config.py=61, test_git_utils.py=20, test_log_rotation.py=18
+- **Existing test coverage gaps by priority**: (1) ~~check_task_progress() stale detection — 0 direct tests~~ **DONE: 15 tests**, (2) BrainstormManager happy paths — ~~only error-path tests (1 start, 2 respond)~~ **start() DONE: 10 tests, respond() DONE: 12 tests**, (3) ~~process_completed_tasks() workflow — 1 persistence test only~~ **DONE: 9 tests**, (4) ~~concurrent persistence — 0 tests~~ **DONE: 12 tests**, (5) ~~BrainstormManager.finish() — 0 unit tests~~ **DONE: 12 tests**, (6) ~~completion summary edge cases~~ **DONE: 5 new tests (12 total)**
+- **Per-file test breakdown (365 Python)**: test_tasks.py=103, test_bot.py=101, test_projects.py=62, test_config.py=61, test_git_utils.py=20, test_log_rotation.py=18
 - **Commander.js APIs used in cli.js**: `.name()`, `.description()`, `.version()`, `.command()`, `.option()`, `.action()`, `.addHelpText('after')`, `.parse()`, plus one negatable option `--no-early-exit`. No advanced APIs (`.exitOverride()`, `.configureOutput()`, etc.). All stable across v12→v14
 - **cli.js helper functions**: `addLoopOptions(cmd)` and `addBuildOptions(cmd)` for DRY option management across plan/build/run commands
 - **No skipped or xfail tests** — all 259 Python and 20 JS tests are active and passing
