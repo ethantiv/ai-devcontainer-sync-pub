@@ -3,6 +3,7 @@
 **Status:** IN_PROGRESS
 **Progress:** 0/17 (0%)
 **Last updated:** 2026-02-08
+**Line numbers verified:** 2026-02-08 (all bot.py and messages.py references confirmed accurate)
 
 ## Goal
 
