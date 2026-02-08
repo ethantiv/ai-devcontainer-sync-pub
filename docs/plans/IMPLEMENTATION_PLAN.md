@@ -1,58 +1,85 @@
 # Implementation Plan
 
-**Status:** COMPLETE
-**Progress:** 14/14 (100%)
-**Last updated:** 2026-02-07 — All phases complete
+**Status:** IN_PROGRESS
+**Progress:** 0/7 (0%)
+**Last updated:** 2026-02-08
 
 ## Goal
 
-Add the ability to create a new project from the Telegram bot when the projects folder is empty (or at any time). The flow should allow the user to:
-1. Create a new local project (directory + `git init` + `loop init`)
-2. Optionally create a GitHub repository (private or public) and push the initial commit
+Remove remaining emoji from Telegram bot buttons and notifications, replacing them with Unicode symbols consistent with the rest of the project.
 
-This addresses the ROADMAP.md requirement: when no projects exist, the bot currently shows "No projects found" and ends the conversation with no action options — enhance this scenario with a project creation option, including optional GitHub integration.
+The project uses a consistent set of Unicode symbols for UI elements (e.g. `◉` `○` `◎` `◇` `■` `▶` `↺` `←` `↳` `≡` `✓` `✗` `Δ` `▸` `→` `~` `·` `+` `⚙`). However, 10 emoji characters remain across 3 files, breaking visual consistency.
 
 ## Phases
 
-### Phase 1: Backend — `projects.py`
-- [x] Add `validate_project_name(name: str) -> tuple[bool, str]` function
-- [x] Add `create_project(name: str) -> tuple[bool, str]` function
-- [x] Add `create_github_repo(project_path: Path, name: str, private: bool) -> tuple[bool, str]` function
-- **Status:** complete
+### Phase 1: Replace emoji in `messages.py` button labels
+- [ ] Replace `MSG_GITHUB_PRIVATE_BTN`: `🔒 Private` -> Unicode symbol + `Private`
+- [ ] Replace `MSG_GITHUB_PUBLIC_BTN`: `🌐 Public` -> Unicode symbol + `Public`
+- **Status:** pending
 
-### Phase 2: Messages — `messages.py`
-- [x] Add button label: `MSG_CREATE_PROJECT_BTN`
-- [x] Add flow messages: `MSG_ENTER_PROJECT_NAME`, `MSG_CREATING_PROJECT`, `MSG_PROJECT_CREATED`, `MSG_PROJECT_CREATE_FAILED`
-- [x] Add GitHub choice messages: `MSG_GITHUB_CHOICE_PROMPT`, `MSG_GITHUB_PRIVATE_BTN`, `MSG_GITHUB_PUBLIC_BTN`, `MSG_GITHUB_SKIP_BTN`, `MSG_GITHUB_CREATING`, `MSG_GITHUB_CREATED`, `MSG_GITHUB_FAILED`, `MSG_GH_NOT_AVAILABLE`
-- [x] Add validation error messages: `MSG_INVALID_PROJECT_NAME`, `MSG_PROJECT_EXISTS`, `MSG_RESERVED_NAME`
-- **Status:** complete
+### Phase 2: Replace emoji in `notify-telegram.sh`
+- [ ] Replace status emoji: `✅` (success) -> `✓`, `✔️` (completed) -> `✓`, `⚠️` (interrupted) -> `!`, `❓` (unknown) -> `?`
+- [ ] Replace mode emoji: `🔨` (build) -> `■`, `📋` (plan) -> `◇`, `🔄` (default) -> `~`
+- **Status:** pending
 
-### Phase 3: Bot UI — `bot.py`
-- [x] Fix empty-state behavior in `show_projects()`: shows inline keyboard with "Create project" and "Clone repo" buttons, returns `State.SELECT_PROJECT`
-- [x] Add "Create project" button to the normal (non-empty) project list view, alongside existing "Clone repo" button
-- [x] Add conversation state `ENTER_PROJECT_NAME` to `State` enum
-- [x] Add conversation state `GITHUB_CHOICE` to `State` enum
-- [x] Add `handle_project_name()` handler: strips/lowercases input, validates via `validate_project_name()`, calls `create_project()`, shows GitHub choice prompt
-- [x] Add `handle_github_choice()` callback handler: handles `github:private`, `github:public`, `github:skip`; calls `create_github_repo()` for private/public; navigates to project menu
-- [x] Register new states and handlers in `create_application()`: `ENTER_PROJECT_NAME` with `MessageHandler`, `GITHUB_CHOICE` with `CallbackQueryHandler`
-- **Status:** complete
+### Phase 3: Replace emoji in `loop.sh`
+- [ ] Replace `✅` in "Done" message (line 166) -> `✓`
+- **Status:** pending
 
-### Phase 4: Tests
-- [x] Add tests for `validate_project_name()` in `test_projects.py` (12 tests)
-- [x] Add tests for `create_project()` in `test_projects.py` (6 tests)
-- [x] Add tests for `create_github_repo()` in `test_projects.py` (5 tests + 6 timeout/OSError tests in TestSubprocessTimeouts)
-- **Status:** complete
+### Phase 4: Verify tests pass
+- [ ] Run `python3 -m pytest src/telegram_bot/tests/ -v` — tests should pass unchanged (no direct emoji assertions found)
+- [ ] Run `npm test --prefix src` — JS tests unaffected
+- **Status:** pending
 
 ## Key Questions
 
 | Question | Answer |
 |----------|--------|
-| Should the "Create project" button appear only when no projects exist? | No — show it always alongside "Clone repo". |
-| What git initialization should the new project have? | `git init` + empty initial commit + `loop init` |
-| Should project names be normalized to lowercase? | Yes — enforce lowercase with `name.lower()` |
-| Is `gh` CLI required for this feature? | No — GitHub integration is optional. |
-| What subprocess timeouts to use? | `git init`: 10s, `git commit`: 10s, `loop init`: 30s, `gh repo create`: 60s |
-| Should `validate_project_name` be separate from `create_project`? | Yes — separate validation for specific error messages and testability. |
-| What happens in empty-state? | Fixed: shows inline keyboard with Create/Clone buttons + returns `State.SELECT_PROJECT`. |
+| Which characters are emoji vs Unicode symbols? | Emoji: U+1F000+ range (🔒🌐🔨📋🔄) and emoji-presentation sequences (✅✔️⚠️❓). Unicode symbols: U+2000-U+2BFF range without variation selectors (✓✗◉○◎◇■▶↺←↳≡Δ▸→⚙). |
+| What replaces `🔒` (Private)? | `◆` (U+25C6, Black Diamond) — filled shape suggests "closed/private", matches project's diamond vocabulary (`◇` for Plan). |
+| What replaces `🌐` (Public)? | `◎` (U+25CE, Bullseye) — open/visible shape suggests "public", already used in project for Status. Alternatively `○` (U+25CB) if `◎` feels too similar to Status. |
+| Do tests need updating? | No — test assertions use generic string matching (e.g. `assert success is True`, `assert "Queued" in msg`), not emoji comparisons. |
+| Is `notify-telegram.sh` in scope? | Yes — ROADMAP says "buttons" but the shell script also sends messages to Telegram with emoji, and the project's CLAUDE.md documents `ok()`/`warn()`/`fail()` helpers using non-emoji symbols. |
+| Should `bot.py` inline symbols be centralized to `messages.py`? | Out of scope — `bot.py` uses consistent Unicode symbols (◇■◉↳▸✓✗█░≡), not emoji. Centralizing them is a separate refactoring task. |
 
-**Codebase state**: 180 Python + 20 JS tests passing. `test_projects.py` has 62 tests across 9 classes.
+## Findings & Decisions
+
+### Requirements
+- Replace 10 emoji instances across 3 files with Unicode symbols
+- Maintain visual meaning (private=closed, public=open, success=check, error=warning, etc.)
+- All replacements must use symbols from the project's existing vocabulary where possible
+- Tests must pass without changes
+
+### Research Findings
+
+**Emoji locations (10 instances across 3 files):**
+
+| File | Line | Current | Replacement | Rationale |
+|------|------|---------|-------------|-----------|
+| `src/telegram_bot/messages.py` | 258 | `🔒 Private` | `◆ Private` | Filled diamond = closed/private |
+| `src/telegram_bot/messages.py` | 259 | `🌐 Public` | `○ Public` | Open circle = public/open |
+| `src/scripts/notify-telegram.sh` | 38 | `✅` (success) | `✓` | Matches project's check mark |
+| `src/scripts/notify-telegram.sh` | 39 | `✔️` (completed) | `✓` | Matches project's check mark |
+| `src/scripts/notify-telegram.sh` | 40 | `⚠️` (interrupted) | `!` | Matches project's exclamation pattern |
+| `src/scripts/notify-telegram.sh` | 41 | `❓` (unknown) | `?` | Simple question mark |
+| `src/scripts/notify-telegram.sh` | 46 | `🔨` (build) | `■` | Matches `MSG_BUILD_BTN` symbol |
+| `src/scripts/notify-telegram.sh` | 47 | `📋` (plan) | `◇` | Matches `MSG_PLAN_BTN` symbol |
+| `src/scripts/notify-telegram.sh` | 48 | `🔄` (default) | `~` | Matches `MSG_BRAINSTORM_BTN` symbol |
+| `src/scripts/loop.sh` | 166 | `✅` | `✓` | Matches project's check mark |
+
+**Test impact analysis:**
+- `test_projects.py`: Tests `create_github_repo()` and `validate_project_name()` — assertions check return tuples `(bool, str)` with generic string content, not emoji characters
+- `test_tasks.py`: Tests queue/persistence — no emoji in assertions
+- `test_config.py`: Tests env var parsing — no emoji
+- `test_git_utils.py`: Tests git operations — no emoji
+
+### Technical Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Use `◆` for Private (not `⊗`) | Consistent with diamond vocabulary in project (`◇` Plan, `◆` Private) |
+| Use `○` for Public (not `◎`) | `◎` already used for Status button — avoid visual confusion |
+| Use `✓` for success/completed (not `+`) | `✓` (U+2713) already used extensively in messages.py for success states |
+| Use `!` for interrupted (not `⚡`) | `!` already used in `MSG_STALE_PROGRESS` for warnings |
+| Use `■`/`◇`/`~` for mode icons | Direct match with existing button labels in messages.py |
+| Keep `notify-telegram.sh` in scope | Telegram notifications are part of the bot's user-facing output |
