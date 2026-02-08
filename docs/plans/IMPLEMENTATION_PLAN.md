@@ -2,6 +2,7 @@
 
 **Status:** IN_PROGRESS
 **Progress:** 0/43 (0%)
+**Last Verified:** 2026-02-08 — all findings confirmed against codebase
 
 ## Goal
 
@@ -173,6 +174,7 @@ Phase 1: Log Rotation and Disk Space Management (P1-Critical)
 | QueuedTask.queued_at exists but unused for TTL | Leverage existing field in Phase 4 — no schema change needed |
 | Brainstorm sessions not persisted after finish() | Phase 7 must scan JSONL files in `.brainstorm/` for metadata — cannot rely on sessions.json |
 | Phase 3 originally had 6 tasks including research | Research completed during planning — Commander.js v14 requires no code changes. Reduced to 4 tasks |
+| Independent verification (2026-02-08) confirmed all findings | Test counts (259 Python + 20 JS), zero TODOs/FIXMEs, no log rotation/sync/history code, Commander ^12.0.0, MSG_STALE_PROGRESS hardcoded "5 min" — all match plan |
 
 ### Resources
 - ROADMAP.md — 7 proposals across P1/P2/P3 priority tiers
