@@ -2351,3 +2351,201 @@ class TestBrainstormManagerFinish:
         ):
             await brainstorm_manager.finish(42)
         mock_cleanup.assert_called_once_with(42)
+
+
+class TestBrainstormHistory:
+    """Tests for brainstorm session history archiving and retrieval."""
+
+    def test_archive_session_creates_history_file(self, brainstorm_manager, tmp_path):
+        """_archive_session() creates .brainstorm_history.json with entry."""
+        from src.telegram_bot.tasks import BrainstormSession
+        session = BrainstormSession(
+            chat_id=42,
+            project="myproject",
+            project_path=tmp_path / "myproject",
+            session_id="sess-1",
+            tmux_session="brainstorm-42",
+            output_file=tmp_path / ".brainstorm" / "out.jsonl",
+            initial_prompt="Build a REST API",
+            last_response="Here is the plan...",
+        )
+        brainstorm_manager._archive_session(session, "saved")
+
+        history_file = tmp_path / ".brainstorm_history.json"
+        assert history_file.exists()
+        history = json.loads(history_file.read_text())
+        assert len(history) == 1
+        assert history[0]["project"] == "myproject"
+        assert history[0]["topic"] == "Build a REST API"
+        assert history[0]["outcome"] == "saved"
+        assert history[0]["last_response"] == "Here is the plan..."
+
+    def test_archive_session_appends_to_existing_history(self, brainstorm_manager, tmp_path):
+        """_archive_session() appends to existing history, not overwrites."""
+        from src.telegram_bot.tasks import BrainstormSession
+        # Pre-populate history
+        history_file = tmp_path / ".brainstorm_history.json"
+        history_file.write_text(json.dumps([{"project": "old", "topic": "old topic"}]))
+
+        session = BrainstormSession(
+            chat_id=42,
+            project="newproj",
+            project_path=tmp_path / "newproj",
+            session_id="sess-2",
+            tmux_session="brainstorm-42",
+            output_file=tmp_path / ".brainstorm" / "out.jsonl",
+            initial_prompt="New idea",
+        )
+        brainstorm_manager._archive_session(session, "cancelled")
+
+        history = json.loads(history_file.read_text())
+        assert len(history) == 2
+        assert history[0]["project"] == "old"
+        assert history[1]["project"] == "newproj"
+        assert history[1]["outcome"] == "cancelled"
+
+    def test_archive_session_truncates_long_topic(self, brainstorm_manager, tmp_path):
+        """_archive_session() truncates initial_prompt to 100 chars + ellipsis."""
+        from src.telegram_bot.tasks import BrainstormSession
+        long_prompt = "A" * 200
+        session = BrainstormSession(
+            chat_id=42,
+            project="proj",
+            project_path=tmp_path / "proj",
+            session_id="sess-1",
+            tmux_session="brainstorm-42",
+            output_file=tmp_path / ".brainstorm" / "out.jsonl",
+            initial_prompt=long_prompt,
+        )
+        brainstorm_manager._archive_session(session, "saved")
+
+        history = json.loads((tmp_path / ".brainstorm_history.json").read_text())
+        assert history[0]["topic"] == "A" * 100 + "..."
+
+    def test_archive_session_truncates_long_response(self, brainstorm_manager, tmp_path):
+        """_archive_session() truncates last_response to 500 chars."""
+        from src.telegram_bot.tasks import BrainstormSession
+        session = BrainstormSession(
+            chat_id=42,
+            project="proj",
+            project_path=tmp_path / "proj",
+            session_id="sess-1",
+            tmux_session="brainstorm-42",
+            output_file=tmp_path / ".brainstorm" / "out.jsonl",
+            initial_prompt="topic",
+            last_response="R" * 1000,
+        )
+        brainstorm_manager._archive_session(session, "saved")
+
+        history = json.loads((tmp_path / ".brainstorm_history.json").read_text())
+        assert len(history[0]["last_response"]) == 500
+
+    def test_load_history_empty_when_no_file(self, brainstorm_manager):
+        """_load_history() returns empty list when file doesn't exist."""
+        assert brainstorm_manager._load_history() == []
+
+    def test_load_history_corrupt_file(self, brainstorm_manager, tmp_path):
+        """_load_history() returns empty list on corrupt JSON."""
+        (tmp_path / ".brainstorm_history.json").write_text("not json{{{")
+        assert brainstorm_manager._load_history() == []
+
+    def test_save_history_atomic_write(self, brainstorm_manager, tmp_path):
+        """_save_history() uses atomic write (no .tmp file left over)."""
+        brainstorm_manager._save_history([{"project": "test"}])
+        assert (tmp_path / ".brainstorm_history.json").exists()
+        assert not (tmp_path / ".brainstorm_history.tmp").exists()
+
+    def test_list_brainstorm_history_empty(self, brainstorm_manager):
+        """list_brainstorm_history() returns empty list when no history."""
+        assert brainstorm_manager.list_brainstorm_history() == []
+
+    def test_list_brainstorm_history_sorted_newest_first(self, brainstorm_manager, tmp_path):
+        """list_brainstorm_history() returns entries sorted by finished_at descending."""
+        history = [
+            {"project": "a", "finished_at": "2026-01-01T10:00:00"},
+            {"project": "b", "finished_at": "2026-02-01T10:00:00"},
+            {"project": "c", "finished_at": "2026-01-15T10:00:00"},
+        ]
+        (tmp_path / ".brainstorm_history.json").write_text(json.dumps(history))
+
+        result = brainstorm_manager.list_brainstorm_history()
+        assert [e["project"] for e in result] == ["b", "c", "a"]
+
+    def test_list_brainstorm_history_filter_by_project(self, brainstorm_manager, tmp_path):
+        """list_brainstorm_history(project=...) filters by project name."""
+        history = [
+            {"project": "alpha", "finished_at": "2026-01-01T10:00:00"},
+            {"project": "beta", "finished_at": "2026-02-01T10:00:00"},
+            {"project": "alpha", "finished_at": "2026-01-15T10:00:00"},
+        ]
+        (tmp_path / ".brainstorm_history.json").write_text(json.dumps(history))
+
+        result = brainstorm_manager.list_brainstorm_history(project="alpha")
+        assert len(result) == 2
+        assert all(e["project"] == "alpha" for e in result)
+
+    def test_cancel_archives_session(self, brainstorm_manager, tmp_path):
+        """cancel() archives session with 'cancelled' outcome before cleanup."""
+        from src.telegram_bot.tasks import BrainstormSession
+        session = BrainstormSession(
+            chat_id=99,
+            project="proj",
+            project_path=tmp_path / "proj",
+            session_id="sess-1",
+            tmux_session="brainstorm-99",
+            output_file=tmp_path / ".brainstorm" / "out.jsonl",
+            initial_prompt="Some idea",
+            last_response="Claude said something",
+        )
+        brainstorm_manager.sessions[99] = session
+
+        with (
+            patch.object(brainstorm_manager, "_is_session_running", return_value=False),
+            patch.object(brainstorm_manager, "_save_sessions"),
+        ):
+            brainstorm_manager.cancel(99)
+
+        history = brainstorm_manager._load_history()
+        assert len(history) == 1
+        assert history[0]["outcome"] == "cancelled"
+        assert history[0]["project"] == "proj"
+
+    @pytest.mark.asyncio
+    async def test_finish_archives_session_on_success(self, brainstorm_manager, tmp_path):
+        """finish() archives session with 'saved' outcome on success."""
+        from src.telegram_bot.tasks import BrainstormSession
+        project_dir = tmp_path / "myproject"
+        project_dir.mkdir()
+        session = BrainstormSession(
+            chat_id=42,
+            project="myproject",
+            project_path=project_dir,
+            session_id="sess-finish",
+            tmux_session="brainstorm-42",
+            output_file=tmp_path / ".brainstorm" / "out.jsonl",
+            initial_prompt="Build something",
+            last_response="Previous response",
+        )
+        brainstorm_manager.sessions[42] = session
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "# Idea\n\nGreat project", "sess-new"),
+            ),
+            patch.object(brainstorm_manager, "_cleanup_session"),
+        ):
+            success, _, _ = await brainstorm_manager.finish(42)
+
+        assert success is True
+        history = brainstorm_manager._load_history()
+        assert len(history) == 1
+        assert history[0]["outcome"] == "saved"
+        assert history[0]["project"] == "myproject"
+
+    def test_cancel_nonexistent_does_not_archive(self, brainstorm_manager, tmp_path):
+        """cancel() on nonexistent session doesn't create history entry."""
+        brainstorm_manager.cancel(999)
+        assert brainstorm_manager._load_history() == []

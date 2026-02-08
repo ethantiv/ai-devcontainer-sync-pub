@@ -1,8 +1,8 @@
 # Implementation Plan
 
-**Status:** IN_PROGRESS
-**Progress:** 38/43 (88%)
-**Last Verified:** 2026-02-08 — Phase 6 complete
+**Status:** COMPLETE
+**Progress:** 43/43 (100%)
+**Last Verified:** 2026-02-08 — Phase 7 complete
 
 ## Goal
 
@@ -10,7 +10,7 @@ Implement all proposals from docs/ROADMAP.md across three priority tiers: P1 (Cr
 
 ## Current Phase
 
-Phase 7: Interactive Brainstorm History Viewer (P3-Nice to Have)
+All phases complete.
 
 ## Phases
 
@@ -71,23 +71,24 @@ Phase 7: Interactive Brainstorm History Viewer (P3-Nice to Have)
 - **Status:** complete
 
 ### Phase 7: Interactive Brainstorm History Viewer (P3-Nice to Have)
-- [ ] Add `list_brainstorm_sessions(projects_root)` function to `tasks.py`: scan `PROJECTS_ROOT/.brainstorm/` for JSONL files, extract metadata from filenames (chat_id, uuid) and file content (first line for topic/prompt), return sorted list with timestamp, topic, message count
-- [ ] Add `view_brainstorm_session(session_file)` function to `tasks.py`: read JSONL file, extract `type:result` entries, format as readable transcript
-- [ ] Add Telegram command `/brainstorm_history` in `bot.py` with paginated session list using inline keyboard buttons
-- [ ] Add message constants to `messages.py`: `MSG_BRAINSTORM_HISTORY_TITLE`, `MSG_BRAINSTORM_HISTORY_EMPTY`, `MSG_BRAINSTORM_SESSION_ENTRY`
-- [ ] Write tests for session listing and transcript viewing
-- **Status:** pending
+- [x] Add `_archive_session()` method to `BrainstormManager` in `tasks.py`: archives session metadata + last response to `PROJECTS_ROOT/.brainstorm_history.json` via atomic write. Called from `finish()` (outcome "saved") and `cancel()` (outcome "cancelled") before `_cleanup_session()`. Truncates topic to 100 chars, last_response to 500 chars
+- [x] Add `_history_file()`, `_load_history()`, `_save_history()` persistence methods to `BrainstormManager`: atomic JSON read/write with corrupt file handling, same pattern as `_save_sessions()`
+- [x] Add `list_brainstorm_history(project=None)` method to `BrainstormManager`: returns history entries sorted by `finished_at` descending, with optional project name filter
+- [x] Add Telegram command `/history` in `bot.py` with paginated list (10 entries per page) using `show_brainstorm_history()` handler — filters by selected project if one is active, shows all otherwise. Registered as ConversationHandler entry point
+- [x] Add message constants to `messages.py`: `MSG_BRAINSTORM_HISTORY_TITLE`, `MSG_BRAINSTORM_HISTORY_EMPTY`, `MSG_BRAINSTORM_SESSION_ENTRY`. Updated `MSG_HELP` to include `/history` command
+- [x] Write tests: 13 tests in `TestBrainstormHistory` (test_tasks.py) for archive, persistence, listing, cancel/finish integration + 4 tests in `TestBrainstormHistoryCommand` (test_bot.py) for handler behavior — 17 new tests total
+- **Status:** complete
 
 ## Key Questions
 
 | Question | Answer |
 |----------|--------|
 | How many tests does test_tasks.py currently have? | 110 tests (103 + 7 new TestQueueTTLExpiry) |
-| How many total tests exist? | 407 Python (110 test_tasks + 110 test_bot + 71 test_projects + 64 test_config + 34 test_git_utils + 18 test_log_rotation) + 20 JS = 427 total |
+| How many total tests exist? | 424 Python (123 test_tasks + 114 test_bot + 71 test_projects + 64 test_config + 34 test_git_utils + 18 test_log_rotation) + 20 JS = 444 total |
 | Is there any log rotation mechanism? | Yes — `log_rotation.py` module with `rotate_logs()`, `cleanup_brainstorm_files()`, `check_disk_space()`. Daily periodic job in bot.py. CLI via `loop cleanup --logs` |
 | Is there retry logic for git operations? | Yes — `clone_repo()` retries up to 3 times with exponential backoff (2s, 4s) on TimeoutExpired and transient git network errors. Non-retryable errors fail immediately |
 | Is the sync/pull feature started? | Yes — complete. `check_remote_updates()` and `pull_project()` in git_utils.py, Sync button in project menu with update count, `action:sync` handler in bot.py |
-| Is brainstorm history viewer started? | No — no history-related code or messages exist. Sessions removed from `.brainstorm_sessions.json` after `finish()` — only JSONL files remain |
+| Is brainstorm history viewer started? | Yes — complete. `_archive_session()` saves to `.brainstorm_history.json` before cleanup. `/history` command in bot.py shows paginated list. 17 new tests |
 | What Commander.js version is installed? | ^14.0.0 in package.json (resolved to 14.0.3). Upgrade from v12 complete — all APIs stable |
 | Are there any TODOs/FIXMEs in the codebase? | None — codebase is clean with no TODO, FIXME, HACK, XXX comments or skipped tests |
 | Does Commander.js upgrade require code changes? | No — confirmed. v12→v14 upgrade required zero code changes. All 20 tests pass, all 7 CLI commands verified |
@@ -151,7 +152,7 @@ Phase 7: Interactive Brainstorm History Viewer (P3-Nice to Have)
 - ~~**QueuedTask has `queued_at` field but never checked for expiry**~~ **DONE: QUEUE_TTL (default 3600s) checks in process_completed_tasks(), expired tasks removed and notified**
 - **Brainstorm session metadata lost on finish** — `_cleanup_session()` removes entry from `_sessions` dict and `.brainstorm_sessions.json`. Only JSONL files survive. Phase 7 must scan JSONL files directly or add a history log
 - **Existing test coverage gaps by priority**: (1) ~~check_task_progress() stale detection — 0 direct tests~~ **DONE: 15 tests**, (2) BrainstormManager happy paths — ~~only error-path tests (1 start, 2 respond)~~ **start() DONE: 10 tests, respond() DONE: 12 tests**, (3) ~~process_completed_tasks() workflow — 1 persistence test only~~ **DONE: 9 tests**, (4) ~~concurrent persistence — 0 tests~~ **DONE: 12 tests**, (5) ~~BrainstormManager.finish() — 0 unit tests~~ **DONE: 12 tests**, (6) ~~completion summary edge cases~~ **DONE: 5 new tests (12 total)**
-- **Per-file test breakdown (407 Python)**: test_tasks.py=110, test_bot.py=110, test_projects.py=71, test_config.py=64, test_git_utils.py=34, test_log_rotation.py=18
+- **Per-file test breakdown (424 Python)**: test_tasks.py=123, test_bot.py=114, test_projects.py=71, test_config.py=64, test_git_utils.py=34, test_log_rotation.py=18
 - **Commander.js APIs used in cli.js**: `.name()`, `.description()`, `.version()`, `.command()`, `.option()`, `.action()`, `.addHelpText('after')`, `.parse()`, plus one negatable option `--no-early-exit`. No advanced APIs (`.exitOverride()`, `.configureOutput()`, etc.). All stable across v12→v14
 - **cli.js helper functions**: `addLoopOptions(cmd)` and `addBuildOptions(cmd)` for DRY option management across plan/build/run commands
 - **No skipped or xfail tests** — all 259 Python and 20 JS tests are active and passing

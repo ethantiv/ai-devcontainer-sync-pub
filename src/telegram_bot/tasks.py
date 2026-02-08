@@ -520,6 +520,72 @@ class BrainstormManager:
         """Path to persistent sessions file (survives container restarts)."""
         return Path(PROJECTS_ROOT) / ".brainstorm_sessions.json"
 
+    def _history_file(self) -> Path:
+        """Path to brainstorm history archive (persistent across sessions)."""
+        return Path(PROJECTS_ROOT) / ".brainstorm_history.json"
+
+    def _load_history(self) -> list[dict]:
+        """Load brainstorm history from JSON file."""
+        path = self._history_file()
+        if not path.exists():
+            return []
+        try:
+            return json.loads(path.read_text())
+        except (json.JSONDecodeError, OSError):
+            logger.warning("Failed to load brainstorm history from %s", path)
+            return []
+
+    def _save_history(self, history: list[dict]) -> None:
+        """Persist brainstorm history to JSON file via atomic write."""
+        path = self._history_file()
+        tmp_path = path.with_suffix(".tmp")
+        try:
+            tmp_path.write_text(json.dumps(history, ensure_ascii=False, indent=2))
+            os.replace(tmp_path, path)
+        except OSError:
+            logger.warning("Failed to save brainstorm history to %s", path)
+
+    def _archive_session(self, session: BrainstormSession, outcome: str) -> None:
+        """Archive a brainstorm session to history before cleanup.
+
+        Args:
+            session: The session being finished/cancelled.
+            outcome: "saved" if idea was saved, "cancelled" if cancelled.
+        """
+        history = self._load_history()
+        # Extract topic from initial_prompt (first 100 chars)
+        topic = session.initial_prompt[:100]
+        if len(session.initial_prompt) > 100:
+            topic += "..."
+
+        entry = {
+            "project": session.project,
+            "topic": topic,
+            "started_at": session.started_at.isoformat(),
+            "finished_at": datetime.now().isoformat(),
+            "outcome": outcome,
+            "turns": 1 if not session.last_response else len(session.last_response.split("\n\n---\n\n")) if "---" in session.last_response else 1,
+            "last_response": session.last_response[:500] if session.last_response else "",
+        }
+        history.append(entry)
+        self._save_history(history)
+
+    def list_brainstorm_history(self, project: str | None = None) -> list[dict]:
+        """Return brainstorm history entries, newest first.
+
+        Args:
+            project: If given, filter by project name.
+
+        Returns:
+            List of history entries sorted by finished_at descending.
+        """
+        history = self._load_history()
+        if project:
+            history = [e for e in history if e.get("project") == project]
+        # Sort newest first
+        history.sort(key=lambda e: e.get("finished_at", ""), reverse=True)
+        return history
+
     def _save_sessions(self) -> None:
         """Serialize active sessions to JSON for persistence across restarts."""
         data = []
@@ -881,6 +947,9 @@ class BrainstormManager:
         idea_file = docs_dir / "ROADMAP.md"
         idea_file.write_text(idea_content)
 
+        # Archive session to history before cleanup
+        self._archive_session(session, "saved")
+
         # Clean up session
         self._cleanup_session(chat_id)
 
@@ -893,6 +962,7 @@ class BrainstormManager:
             True if session was cancelled, False if no session existed.
         """
         if chat_id in self.sessions:
+            self._archive_session(self.sessions[chat_id], "cancelled")
             self._cleanup_session(chat_id)
             return True
         return False

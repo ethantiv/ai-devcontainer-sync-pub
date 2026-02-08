@@ -4,6 +4,7 @@ import logging
 import os
 import subprocess
 import time
+from datetime import datetime
 from enum import IntEnum, auto
 from pathlib import Path
 
@@ -40,6 +41,9 @@ from .messages import (
     MSG_BACK_BTN,
     MSG_BRAINSTORM_BTN,
     MSG_BRAINSTORM_CANCELLED,
+    MSG_BRAINSTORM_HISTORY_EMPTY,
+    MSG_BRAINSTORM_HISTORY_TITLE,
+    MSG_BRAINSTORM_SESSION_ENTRY,
     MSG_BRAINSTORM_CMD_PROMPT_REQUIRED,
     MSG_BRAINSTORM_CMD_USAGE,
     MSG_BRAINSTORM_CLAUDE_THINKING,
@@ -1027,6 +1031,53 @@ async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
 
 @authorized
+async def show_brainstorm_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle /history command to show brainstorm session history."""
+    assert update.message is not None
+
+    # Check if a project filter was given
+    user_data = get_user_data(update.effective_chat.id)
+    project = user_data.get("project")
+    project_name = project.name if project else None
+
+    history = brainstorm_manager.list_brainstorm_history(project=project_name)
+
+    if not history:
+        reply_markup = _nav_keyboard(project_name)
+        await update.message.reply_text(
+            MSG_BRAINSTORM_HISTORY_EMPTY, reply_markup=reply_markup
+        )
+        return State.SELECT_PROJECT
+
+    # Show up to 10 most recent entries
+    PAGE_SIZE = 10
+    text = MSG_BRAINSTORM_HISTORY_TITLE
+    for i, entry in enumerate(history[:PAGE_SIZE], 1):
+        finished_at = entry.get("finished_at", "")
+        try:
+            dt = datetime.fromisoformat(finished_at)
+            date_str = dt.strftime("%Y-%m-%d %H:%M")
+        except (ValueError, TypeError):
+            date_str = "unknown"
+
+        text += MSG_BRAINSTORM_SESSION_ENTRY.format(
+            num=i,
+            project=entry.get("project", "?"),
+            topic=entry.get("topic", "?"),
+            date=date_str,
+            turns=entry.get("turns", 0),
+        )
+        text += "\n"
+
+    if len(history) > PAGE_SIZE:
+        text += f"_...and {len(history) - PAGE_SIZE} more_\n"
+
+    reply_markup = _nav_keyboard(project_name)
+    await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+    return State.SELECT_PROJECT
+
+
+@authorized
 async def start_brainstorming(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle /brainstorming <prompt> command to start a brainstorming session."""
     assert update.message is not None
@@ -1590,6 +1641,7 @@ def create_application() -> Application:
             CommandHandler("projects", start),
             CommandHandler("status", show_status),
             CommandHandler("brainstorming", start_brainstorming),
+            CommandHandler("history", show_brainstorm_history),
         ],
         states={
             State.SELECT_PROJECT: [

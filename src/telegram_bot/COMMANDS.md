@@ -28,6 +28,7 @@
 | `/brainstorming <prompt>` | Start interactive brainstorming session with Claude |
 | `/done` | Finish brainstorming and save result to `docs/ROADMAP.md` |
 | `/save` | Same as `/done` |
+| `/history` | Show past brainstorming sessions (filtered by selected project) |
 
 ## Interactive Buttons
 
@@ -48,6 +49,7 @@ The bot uses inline keyboard buttons for most interactions:
 - **Status** - Show task status
 - **Attach** - Get tmux attach command for running task
 - **Queue** - View queued tasks
+- **Sync** - Pull latest changes from remote (shows update count)
 - **Back** - Go back to project list
 
 ### After Brainstorming

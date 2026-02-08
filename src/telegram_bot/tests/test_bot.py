@@ -2014,3 +2014,116 @@ class TestShowProjectMenuSyncButton:
         button_data = [b.callback_data for row in markup.inline_keyboard for b in row]
         # No sync button in uninitialized projects
         assert "action:sync" not in button_data
+
+
+# --- Tests for brainstorm history command ---
+
+
+class TestBrainstormHistoryCommand:
+    """Tests for /history command handler."""
+
+    CHAT_ID = 12345
+
+    @pytest.mark.asyncio
+    async def test_history_empty_shows_empty_message(self):
+        """show_brainstorm_history shows empty message when no history."""
+        from src.telegram_bot.bot import show_brainstorm_history, user_data_store
+        from src.telegram_bot.messages import MSG_BRAINSTORM_HISTORY_EMPTY
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        context = make_context()
+
+        user_data_store[self.CHAT_ID] = {}
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
+        ):
+            mock_bm.list_brainstorm_history.return_value = []
+            result = await show_brainstorm_history(update, context)
+
+        update.message.reply_text.assert_called_once()
+        call_args = update.message.reply_text.call_args
+        assert MSG_BRAINSTORM_HISTORY_EMPTY in call_args[0][0]
+
+    @pytest.mark.asyncio
+    async def test_history_shows_entries(self):
+        """show_brainstorm_history formats and shows history entries."""
+        from src.telegram_bot.bot import show_brainstorm_history, State, user_data_store
+        from src.telegram_bot.messages import MSG_BRAINSTORM_HISTORY_TITLE
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        context = make_context()
+
+        user_data_store[self.CHAT_ID] = {}
+
+        history = [
+            {"project": "myproj", "topic": "Build API", "finished_at": "2026-02-08T10:30:00", "turns": 3},
+        ]
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
+        ):
+            mock_bm.list_brainstorm_history.return_value = history
+            result = await show_brainstorm_history(update, context)
+
+        assert result == State.SELECT_PROJECT
+        call_args = update.message.reply_text.call_args
+        text = call_args[0][0]
+        assert MSG_BRAINSTORM_HISTORY_TITLE in text
+        assert "myproj" in text
+        assert "Build API" in text
+        assert "3 turn(s)" in text
+
+    @pytest.mark.asyncio
+    async def test_history_filters_by_selected_project(self):
+        """show_brainstorm_history passes project name filter when project selected."""
+        from src.telegram_bot.bot import show_brainstorm_history, user_data_store
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        context = make_context()
+
+        mock_project = MagicMock()
+        mock_project.name = "filtered-proj"
+        user_data_store[self.CHAT_ID] = {"project": mock_project}
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
+        ):
+            mock_bm.list_brainstorm_history.return_value = []
+            await show_brainstorm_history(update, context)
+
+        mock_bm.list_brainstorm_history.assert_called_once_with(project="filtered-proj")
+
+    @pytest.mark.asyncio
+    async def test_history_returns_select_project_state(self):
+        """show_brainstorm_history returns State.SELECT_PROJECT."""
+        from src.telegram_bot.bot import show_brainstorm_history, State, user_data_store
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        context = make_context()
+
+        user_data_store[self.CHAT_ID] = {}
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm,
+        ):
+            mock_bm.list_brainstorm_history.return_value = []
+            result = await show_brainstorm_history(update, context)
+
+        assert result == State.SELECT_PROJECT

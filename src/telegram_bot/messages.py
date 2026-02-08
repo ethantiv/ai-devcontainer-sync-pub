@@ -204,6 +204,7 @@ MSG_HELP = (
     "/start \u2014 Show project list and select a project\n"
     "/status \u2014 Show active tasks and their progress\n"
     "/brainstorming <topic> \u2014 Start brainstorming session with Claude\n"
+    "/history \u2014 Show past brainstorming sessions\n"
     "/cancel \u2014 Cancel current operation\n"
     "/skip \u2014 Skip task description (Plan mode)\n"
     "/done \u2014 Finish brainstorming and save result\n"
@@ -215,6 +216,14 @@ MSG_BRAINSTORM_CMD_USAGE = (
 )
 MSG_BRAINSTORM_CMD_PROMPT_REQUIRED = (
     "\u2717 Enter a brainstorming topic:\n`/brainstorming <idea description>`"
+)
+
+# Brainstorm history
+MSG_BRAINSTORM_HISTORY_TITLE = "~ *Brainstorm history*\n\n"
+MSG_BRAINSTORM_HISTORY_EMPTY = "No brainstorm sessions recorded yet."
+MSG_BRAINSTORM_SESSION_ENTRY = (
+    "{num}. *{project}* — {topic}\n"
+    "   {date} \u2022 {turns} turn(s)\n"
 )
 
 # --- tasks.py strings ---
