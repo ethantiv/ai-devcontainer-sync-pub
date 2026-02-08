@@ -4,27 +4,15 @@
 
 ### P1 - Critical
 
-#### Log rotation and disk space management
-Loop JSONL logs in `loop/logs/` grow unbounded — no rotation, no size limits, no automatic cleanup. On resource-constrained hosts like Raspberry Pi this can fill the disk. Brainstorm output files in `PROJECTS_ROOT/.brainstorm/` also accumulate indefinitely. Add configurable log retention (by age and/or size) to `loop cleanup`, automatic pruning of old JSONL files, and disk space checks before starting new tasks or cloning repositories.
+#### Bot UI for project creation flow (Phase 3 of project creation feature)
+Backend functions `validate_project_name()`, `create_project()`, and `create_github_repo()` are implemented with 16 MSG_* constants ready in `messages.py`, but the Telegram bot UI (Phase 3) was never built. Add conversation states in `bot.py` for: "Create project" button on project list, project name input with validation feedback, optional GitHub repo creation confirmation, and success/failure result with navigation back to project menu. This completes the project creation feature started in Phase 1+2+4.
 
 ### P2 - Important
 
-#### Improve async test coverage for TaskManager and BrainstormManager
-`test_tasks.py` has only 3 tests — missing coverage for `process_completed_tasks()`, stale progress detection, task persistence save/load cycle, and completion summary generation. `BrainstormManager` async generators (`start()`, `respond()`) have zero tests for multi-turn conversation flow, timeout handling, or session restoration after container restart. Add pytest-asyncio tests covering these critical paths.
-
-#### Upgrade Commander.js to v14
-`commander` in `src/package.json` is pinned to `^12.0.0` — two major versions behind current v14. Review breaking changes between v12 and v14, update the dependency, and verify all CLI commands (`loop plan`, `loop build`, `loop run`, `loop init`, `loop cleanup`, `loop summary`, `loop update`) still work correctly.
+#### Reduce bot.py size by extracting handler modules
+`bot.py` is 1,723 lines — the largest file in the codebase — mixing conversation handlers, callback queries, keyboard builders, and state management. Extract logically grouped handlers into separate modules (e.g. `handlers/projects.py`, `handlers/brainstorm.py`, `handlers/queue.py`) while keeping `bot.py` as the thin wiring layer that registers handlers with the Application. This improves readability and makes parallel development easier.
 
 ### P3 - Nice to Have
 
-#### Task queue expiry and retry logic
-Queued tasks have no TTL — a task can sit in the queue indefinitely if earlier tasks keep failing. Git operations in `projects.py` and `git_utils.py` have timeouts but no retry logic for transient network failures. Add configurable queue task expiry (e.g. `LOOP_QUEUE_TTL`) and optional retry with exponential backoff for git clone/push operations.
-
-#### Increase stale task threshold from 5 to 30 minutes
-`LOOP_STALE_THRESHOLD` defaults to 300 seconds (5 minutes). In practice, Claude Code iterations — especially on large codebases or with multi-file edits — regularly exceed 5 minutes without producing new log output. This triggers false-positive stale warnings in the Telegram bot. Change the default to 1800 seconds (30 minutes) in `config.py` to better match real-world iteration durations.
-
-#### Sync/Pull button in Telegram project menu with update indicator
-Add a "Sync" button to the project menu in the Telegram bot that runs `git pull` on the selected project. On project menu open, run a lightweight `git fetch --dry-run` (or `git rev-list HEAD..@{u} --count`) in the background to detect if the remote has newer commits. If updates are available, show an indicator on the button (e.g. `"^ Sync (3 new)"`). This lets the user keep projects up-to-date without SSH-ing into the container.
-
-#### Interactive brainstorm history viewer
-Brainstorm sessions produce JSONL files in `PROJECTS_ROOT/.brainstorm/` but there is no way to review past sessions. Add a `loop brainstorm --history` CLI command (or Telegram `/brainstorm_history` command) that lists past sessions with timestamps and topics, and allows viewing the full conversation transcript.
+#### Pagination for project list in Telegram
+`list_projects()` renders all projects as inline keyboard buttons in a single message. With 10+ projects the button list becomes unwieldy on mobile. Add pagination (5 projects per page) with "Next/Previous" navigation buttons, preserving the existing "Create project" and "Clone repo" buttons on every page.
