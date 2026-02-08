@@ -2,7 +2,7 @@
 
 **Status:** IN_PROGRESS
 **Progress:** 0/43 (0%)
-**Last Verified:** 2026-02-08 — all findings confirmed against codebase
+**Last Verified:** 2026-02-08 — re-verified with full codebase analysis (bot.py, tasks.py, config.py, messages.py, projects.py, git_utils.py, cli.js, all test files)
 
 ## Goal
 
@@ -152,6 +152,10 @@ Phase 1: Log Rotation and Disk Space Management (P1-Critical)
 - **Brainstorm session metadata lost on finish** — `_cleanup_session()` removes entry from `_sessions` dict and `.brainstorm_sessions.json`. Only JSONL files survive. Phase 7 must scan JSONL files directly or add a history log
 - **Existing test coverage gaps by priority**: (1) check_task_progress() stale detection — 0 direct tests, (2) BrainstormManager happy paths — only error-path tests (1 start, 2 respond), (3) process_completed_tasks() workflow — 1 persistence test only, no state transition tests, (4) concurrent persistence — 0 tests, (5) BrainstormManager.finish() — 0 unit tests (only integration mocks in bot handlers)
 - **Per-file test breakdown (259 Python)**: test_tasks.py=46, test_bot.py=79, test_projects.py=62, test_config.py=52, test_git_utils.py=20
+- **Commander.js APIs used in cli.js**: `.name()`, `.description()`, `.version()`, `.command()`, `.option()`, `.action()`, `.addHelpText('after')`, `.parse()`, plus one negatable option `--no-early-exit`. No advanced APIs (`.exitOverride()`, `.configureOutput()`, etc.). All stable across v12→v14
+- **cli.js helper functions**: `addLoopOptions(cmd)` and `addBuildOptions(cmd)` for DRY option management across plan/build/run commands
+- **No skipped or xfail tests** — all 259 Python and 20 JS tests are active and passing
+- **cleanup.js spawns `./loop/cleanup.sh`** — the `--logs` option (Phase 1) will extend this pattern, spawning Python log_rotation.py via subprocess
 
 ### Technical Decisions
 | Decision | Rationale |
@@ -175,6 +179,7 @@ Phase 1: Log Rotation and Disk Space Management (P1-Critical)
 | Brainstorm sessions not persisted after finish() | Phase 7 must scan JSONL files in `.brainstorm/` for metadata — cannot rely on sessions.json |
 | Phase 3 originally had 6 tasks including research | Research completed during planning — Commander.js v14 requires no code changes. Reduced to 4 tasks |
 | Independent verification (2026-02-08) confirmed all findings | Test counts (259 Python + 20 JS), zero TODOs/FIXMEs, no log rotation/sync/history code, Commander ^12.0.0, MSG_STALE_PROGRESS hardcoded "5 min" — all match plan |
+| Full codebase re-analysis (2026-02-08) — no plan changes needed | Deep analysis of all source files (bot.py 1593 LOC, tasks.py 876 LOC, config.py 129 LOC, messages.py 261 LOC, projects.py 346 LOC, git_utils.py 116 LOC, cli.js 90 LOC, 4 JS libs 409 LOC) confirmed: all 7 phases correctly scoped, task counts accurate (43 tasks), no missing ROADMAP features, no existing implementations overlap with planned work |
 
 ### Resources
 - ROADMAP.md — 7 proposals across P1/P2/P3 priority tiers
