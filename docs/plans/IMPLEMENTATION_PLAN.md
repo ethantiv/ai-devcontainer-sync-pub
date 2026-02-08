@@ -3,6 +3,7 @@
 **Status:** IN_PROGRESS
 **Progress:** 0/12 (0%)
 **Last updated:** 2026-02-08
+**Verified:** 2026-02-08 — all line numbers confirmed against source code
 
 ## Goal
 
