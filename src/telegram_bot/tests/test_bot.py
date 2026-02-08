@@ -116,19 +116,38 @@ class TestHandleInputCancel:
 
         with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
             await handle_input_cancel(update, context)
-        update.callback_query.edit_message_text.assert_awaited_once_with(MSG_CANCELLED)
+        call_args = update.callback_query.edit_message_text.call_args
+        assert call_args[0][0] == MSG_CANCELLED
 
     @pytest.mark.asyncio
-    async def test_returns_conversation_end(self):
-        """Handler returns ConversationHandler.END to exit conversation."""
-        from src.telegram_bot.bot import handle_input_cancel
+    async def test_returns_select_project(self):
+        """Handler returns State.SELECT_PROJECT for follow-up button routing."""
+        from src.telegram_bot.bot import handle_input_cancel, State
 
         update = make_callback_update(self.CHAT_ID, "input:cancel")
         context = make_context()
 
         with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
             result = await handle_input_cancel(update, context)
-        assert result == ConversationHandler.END
+        assert result == State.SELECT_PROJECT
+
+    @pytest.mark.asyncio
+    async def test_includes_nav_buttons(self):
+        """Handler includes Projects navigation button in reply_markup."""
+        from src.telegram_bot.bot import handle_input_cancel
+        from src.telegram_bot.messages import MSG_PROJECTS_LIST_BTN
+
+        update = make_callback_update(self.CHAT_ID, "input:cancel")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+            await handle_input_cancel(update, context)
+
+        call_kwargs = update.callback_query.edit_message_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        assert isinstance(markup, InlineKeyboardMarkup)
+        button_texts = [b.text for row in markup.inline_keyboard for b in row]
+        assert MSG_PROJECTS_LIST_BTN in button_texts
 
 
 # --- Tests for cancel button presence in prompts ---
@@ -258,7 +277,8 @@ class TestHandleIdeaButton:
         update = make_callback_update(self.CHAT_ID, "idea:cancel")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value={}):
             await handle_idea_button(update, context)
         update.callback_query.answer.assert_awaited_once()
 
@@ -271,21 +291,45 @@ class TestHandleIdeaButton:
         update = make_callback_update(self.CHAT_ID, "idea:cancel")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value={}):
             await handle_idea_button(update, context)
-        update.callback_query.edit_message_text.assert_awaited_once_with(MSG_CANCELLED)
+        call_args = update.callback_query.edit_message_text.call_args
+        assert call_args[0][0] == MSG_CANCELLED
 
     @pytest.mark.asyncio
-    async def test_cancel_returns_conversation_end(self):
-        """idea:cancel returns ConversationHandler.END."""
-        from src.telegram_bot.bot import handle_idea_button
+    async def test_cancel_returns_select_project(self):
+        """idea:cancel returns State.SELECT_PROJECT for follow-up button routing."""
+        from src.telegram_bot.bot import handle_idea_button, State
 
         update = make_callback_update(self.CHAT_ID, "idea:cancel")
         context = make_context()
 
-        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value={}):
             result = await handle_idea_button(update, context)
-        assert result == ConversationHandler.END
+        assert result == State.SELECT_PROJECT
+
+    @pytest.mark.asyncio
+    async def test_cancel_includes_nav_buttons(self):
+        """idea:cancel includes navigation buttons with project context."""
+        from src.telegram_bot.bot import handle_idea_button
+        from src.telegram_bot.messages import MSG_PROJECT_BTN, MSG_PROJECTS_LIST_BTN
+
+        update = make_callback_update(self.CHAT_ID, "idea:cancel")
+        context = make_context()
+        mock_project = MagicMock()
+        mock_project.name = "test-proj"
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value={"project": mock_project}):
+            await handle_idea_button(update, context)
+
+        call_kwargs = update.callback_query.edit_message_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_texts = [b.text for row in markup.inline_keyboard for b in row]
+        assert MSG_PROJECT_BTN in button_texts
+        assert MSG_PROJECTS_LIST_BTN in button_texts
 
 
 # --- Tests for brainstorm hint keyboards ---
@@ -520,12 +564,13 @@ class TestHandleBrainstormHintButton:
              patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
             mock_bm.cancel = MagicMock(return_value=True)
             await handle_brainstorm_hint_button(update, context)
-        update.callback_query.edit_message_text.assert_awaited_once_with(MSG_BRAINSTORM_CANCELLED)
+        call_args = update.callback_query.edit_message_text.call_args
+        assert call_args[0][0] == MSG_BRAINSTORM_CANCELLED
 
     @pytest.mark.asyncio
-    async def test_cancel_returns_conversation_end(self):
-        """bs:cancel returns ConversationHandler.END."""
-        from src.telegram_bot.bot import handle_brainstorm_hint_button
+    async def test_cancel_returns_select_project(self):
+        """bs:cancel returns State.SELECT_PROJECT for follow-up button routing."""
+        from src.telegram_bot.bot import handle_brainstorm_hint_button, State
 
         update = make_callback_update(self.CHAT_ID, "bs:cancel")
         context = make_context()
@@ -534,7 +579,26 @@ class TestHandleBrainstormHintButton:
              patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
             mock_bm.cancel = MagicMock(return_value=True)
             result = await handle_brainstorm_hint_button(update, context)
-        assert result == ConversationHandler.END
+        assert result == State.SELECT_PROJECT
+
+    @pytest.mark.asyncio
+    async def test_cancel_includes_nav_buttons(self):
+        """bs:cancel includes navigation buttons in reply_markup."""
+        from src.telegram_bot.bot import handle_brainstorm_hint_button
+        from src.telegram_bot.messages import MSG_PROJECTS_LIST_BTN
+
+        update = make_callback_update(self.CHAT_ID, "bs:cancel")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm:
+            mock_bm.cancel = MagicMock(return_value=True)
+            await handle_brainstorm_hint_button(update, context)
+
+        call_kwargs = update.callback_query.edit_message_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_texts = [b.text for row in markup.inline_keyboard for b in row]
+        assert MSG_PROJECTS_LIST_BTN in button_texts
 
     @pytest.mark.asyncio
     async def test_done_success_returns_brainstorming_state(self):
@@ -779,3 +843,432 @@ class TestNotifyTelegramRemoval:
         with open(loop_sh) as f:
             content = f.read()
         assert "notify-telegram.sh" not in content
+
+
+# --- Tests for _nav_keyboard helper ---
+
+
+class TestNavKeyboard:
+    """Tests for _nav_keyboard() navigation button helper."""
+
+    def test_without_project_has_projects_button_only(self):
+        """Without project_name, keyboard has only Projects button."""
+        from src.telegram_bot.bot import _nav_keyboard
+        from src.telegram_bot.messages import MSG_PROJECTS_LIST_BTN
+
+        kb = _nav_keyboard()
+        assert len(kb.inline_keyboard) == 1
+        assert len(kb.inline_keyboard[0]) == 1
+        assert kb.inline_keyboard[0][0].text == MSG_PROJECTS_LIST_BTN
+        assert kb.inline_keyboard[0][0].callback_data == "action:back"
+
+    def test_with_project_has_project_and_projects_buttons(self):
+        """With project_name, keyboard has View Project + Projects buttons."""
+        from src.telegram_bot.bot import _nav_keyboard
+        from src.telegram_bot.messages import MSG_PROJECT_BTN, MSG_PROJECTS_LIST_BTN
+
+        kb = _nav_keyboard("my-proj")
+        buttons = kb.inline_keyboard[0]
+        assert len(buttons) == 2
+        assert buttons[0].text == MSG_PROJECT_BTN
+        assert buttons[0].callback_data == "project:my-proj"
+        assert buttons[1].text == MSG_PROJECTS_LIST_BTN
+        assert buttons[1].callback_data == "action:back"
+
+    def test_returns_inline_keyboard_markup(self):
+        """Helper returns InlineKeyboardMarkup instance."""
+        from src.telegram_bot.bot import _nav_keyboard
+
+        assert isinstance(_nav_keyboard(), InlineKeyboardMarkup)
+        assert isinstance(_nav_keyboard("proj"), InlineKeyboardMarkup)
+
+
+# --- Tests for start_task follow-up buttons ---
+
+
+class TestStartTaskFollowUp:
+    """Tests for follow-up buttons in start_task()."""
+
+    CHAT_ID = 12345
+
+    @pytest.mark.asyncio
+    async def test_started_task_returns_select_project(self):
+        """start_task returns State.SELECT_PROJECT instead of END."""
+        from src.telegram_bot.bot import start_task, State
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.callback_query = None
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        context = make_context()
+
+        mock_project = MagicMock()
+        mock_project.name = "test-proj"
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value={
+                 "project": mock_project, "mode": "build", "iterations": 5, "idea": None
+             }), \
+             patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.start_task.return_value = (True, "Started")
+            result = await start_task(update, context)
+
+        assert result == State.SELECT_PROJECT
+
+    @pytest.mark.asyncio
+    async def test_started_task_has_project_and_projects_buttons(self):
+        """Started task includes View Project + Projects buttons."""
+        from src.telegram_bot.bot import start_task
+        from src.telegram_bot.messages import MSG_PROJECT_BTN, MSG_PROJECTS_LIST_BTN
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.callback_query = None
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        context = make_context()
+
+        mock_project = MagicMock()
+        mock_project.name = "test-proj"
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value={
+                 "project": mock_project, "mode": "build", "iterations": 5, "idea": None
+             }), \
+             patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.start_task.return_value = (True, "Started")
+            await start_task(update, context)
+
+        call_kwargs = update.message.reply_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_texts = [b.text for row in markup.inline_keyboard for b in row]
+        assert MSG_PROJECT_BTN in button_texts
+        assert MSG_PROJECTS_LIST_BTN in button_texts
+
+    @pytest.mark.asyncio
+    async def test_queued_task_has_queue_button(self):
+        """Queued task includes Queue + Project + Projects buttons."""
+        from src.telegram_bot.bot import start_task
+        from src.telegram_bot.messages import MSG_PROJECT_BTN, MSG_PROJECTS_LIST_BTN
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.callback_query = None
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        context = make_context()
+
+        mock_project = MagicMock()
+        mock_project.name = "test-proj"
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value={
+                 "project": mock_project, "mode": "plan", "iterations": 3, "idea": None
+             }), \
+             patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.start_task.return_value = (True, "Queued #2")
+            await start_task(update, context)
+
+        call_kwargs = update.message.reply_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        buttons = markup.inline_keyboard[0]
+        # Queued: 3 buttons (Queue, Project, Projects)
+        assert len(buttons) == 3
+        assert buttons[0].callback_data == "action:queue"
+        assert buttons[1].callback_data == "project:test-proj"
+        assert buttons[2].callback_data == "action:back"
+
+    @pytest.mark.asyncio
+    async def test_failed_task_has_nav_buttons(self):
+        """Failed task includes Project + Projects buttons."""
+        from src.telegram_bot.bot import start_task
+        from src.telegram_bot.messages import MSG_PROJECT_BTN, MSG_PROJECTS_LIST_BTN
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.callback_query = None
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        context = make_context()
+
+        mock_project = MagicMock()
+        mock_project.name = "test-proj"
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value={
+                 "project": mock_project, "mode": "build", "iterations": 5, "idea": None
+             }), \
+             patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.start_task.return_value = (False, "Session already running")
+            await start_task(update, context)
+
+        call_kwargs = update.message.reply_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_texts = [b.text for row in markup.inline_keyboard for b in row]
+        assert MSG_PROJECT_BTN in button_texts
+        assert MSG_PROJECTS_LIST_BTN in button_texts
+
+
+# --- Tests for cancel_brainstorming follow-up buttons ---
+
+
+class TestCancelBrainstormingFollowUp:
+    """Tests for follow-up buttons in cancel_brainstorming()."""
+
+    CHAT_ID = 12345
+
+    @pytest.mark.asyncio
+    async def test_returns_select_project(self):
+        """cancel_brainstorming returns State.SELECT_PROJECT."""
+        from src.telegram_bot.bot import cancel_brainstorming, State
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm, \
+             patch("src.telegram_bot.bot.get_user_data", return_value={}):
+            mock_bm.cancel.return_value = True
+            result = await cancel_brainstorming(update, context)
+
+        assert result == State.SELECT_PROJECT
+
+    @pytest.mark.asyncio
+    async def test_includes_nav_buttons(self):
+        """cancel_brainstorming includes navigation buttons."""
+        from src.telegram_bot.bot import cancel_brainstorming
+        from src.telegram_bot.messages import MSG_PROJECTS_LIST_BTN
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.brainstorm_manager") as mock_bm, \
+             patch("src.telegram_bot.bot.get_user_data", return_value={}):
+            mock_bm.cancel.return_value = True
+            await cancel_brainstorming(update, context)
+
+        call_kwargs = update.message.reply_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_texts = [b.text for row in markup.inline_keyboard for b in row]
+        assert MSG_PROJECTS_LIST_BTN in button_texts
+
+
+# --- Tests for cancel() follow-up buttons ---
+
+
+class TestCancelFollowUp:
+    """Tests for follow-up buttons in cancel()."""
+
+    CHAT_ID = 12345
+
+    @pytest.mark.asyncio
+    async def test_returns_select_project(self):
+        """cancel() returns State.SELECT_PROJECT."""
+        from src.telegram_bot.bot import cancel, State
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+            result = await cancel(update, context)
+
+        assert result == State.SELECT_PROJECT
+
+    @pytest.mark.asyncio
+    async def test_includes_nav_buttons(self):
+        """cancel() includes Projects navigation button."""
+        from src.telegram_bot.bot import cancel
+        from src.telegram_bot.messages import MSG_PROJECTS_LIST_BTN
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+            await cancel(update, context)
+
+        call_kwargs = update.message.reply_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_texts = [b.text for row in markup.inline_keyboard for b in row]
+        assert MSG_PROJECTS_LIST_BTN in button_texts
+
+
+# --- Tests for handle_brainstorm_action follow-up buttons ---
+
+
+class TestHandleBrainstormActionFollowUp:
+    """Tests for follow-up buttons in handle_brainstorm_action() end/no-project paths."""
+
+    CHAT_ID = 12345
+
+    @pytest.mark.asyncio
+    async def test_end_returns_select_project(self):
+        """brainstorm:end returns State.SELECT_PROJECT."""
+        from src.telegram_bot.bot import handle_brainstorm_action, State
+
+        update = make_callback_update(self.CHAT_ID, "brainstorm:end")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value={}):
+            result = await handle_brainstorm_action(update, context)
+
+        assert result == State.SELECT_PROJECT
+
+    @pytest.mark.asyncio
+    async def test_end_includes_nav_buttons(self):
+        """brainstorm:end includes Projects navigation button."""
+        from src.telegram_bot.bot import handle_brainstorm_action
+        from src.telegram_bot.messages import MSG_PROJECTS_LIST_BTN
+
+        update = make_callback_update(self.CHAT_ID, "brainstorm:end")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value={}):
+            await handle_brainstorm_action(update, context)
+
+        call_kwargs = update.callback_query.edit_message_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_texts = [b.text for row in markup.inline_keyboard for b in row]
+        assert MSG_PROJECTS_LIST_BTN in button_texts
+
+    @pytest.mark.asyncio
+    async def test_end_with_project_shows_project_button(self):
+        """brainstorm:end with project context includes View Project button."""
+        from src.telegram_bot.bot import handle_brainstorm_action
+        from src.telegram_bot.messages import MSG_PROJECT_BTN
+
+        update = make_callback_update(self.CHAT_ID, "brainstorm:end")
+        context = make_context()
+        mock_project = MagicMock()
+        mock_project.name = "test-proj"
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value={"project": mock_project}):
+            await handle_brainstorm_action(update, context)
+
+        call_kwargs = update.callback_query.edit_message_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_data = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert "project:test-proj" in button_data
+
+    @pytest.mark.asyncio
+    async def test_no_project_returns_select_project(self):
+        """brainstorm:plan with no project returns State.SELECT_PROJECT."""
+        from src.telegram_bot.bot import handle_brainstorm_action, State
+
+        update = make_callback_update(self.CHAT_ID, "brainstorm:plan")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value={}):
+            result = await handle_brainstorm_action(update, context)
+
+        assert result == State.SELECT_PROJECT
+
+    @pytest.mark.asyncio
+    async def test_no_project_includes_nav_buttons(self):
+        """brainstorm:plan with no project includes Projects button."""
+        from src.telegram_bot.bot import handle_brainstorm_action
+        from src.telegram_bot.messages import MSG_PROJECTS_LIST_BTN
+
+        update = make_callback_update(self.CHAT_ID, "brainstorm:plan")
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.get_user_data", return_value={}):
+            await handle_brainstorm_action(update, context)
+
+        call_kwargs = update.callback_query.edit_message_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_texts = [b.text for row in markup.inline_keyboard for b in row]
+        assert MSG_PROJECTS_LIST_BTN in button_texts
+
+
+# --- Tests for orphaned queue start follow-up buttons ---
+
+
+class TestOrphanedQueueStartFollowUp:
+    """Tests for follow-up buttons in orphaned queue start message."""
+
+    CHAT_ID = 12345
+
+    def _make_task(self, project="myproject", mode="build", iterations=5):
+        from src.telegram_bot.tasks import Task
+        from pathlib import Path
+        return Task(
+            project=project,
+            project_path=Path(f"/tmp/{project}"),
+            mode=mode,
+            iterations=iterations,
+            idea=None,
+            session_name=f"loop-{project}",
+        )
+
+    @pytest.mark.asyncio
+    async def test_orphaned_queue_start_has_nav_buttons(self):
+        """Orphaned queue start message includes project + projects nav buttons."""
+        from src.telegram_bot.bot import check_task_completion
+        from src.telegram_bot.messages import MSG_PROJECT_BTN, MSG_PROJECTS_LIST_BTN
+
+        next_t = self._make_task(project="proj-b", mode="build", iterations=5)
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID), \
+             patch("src.telegram_bot.bot.task_manager") as mock_tm:
+            mock_tm.process_completed_tasks.return_value = [(None, next_t)]
+            await check_task_completion(context)
+
+        call_kwargs = context.bot.send_message.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_texts = [b.text for row in markup.inline_keyboard for b in row]
+        assert MSG_PROJECT_BTN in button_texts
+        assert MSG_PROJECTS_LIST_BTN in button_texts
+        button_data = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert "project:proj-b" in button_data
+
+
+# --- Tests for help_command follow-up buttons ---
+
+
+class TestHelpCommandFollowUp:
+    """Tests for follow-up buttons in help_command()."""
+
+    CHAT_ID = 12345
+
+    @pytest.mark.asyncio
+    async def test_help_includes_projects_button(self):
+        """help_command includes Projects navigation button."""
+        from src.telegram_bot.bot import help_command
+        from src.telegram_bot.messages import MSG_PROJECTS_LIST_BTN
+
+        update = MagicMock(spec=Update)
+        update.effective_chat = Chat(id=self.CHAT_ID, type="private")
+        update.message = MagicMock(spec=Message)
+        update.message.reply_text = AsyncMock()
+        context = make_context()
+
+        with patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID):
+            result = await help_command(update, context)
+
+        # help_command remains stateless
+        assert result is None
+
+        call_kwargs = update.message.reply_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_texts = [b.text for row in markup.inline_keyboard for b in row]
+        assert MSG_PROJECTS_LIST_BTN in button_texts

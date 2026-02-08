@@ -1,9 +1,8 @@
 # Implementation Plan
 
-**Status:** IN_PROGRESS
-**Progress:** 0/20 (0%)
+**Status:** COMPLETE
+**Progress:** 20/20 (100%)
 **Last updated:** 2026-02-08
-**Verified:** 2026-02-08 — all line numbers re-confirmed against source code (bot.py, test_bot.py, messages.py); bs:cancel line fixed 1178→1177
 
 ## Goal
 
@@ -12,106 +11,58 @@ Add natural conversation continuation with context-aware inline buttons througho
 From ROADMAP.md:
 > dodaj w telegram bot taką naturalną kontynuację pomiędzy kolejnymi wiadmościami np po planie powinien się pojawić przycisk build i powrót do listy projektów, bo dodaniu zadania do kolejki też powinny się wyświetlić jakieś przyciski np przyciski związane z projektem gdzie jest kolejka albo lista projektów, ma być zachowany natrutrany flow w oknie rozmowy , żebym nie musiał cały czas wywoływać polecenia /start w trakcie pracy z agentem za pośrednictwem bota
 
-## Current Phase
-
-Phase 1
-
 ## Phases
 
 ### Phase 1: Add follow-up buttons after task start/queue
-- [ ] Add `MSG_PROJECTS_LIST_BTN` constant in messages.py (e.g. `"\u2261 Projects"`) — for "go to project list" navigation; reuse existing `MSG_PROJECT_BTN` (`"\u25b8 Project"`) for "view current project" navigation (no new constant needed)
-- [ ] In `start_task()` (bot.py line 926): replace plain `reply_text` with `reply_text(..., reply_markup=keyboard)` containing context-aware buttons:
-  - When task **started**: "View Project" button (`project:{project.name}`) + "Projects" button (`action:back`)
-  - When task **queued**: "Queue" button (`action:queue`) + "View Project" button (`project:{project.name}`) + "Projects" button (`action:back`)
-  - When task **failed**: "View Project" button (`project:{project.name}`) + "Projects" button (`action:back`)
-- [ ] Change `start_task()` return from `ConversationHandler.END` (line 927) to `State.SELECT_PROJECT` so button callbacks stay routed within the conversation
-- **Status:** pending
+- [x] Add `MSG_PROJECTS_LIST_BTN` constant in messages.py (`"\u2261 Projects"`)
+- [x] In `start_task()`: replace plain `reply_text` with `reply_text(..., reply_markup=keyboard)` containing context-aware buttons (started/queued/failed)
+- [x] Change `start_task()` return from `ConversationHandler.END` to `State.SELECT_PROJECT`
+- **Status:** complete
 
 ### Phase 2: Add follow-up buttons after cancel/end operations
-- [ ] In `cancel_brainstorming()` (bot.py line 1131/1133): add inline keyboard with "View Project" + "Projects" buttons after cancel/no-active message; return `State.SELECT_PROJECT` instead of `END`
-- [ ] In `handle_input_cancel()` (bot.py line 1144): change `edit_message_text(MSG_CANCELLED)` to include inline keyboard with "Projects" button (`action:back`); return `State.SELECT_PROJECT` instead of `END`
-- [ ] In `cancel()` (bot.py line 1211): add inline keyboard with "Projects" button after cancel message; return `State.SELECT_PROJECT` instead of `END`
-- [ ] In `handle_idea_button()` idea:cancel path (bot.py line 1162): add inline keyboard with "View Project" + "Projects" buttons; return `State.SELECT_PROJECT` instead of `END`
-- [ ] In `handle_brainstorm_hint_button()` bs:cancel path (bot.py line 1177): add inline keyboard with "View Project" + "Projects" buttons; return `State.SELECT_PROJECT` instead of `END`
-- [ ] In `handle_brainstorm_action()` `brainstorm:end` path (bot.py line 1118): add inline keyboard with "View Project" + "Projects" buttons; return `State.SELECT_PROJECT` instead of `END`
-- [ ] In `handle_brainstorm_action()` `brainstorm:plan` no-project path (bot.py line 1103): add inline keyboard with "Projects" button; return `State.SELECT_PROJECT` instead of `END`
-- **Status:** pending
+- [x] In `cancel_brainstorming()`: add inline keyboard with "View Project" + "Projects" buttons; return `State.SELECT_PROJECT`
+- [x] In `handle_input_cancel()`: add inline keyboard with "Projects" button; return `State.SELECT_PROJECT`
+- [x] In `cancel()`: add inline keyboard with "Projects" button; return `State.SELECT_PROJECT`
+- [x] In `handle_idea_button()` idea:cancel path: add "View Project" + "Projects" buttons; return `State.SELECT_PROJECT`
+- [x] In `handle_brainstorm_hint_button()` bs:cancel path: add "View Project" + "Projects" buttons; return `State.SELECT_PROJECT`
+- [x] In `handle_brainstorm_action()` `brainstorm:end` path: add "View Project" + "Projects" buttons; return `State.SELECT_PROJECT`
+- [x] In `handle_brainstorm_action()` `brainstorm:plan` no-project path: add "Projects" button; return `State.SELECT_PROJECT`
+- **Status:** complete
 
 ### Phase 3: Add follow-up buttons to help and notification messages
-- [ ] In `help_command()` (bot.py line 1222): add inline keyboard with "Projects" button after help text
-- [ ] In orphaned queue start message (bot.py line 1334): add `reply_markup` with "View Project" button (`project:{next_task.project}`) + "Projects" button (`action:back`) to `send_message()` call
-- **Status:** pending
+- [x] In `help_command()`: add inline keyboard with "Projects" button after help text
+- [x] In orphaned queue start message: add `reply_markup` with "View Project" + "Projects" buttons
+- **Status:** complete
 
 ### Phase 4: Add tests for follow-up buttons
-- [ ] Add tests for `start_task()` verifying: reply_markup present with correct buttons for started, queued, and failed cases; returns `State.SELECT_PROJECT`
-- [ ] Add tests for `cancel_brainstorming()` verifying: reply_markup present after cancel, returns `State.SELECT_PROJECT`
-- [ ] Add tests for `handle_input_cancel()` verifying: reply_markup in edited message, returns `State.SELECT_PROJECT`
-- [ ] Add tests for `cancel()` verifying: reply_markup present, returns `State.SELECT_PROJECT`
-- [ ] Add tests for `handle_brainstorm_hint_button()` bs:cancel verifying: reply_markup present, returns `State.SELECT_PROJECT`
-- [ ] Add tests for `handle_brainstorm_action()` end/no-project paths verifying: reply_markup present, returns `State.SELECT_PROJECT`
-- [ ] Add tests for orphaned queue start verifying: reply_markup in send_message call
-- [ ] Update 3 existing tests that assert `ConversationHandler.END` for cancel handlers (`test_bot.py` lines 131, 288, 537) to expect `State.SELECT_PROJECT` instead
-- [ ] Run `python3 -m pytest src/telegram_bot/tests/ -v` — all tests pass
-- **Status:** pending
+- [x] Add tests for `start_task()` — reply_markup with correct buttons for started, queued, failed; returns `State.SELECT_PROJECT`
+- [x] Add tests for `cancel_brainstorming()` — reply_markup present, returns `State.SELECT_PROJECT`
+- [x] Add tests for `handle_input_cancel()` — reply_markup in edited message, returns `State.SELECT_PROJECT`
+- [x] Add tests for `cancel()` — reply_markup present, returns `State.SELECT_PROJECT`
+- [x] Add tests for `handle_brainstorm_hint_button()` bs:cancel — reply_markup present, returns `State.SELECT_PROJECT`
+- [x] Add tests for `handle_brainstorm_action()` end/no-project paths — reply_markup present, returns `State.SELECT_PROJECT`
+- [x] Add tests for orphaned queue start — reply_markup in send_message call
+- [x] Update 3 existing tests from `ConversationHandler.END` to `State.SELECT_PROJECT`
+- [x] All 259 tests pass (`python3 -m pytest src/telegram_bot/tests/ -v`)
+- **Status:** complete
 
-## Findings & Decisions
+## Implementation Summary
 
-### Requirements
-- Every bot response that ends a conversation (`ConversationHandler.END`) should include at least one navigation button
-- Buttons should be context-aware: show "View Project" when a project is selected, show "Projects" to go to project list
-- Background notification messages (orphaned queue start) should include navigation buttons
-- Existing button patterns (callback_data namespaces: `project:`, `action:`) must be reused
-- `/help` remains stateless (returns `None`, not a conversation state) but should still offer a "Projects" button
+### What was added
+- `MSG_PROJECTS_LIST_BTN` constant in `messages.py` — `"\u2261 Projects"` for navigating to project list
+- `_nav_keyboard(project_name=None)` helper in `bot.py` — reusable navigation keyboard builder that includes optional "View Project" and always-present "Projects" buttons
+- 21 new tests (79 total in test_bot.py, 259 across all test files)
 
-### Research Findings
-
-#### Dead-end locations identified in bot.py (no follow-up buttons):
-| Location | Line | Current behavior | Fix |
-|----------|------|------------------|-----|
-| `start_task()` | 926 | `reply_text(text)` → END | Add project/queue/projects buttons |
-| `cancel_brainstorming()` | 1131 | `reply_text(MSG_BRAINSTORM_CANCELLED)` → END | Add project/projects buttons |
-| `handle_input_cancel()` | 1144 | `edit_message_text(MSG_CANCELLED)` → END | Add projects button |
-| `cancel()` | 1211 | `reply_text(MSG_CANCELLED)` → END | Add projects button |
-| `handle_idea_button()` idea:cancel | 1162 | `edit_message_text(MSG_CANCELLED)` → END | Add project/projects buttons |
-| `handle_brainstorm_hint_button()` bs:cancel | 1177 | `edit_message_text(MSG_BRAINSTORM_CANCELLED)` → END | Add project/projects buttons |
-| `handle_brainstorm_action()` end | 1118 | `edit_message_text(MSG_BRAINSTORM_SESSION_ENDED)` → END | Add project/projects buttons |
-| `handle_brainstorm_action()` no project | 1103 | `edit_message_text(MSG_NO_PROJECT_SELECTED)` → END | Add projects button |
-| `help_command()` | 1222 | `reply_text(MSG_HELP)` → None | Add projects button |
-| Orphaned queue start | 1334 | `send_message(text)` — no markup | Add project + projects buttons |
-
-#### Well-covered locations (already have buttons):
-- `show_projects()` — project list + create/clone buttons
-- `show_project_menu()` — full action menu
-- `show_queue()` — cancel buttons + back
-- `show_iterations_menu()` — iteration buttons + cancel
-- `check_task_completion()` — diff summary + project buttons (line 1310-1322)
-- All brainstorm states — done/save/cancel buttons
-- `finish_brainstorming()` — Run Plan / End buttons
-
-#### Locations that appear dead-end but are not:
-- `handle_github_choice()` line 725: sends plain text BUT immediately follows with `show_project_menu()` on line 730 — not a dead-end
-- `handle_name()` / `handle_clone_url()`: on success call `start()` which shows projects — not a dead-end
-
-#### Existing tests that will need updates:
-| Test | File:Line | Current assertion | Required change |
-|------|-----------|-------------------|-----------------|
-| `test_returns_end` | test_bot.py:131 | `result == ConversationHandler.END` | Change to `State.SELECT_PROJECT` |
-| `test_cancel_returns_end` | test_bot.py:288 | `result == ConversationHandler.END` | Change to `State.SELECT_PROJECT` |
-| `test_cancel_returns_end` | test_bot.py:537 | `result == ConversationHandler.END` | Change to `State.SELECT_PROJECT` |
-
-#### ConversationHandler routing verification:
-- `State.SELECT_PROJECT` handlers: `project:*` → `project_selected()`, `action:*` → `handle_action()` (bot.py lines 1454-1457)
-- Both `project:` and `action:` callback namespaces are handled in this state
-- Returning `State.SELECT_PROJECT` from cancel/end handlers will correctly route follow-up button presses
+### What was changed
+- 10 dead-end locations in bot.py now include follow-up navigation buttons
+- 7 cancel/end handlers return `State.SELECT_PROJECT` instead of `ConversationHandler.END`
+- 3 existing tests updated to assert `State.SELECT_PROJECT`
 
 ### Technical Decisions
 | Decision | Rationale |
 |----------|-----------|
 | Reuse existing `project:` and `action:` callback namespaces | Existing handlers already process these callbacks; no new handler registration needed |
-| Return `State.SELECT_PROJECT` instead of `END` from cancel handlers | Keeps button callbacks routed within the ConversationHandler; `SELECT_PROJECT` already handles both `project:` and `action:` callbacks (verified at lines 1454-1457) |
+| Return `State.SELECT_PROJECT` instead of `END` from cancel handlers | Keeps button callbacks routed within the ConversationHandler; `SELECT_PROJECT` already handles both `project:` and `action:` callbacks |
 | Keep `help_command()` stateless (return None) | Help is a fallback handler; adding reply_markup is sufficient for navigation without changing state management |
-| Add `MSG_PROJECTS_LIST_BTN` as a new constant | Distinct from `MSG_BACK_BTN` ("← Back") — "Projects" better communicates the destination when not in a sub-menu |
-| Reuse existing `MSG_PROJECT_BTN` for "View Project" instead of adding `MSG_VIEW_PROJECT_BTN` | Already defined as `"\u25b8 Project"` with the right icon; avoid duplicate constants |
-| Add buttons to orphaned queue start but NOT to progress messages | Progress messages use edit-in-place pattern (1 create + N edits); adding buttons would add clutter to frequently-updated messages. Orphaned queue start is a one-time message that benefits from navigation. |
-| Include `handle_brainstorm_hint_button()` bs:cancel in Phase 2 | Originally missed dead-end: line 1178 returns END with no buttons after brainstorm cancel via inline button |
-| Update existing cancel tests in Phase 4 | 3 existing tests (lines 131, 288, 537 in test_bot.py) assert `ConversationHandler.END` for cancel handlers; must be updated to `State.SELECT_PROJECT` to avoid test regressions |
+| Add `_nav_keyboard()` helper | DRY — reused across 10 locations instead of duplicating keyboard construction |
+| Add buttons to orphaned queue start but NOT to progress messages | Progress messages use edit-in-place pattern; buttons would add clutter to frequently-updated messages |

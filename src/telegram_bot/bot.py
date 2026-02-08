@@ -106,6 +106,7 @@ from .messages import (
     MSG_PROJECT_BTN,
     MSG_PROJECT_LABEL,
     MSG_PROJECT_NOT_FOUND,
+    MSG_PROJECTS_LIST_BTN,
     MSG_QUEUE_BTN,
     MSG_QUEUE_EMPTY,
     MSG_QUEUE_TITLE,
@@ -242,6 +243,23 @@ def _brainstorm_hint_long_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton(MSG_CANCEL_BTN, callback_data="bs:cancel"),
         ]]
     )
+
+
+def _nav_keyboard(project_name: str | None = None) -> InlineKeyboardMarkup:
+    """Return navigation buttons for conversation dead-ends.
+
+    When project_name is given, includes a 'View Project' button.
+    Always includes a 'Projects' button to go to the project list.
+    """
+    buttons = []
+    if project_name:
+        buttons.append(
+            InlineKeyboardButton(MSG_PROJECT_BTN, callback_data=f"project:{project_name}")
+        )
+    buttons.append(
+        InlineKeyboardButton(MSG_PROJECTS_LIST_BTN, callback_data="action:back")
+    )
+    return InlineKeyboardMarkup([buttons])
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -923,8 +941,22 @@ async def start_task(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     else:
         text = MSG_TASK_ERROR.format(message=message)
 
-    await reply_text(update, text)
-    return ConversationHandler.END
+    # Context-aware follow-up buttons
+    if success and is_queued:
+        buttons = [
+            InlineKeyboardButton(MSG_QUEUE_BTN.format(count=""), callback_data="action:queue"),
+            InlineKeyboardButton(MSG_PROJECT_BTN, callback_data=f"project:{project.name}"),
+            InlineKeyboardButton(MSG_PROJECTS_LIST_BTN, callback_data="action:back"),
+        ]
+    else:
+        buttons = [
+            InlineKeyboardButton(MSG_PROJECT_BTN, callback_data=f"project:{project.name}"),
+            InlineKeyboardButton(MSG_PROJECTS_LIST_BTN, callback_data="action:back"),
+        ]
+    reply_markup = InlineKeyboardMarkup([buttons])
+
+    await reply_text(update, text, reply_markup=reply_markup)
+    return State.SELECT_PROJECT
 
 
 async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -1100,8 +1132,11 @@ async def handle_brainstorm_action(update: Update, context: ContextTypes.DEFAULT
 
     if action == "plan":
         if not project:
-            await query.edit_message_text(MSG_NO_PROJECT_SELECTED)
-            return ConversationHandler.END
+            await query.edit_message_text(
+                MSG_NO_PROJECT_SELECTED,
+                reply_markup=_nav_keyboard(),
+            )
+            return State.SELECT_PROJECT
 
         # Start plan mode with saved IDEA
         user_data["mode"] = "plan"
@@ -1115,8 +1150,12 @@ async def handle_brainstorm_action(update: Update, context: ContextTypes.DEFAULT
         return await show_iterations_menu(update, context)
 
     # action == "end"
-    await query.edit_message_text(MSG_BRAINSTORM_SESSION_ENDED)
-    return ConversationHandler.END
+    project_name = project.name if project else None
+    await query.edit_message_text(
+        MSG_BRAINSTORM_SESSION_ENDED,
+        reply_markup=_nav_keyboard(project_name),
+    )
+    return State.SELECT_PROJECT
 
 
 @authorized
@@ -1126,13 +1165,17 @@ async def cancel_brainstorming(update: Update, context: ContextTypes.DEFAULT_TYP
     assert update.effective_chat is not None
 
     cancelled = brainstorm_manager.cancel(update.effective_chat.id)
+    user_data = get_user_data(update.effective_chat.id)
+    project = user_data.get("project")
+    project_name = project.name if project else None
+    reply_markup = _nav_keyboard(project_name)
 
     if cancelled:
-        await update.message.reply_text(MSG_BRAINSTORM_CANCELLED)
+        await update.message.reply_text(MSG_BRAINSTORM_CANCELLED, reply_markup=reply_markup)
     else:
-        await update.message.reply_text(MSG_BRAINSTORM_NO_ACTIVE)
+        await update.message.reply_text(MSG_BRAINSTORM_NO_ACTIVE, reply_markup=reply_markup)
 
-    return ConversationHandler.END
+    return State.SELECT_PROJECT
 
 
 @authorized_callback
@@ -1141,8 +1184,11 @@ async def handle_input_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE
     query = update.callback_query
     assert query is not None
     await query.answer()
-    await query.edit_message_text(MSG_CANCELLED)
-    return ConversationHandler.END
+    await query.edit_message_text(
+        MSG_CANCELLED,
+        reply_markup=_nav_keyboard(),
+    )
+    return State.SELECT_PROJECT
 
 
 @authorized_callback
@@ -1158,9 +1204,16 @@ async def handle_idea_button(update: Update, context: ContextTypes.DEFAULT_TYPE)
         user_data["idea"] = None
         return await show_iterations_menu(update, context)
 
-    # idea:cancel
-    await query.edit_message_text(MSG_CANCELLED)
-    return ConversationHandler.END
+    # idea:cancel — project is available since we're in ENTER_IDEA state
+    assert update.effective_chat is not None
+    user_data = get_user_data(update.effective_chat.id)
+    project = user_data.get("project")
+    project_name = project.name if project else None
+    await query.edit_message_text(
+        MSG_CANCELLED,
+        reply_markup=_nav_keyboard(project_name),
+    )
+    return State.SELECT_PROJECT
 
 
 @authorized_callback
@@ -1174,8 +1227,14 @@ async def handle_brainstorm_hint_button(update: Update, context: ContextTypes.DE
 
     if query.data == "bs:cancel":
         brainstorm_manager.cancel(update.effective_chat.id)
-        await query.edit_message_text(MSG_BRAINSTORM_CANCELLED)
-        return ConversationHandler.END
+        user_data = get_user_data(update.effective_chat.id)
+        project = user_data.get("project")
+        project_name = project.name if project else None
+        await query.edit_message_text(
+            MSG_BRAINSTORM_CANCELLED,
+            reply_markup=_nav_keyboard(project_name),
+        )
+        return State.SELECT_PROJECT
 
     # bs:done or bs:save — both trigger finish
     success, message, idea_content = await brainstorm_manager.finish(
@@ -1208,8 +1267,11 @@ async def handle_brainstorm_hint_button(update: Update, context: ContextTypes.DE
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancel current operation."""
     assert update.message is not None
-    await update.message.reply_text(MSG_CANCELLED)
-    return ConversationHandler.END
+    await update.message.reply_text(
+        MSG_CANCELLED,
+        reply_markup=_nav_keyboard(),
+    )
+    return State.SELECT_PROJECT
 
 
 @authorized
@@ -1219,7 +1281,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     text = MSG_HELP
 
-    await update.message.reply_text(text)
+    await update.message.reply_text(text, reply_markup=_nav_keyboard())
     return None
 
 
@@ -1335,6 +1397,7 @@ async def check_task_completion(context: ContextTypes.DEFAULT_TYPE) -> None:
                 chat_id=TELEGRAM_CHAT_ID,
                 text=text,
                 parse_mode="Markdown",
+                reply_markup=_nav_keyboard(next_task.project),
             )
 
 
