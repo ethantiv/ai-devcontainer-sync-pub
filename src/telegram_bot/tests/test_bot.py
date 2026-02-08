@@ -1,5 +1,8 @@
 """Tests for bot.py handlers — inline button functionality."""
 
+import time
+from pathlib import Path
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -1310,3 +1313,380 @@ class TestRunLogRotation:
             patch("src.telegram_bot.bot.PROJECTS_ROOT", "/tmp/test-projects"),
         ):
             await run_log_rotation(context)
+
+
+# --- Tests for check_task_progress ---
+
+
+class TestCheckTaskProgress:
+    """Tests for check_task_progress() stale detection and iteration tracking."""
+
+    CHAT_ID = 12345
+
+    def _make_task(self, project="myproject", mode="build", iterations=5,
+                   last_reported_iteration=0, stale_warned=False,
+                   progress_message_id=None):
+        from src.telegram_bot.tasks import Task
+        return Task(
+            project=project,
+            project_path=Path(f"/tmp/{project}"),
+            mode=mode,
+            iterations=iterations,
+            idea=None,
+            session_name=f"loop-{project}",
+            last_reported_iteration=last_reported_iteration,
+            stale_warned=stale_warned,
+            progress_message_id=progress_message_id,
+        )
+
+    @pytest.mark.asyncio
+    async def test_stale_warning_sent_when_progress_stale(self):
+        """Sends stale warning when .progress file is older than STALE_THRESHOLD."""
+        from src.telegram_bot.bot import check_task_progress
+        from src.telegram_bot.messages import MSG_STALE_PROGRESS
+
+        task = self._make_task(last_reported_iteration=2)
+        context = make_context()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            # .progress file mtime = 400s ago → stale
+            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time() - 400),
+        ):
+            mock_tm.active_tasks = {"/tmp/myproject": task}
+            mock_tm.get_current_iteration.return_value = 2  # same as last_reported
+            mock_tm._is_session_running.return_value = True
+            await check_task_progress(context)
+
+        # Stale warning sent
+        context.bot.send_message.assert_awaited_once()
+        call_kwargs = context.bot.send_message.call_args[1]
+        assert call_kwargs["text"] == MSG_STALE_PROGRESS.format(project="myproject")
+        assert task.stale_warned is True
+
+    @pytest.mark.asyncio
+    async def test_no_stale_warning_when_below_threshold(self):
+        """No stale warning when .progress file is recent (below threshold)."""
+        from src.telegram_bot.bot import check_task_progress
+
+        task = self._make_task(last_reported_iteration=2)
+        context = make_context()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            # .progress file mtime = 100s ago → not stale
+            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time() - 100),
+        ):
+            mock_tm.active_tasks = {"/tmp/myproject": task}
+            mock_tm.get_current_iteration.return_value = 2  # same iteration
+            mock_tm._is_session_running.return_value = True
+            await check_task_progress(context)
+
+        # No messages at all (same iteration, not stale)
+        context.bot.send_message.assert_not_awaited()
+        assert task.stale_warned is False
+
+    @pytest.mark.asyncio
+    async def test_stale_warning_only_sent_once(self):
+        """Stale warning is not re-sent if already warned (single-warn behavior)."""
+        from src.telegram_bot.bot import check_task_progress
+
+        task = self._make_task(last_reported_iteration=2, stale_warned=True)
+        context = make_context()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time() - 400),
+        ):
+            mock_tm.active_tasks = {"/tmp/myproject": task}
+            mock_tm.get_current_iteration.return_value = 2
+            mock_tm._is_session_running.return_value = True
+            await check_task_progress(context)
+
+        # No message — already warned
+        context.bot.send_message.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_stale_warned_resets_on_iteration_change(self):
+        """stale_warned flag resets to False when iteration advances."""
+        from src.telegram_bot.bot import check_task_progress
+
+        task = self._make_task(last_reported_iteration=2, stale_warned=True)
+        context = make_context()
+        context.bot.send_message.return_value = MagicMock(message_id=42)
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            # Fresh .progress file
+            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time() - 10),
+        ):
+            mock_tm.active_tasks = {"/tmp/myproject": task}
+            mock_tm.get_current_iteration.return_value = 3  # advanced from 2 → 3
+            mock_tm.get_task_duration.return_value = "1m 0s"
+            await check_task_progress(context)
+
+        assert task.stale_warned is False
+        assert task.last_reported_iteration == 3
+
+    @pytest.mark.asyncio
+    async def test_no_stale_warning_when_session_not_running(self):
+        """No stale warning if tmux session is not running (task may have ended)."""
+        from src.telegram_bot.bot import check_task_progress
+
+        task = self._make_task(last_reported_iteration=2)
+        context = make_context()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time() - 400),
+        ):
+            mock_tm.active_tasks = {"/tmp/myproject": task}
+            mock_tm.get_current_iteration.return_value = 2
+            mock_tm._is_session_running.return_value = False  # session gone
+            await check_task_progress(context)
+
+        context.bot.send_message.assert_not_awaited()
+        assert task.stale_warned is False
+
+    @pytest.mark.asyncio
+    async def test_progress_file_missing_no_stale(self):
+        """When .progress file is missing (OSError), stale_seconds=0 — no warning."""
+        from src.telegram_bot.bot import check_task_progress
+
+        task = self._make_task(last_reported_iteration=2)
+        context = make_context()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.bot.os.path.getmtime", side_effect=OSError("No such file")),
+        ):
+            mock_tm.active_tasks = {"/tmp/myproject": task}
+            mock_tm.get_current_iteration.return_value = 2
+            mock_tm._is_session_running.return_value = True
+            await check_task_progress(context)
+
+        context.bot.send_message.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_iteration_change_sends_new_message(self):
+        """First iteration change creates a new Telegram message."""
+        from src.telegram_bot.bot import check_task_progress
+        from src.telegram_bot.messages import MSG_ITERATION_LABEL
+
+        task = self._make_task(last_reported_iteration=0)
+        context = make_context()
+        context.bot.send_message.return_value = MagicMock(message_id=99)
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time()),
+        ):
+            mock_tm.active_tasks = {"/tmp/myproject": task}
+            mock_tm.get_current_iteration.return_value = 1
+            mock_tm.get_task_duration.return_value = "10s"
+            await check_task_progress(context)
+
+        context.bot.send_message.assert_awaited_once()
+        call_kwargs = context.bot.send_message.call_args[1]
+        assert MSG_ITERATION_LABEL in call_kwargs["text"]
+        assert "1/5" in call_kwargs["text"]
+        assert task.progress_message_id == 99
+        assert task.last_reported_iteration == 1
+
+    @pytest.mark.asyncio
+    async def test_iteration_change_edits_existing_message(self):
+        """Subsequent iteration changes edit the existing progress message."""
+        from src.telegram_bot.bot import check_task_progress
+
+        task = self._make_task(last_reported_iteration=1, progress_message_id=42)
+        context = make_context()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time()),
+        ):
+            mock_tm.active_tasks = {"/tmp/myproject": task}
+            mock_tm.get_current_iteration.return_value = 2
+            mock_tm.get_task_duration.return_value = "30s"
+            await check_task_progress(context)
+
+        # Should edit, not send new message
+        context.bot.send_message.assert_not_awaited()
+        context.bot.edit_message_text.assert_awaited_once()
+        call_kwargs = context.bot.edit_message_text.call_args[1]
+        assert call_kwargs["message_id"] == 42
+        assert "2/5" in call_kwargs["text"]
+
+    @pytest.mark.asyncio
+    async def test_no_action_when_get_current_iteration_returns_none(self):
+        """Skips task when .progress file is unreadable (get_current_iteration=None)."""
+        from src.telegram_bot.bot import check_task_progress
+
+        task = self._make_task()
+        context = make_context()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+        ):
+            mock_tm.active_tasks = {"/tmp/myproject": task}
+            mock_tm.get_current_iteration.return_value = None
+            await check_task_progress(context)
+
+        context.bot.send_message.assert_not_awaited()
+        context.bot.edit_message_text.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_same_iteration_no_update(self):
+        """No message sent/edited when iteration hasn't changed."""
+        from src.telegram_bot.bot import check_task_progress
+
+        task = self._make_task(last_reported_iteration=3)
+        context = make_context()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time()),
+        ):
+            mock_tm.active_tasks = {"/tmp/myproject": task}
+            mock_tm.get_current_iteration.return_value = 3  # same
+            await check_task_progress(context)
+
+        context.bot.send_message.assert_not_awaited()
+        context.bot.edit_message_text.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_plan_mode_uses_diamond_icon(self):
+        """Plan mode tasks use ◇ icon in progress message."""
+        from src.telegram_bot.bot import check_task_progress
+
+        task = self._make_task(mode="plan", last_reported_iteration=0)
+        context = make_context()
+        context.bot.send_message.return_value = MagicMock(message_id=1)
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time()),
+        ):
+            mock_tm.active_tasks = {"/tmp/myproject": task}
+            mock_tm.get_current_iteration.return_value = 1
+            mock_tm.get_task_duration.return_value = "5s"
+            await check_task_progress(context)
+
+        call_kwargs = context.bot.send_message.call_args[1]
+        assert "\u25c7" in call_kwargs["text"]  # ◇
+
+    @pytest.mark.asyncio
+    async def test_build_mode_uses_square_icon(self):
+        """Build mode tasks use ■ icon in progress message."""
+        from src.telegram_bot.bot import check_task_progress
+
+        task = self._make_task(mode="build", last_reported_iteration=0)
+        context = make_context()
+        context.bot.send_message.return_value = MagicMock(message_id=1)
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time()),
+        ):
+            mock_tm.active_tasks = {"/tmp/myproject": task}
+            mock_tm.get_current_iteration.return_value = 1
+            mock_tm.get_task_duration.return_value = "5s"
+            await check_task_progress(context)
+
+        call_kwargs = context.bot.send_message.call_args[1]
+        assert "\u25a0" in call_kwargs["text"]  # ■
+
+    @pytest.mark.asyncio
+    async def test_edit_failure_handled_gracefully(self):
+        """Exception during edit_message_text is caught without crashing."""
+        from src.telegram_bot.bot import check_task_progress
+
+        task = self._make_task(last_reported_iteration=1, progress_message_id=42)
+        context = make_context()
+        context.bot.edit_message_text.side_effect = Exception("Message not found")
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time()),
+        ):
+            mock_tm.active_tasks = {"/tmp/myproject": task}
+            mock_tm.get_current_iteration.return_value = 2
+            mock_tm.get_task_duration.return_value = "30s"
+            # Should not raise
+            await check_task_progress(context)
+
+        assert task.last_reported_iteration == 2
+
+    @pytest.mark.asyncio
+    async def test_no_tasks_does_nothing(self):
+        """No errors when there are no active tasks."""
+        from src.telegram_bot.bot import check_task_progress
+
+        context = make_context()
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+        ):
+            mock_tm.active_tasks = {}
+            await check_task_progress(context)
+
+        context.bot.send_message.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_multiple_tasks_tracked_independently(self):
+        """Multiple active tasks get independent progress tracking."""
+        from src.telegram_bot.bot import check_task_progress
+
+        task_a = self._make_task(project="proj-a", last_reported_iteration=0)
+        task_b = self._make_task(project="proj-b", last_reported_iteration=1, progress_message_id=50)
+        context = make_context()
+        context.bot.send_message.return_value = MagicMock(message_id=100)
+
+        with (
+            patch("src.telegram_bot.bot.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.bot.task_manager") as mock_tm,
+            patch("src.telegram_bot.bot.STALE_THRESHOLD", 300),
+            patch("src.telegram_bot.bot.os.path.getmtime", return_value=time.time()),
+        ):
+            mock_tm.active_tasks = {
+                "/tmp/proj-a": task_a,
+                "/tmp/proj-b": task_b,
+            }
+
+            def side_effect(task):
+                return 1 if task.project == "proj-a" else 2
+
+            mock_tm.get_current_iteration.side_effect = side_effect
+            mock_tm.get_task_duration.return_value = "10s"
+            await check_task_progress(context)
+
+        # proj-a: new message (was at 0, now 1)
+        # proj-b: edit message (was at 1, now 2)
+        assert context.bot.send_message.await_count == 1
+        assert context.bot.edit_message_text.await_count == 1

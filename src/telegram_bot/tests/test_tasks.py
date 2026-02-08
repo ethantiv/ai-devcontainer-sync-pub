@@ -780,3 +780,253 @@ class TestTaskManagerPersistence:
         assert "/tmp/proj" not in tm2.active_tasks
         # Queue should still be present for process_completed_tasks to pick up
         assert len(tm2.queues.get("/tmp/proj", [])) == 1
+
+
+class TestProcessCompletedTasks:
+    """Tests for TaskManager.process_completed_tasks() workflow.
+
+    Covers: completed session detection, active task removal, queue-next start,
+    return tuple format, and orphaned queue handling.
+    """
+
+    @pytest.fixture
+    def ptm(self, tmp_path):
+        """TaskManager with PROJECTS_ROOT patched to tmp_path."""
+        with (
+            patch("src.telegram_bot.tasks.PROJECTS_ROOT", str(tmp_path)),
+            patch("src.telegram_bot.tasks.check_disk_space", return_value=(True, 5000.0)),
+        ):
+            from src.telegram_bot.tasks import TaskManager
+            tm = TaskManager()
+            yield tm
+
+    def _make_task(self, project="proj", mode="build", iterations=5):
+        from src.telegram_bot.tasks import Task
+        return Task(
+            project=project,
+            project_path=Path(f"/tmp/{project}"),
+            mode=mode,
+            iterations=iterations,
+            idea=None,
+            session_name=f"loop-{project}",
+        )
+
+    def test_completed_task_removed_from_active(self, ptm):
+        """Completed task (tmux gone) is removed from active_tasks."""
+        task = self._make_task()
+        ptm.active_tasks["/tmp/proj"] = task
+
+        with (
+            patch.object(ptm, "_is_session_running", return_value=False),
+            patch.object(ptm, "_save_tasks"),
+        ):
+            results = ptm.process_completed_tasks()
+
+        assert "/tmp/proj" not in ptm.active_tasks
+        assert len(results) == 1
+        completed, next_task = results[0]
+        assert completed.project == "proj"
+        assert next_task is None
+
+    def test_active_task_not_removed_when_session_running(self, ptm):
+        """Active task with running tmux session is not touched."""
+        task = self._make_task()
+        ptm.active_tasks["/tmp/proj"] = task
+
+        with patch.object(ptm, "_is_session_running", return_value=True):
+            results = ptm.process_completed_tasks()
+
+        assert "/tmp/proj" in ptm.active_tasks
+        assert results == []
+
+    def test_queue_next_started_after_completion(self, ptm):
+        """When task completes and queue has items, next task starts."""
+        task = self._make_task(project="proj")
+        ptm.active_tasks["/tmp/proj"] = task
+
+        # Add a queued task
+        from src.telegram_bot.tasks import QueuedTask
+        ptm.queues["/tmp/proj"] = [
+            QueuedTask(
+                id="q1",
+                project="proj",
+                project_path=Path("/tmp/proj"),
+                mode="plan",
+                iterations=3,
+                idea=None,
+            ),
+        ]
+
+        with (
+            patch.object(ptm, "_is_session_running", return_value=False),
+            patch.object(ptm, "_start_task_now", return_value=(True, "Started")) as mock_start,
+            patch.object(ptm, "_save_tasks"),
+        ):
+            # After _start_task_now succeeds, simulate the new task in active_tasks
+            from src.telegram_bot.tasks import Task
+            new_task = Task(
+                project="proj",
+                project_path=Path("/tmp/proj"),
+                mode="plan",
+                iterations=3,
+                idea=None,
+                session_name="loop-proj",
+            )
+
+            def fake_start(**kwargs):
+                ptm.active_tasks["/tmp/proj"] = new_task
+                return (True, "Started")
+
+            mock_start.side_effect = lambda **kwargs: fake_start(**kwargs)
+            results = ptm.process_completed_tasks()
+
+        assert len(results) == 1
+        completed, next_started = results[0]
+        assert completed.project == "proj"
+        assert completed.mode == "build"
+        assert next_started is not None
+        assert next_started.mode == "plan"
+        mock_start.assert_called_once_with(
+            project="proj",
+            project_path=Path("/tmp/proj"),
+            mode="plan",
+            iterations=3,
+            idea=None,
+        )
+
+    def test_queue_item_restored_on_start_failure(self, ptm):
+        """When _start_task_now fails, queued task is restored to queue front."""
+        task = self._make_task()
+        ptm.active_tasks["/tmp/proj"] = task
+
+        from src.telegram_bot.tasks import QueuedTask
+        ptm.queues["/tmp/proj"] = [
+            QueuedTask(
+                id="q1",
+                project="proj",
+                project_path=Path("/tmp/proj"),
+                mode="plan",
+                iterations=3,
+                idea=None,
+            ),
+        ]
+
+        with (
+            patch.object(ptm, "_is_session_running", return_value=False),
+            patch.object(ptm, "_start_task_now", return_value=(False, "Failed")),
+            patch.object(ptm, "_save_tasks"),
+        ):
+            results = ptm.process_completed_tasks()
+
+        assert len(results) == 1
+        completed, next_started = results[0]
+        assert completed.project == "proj"
+        assert next_started is None
+        # Queue item should be restored
+        assert len(ptm.queues["/tmp/proj"]) == 1
+        assert ptm.queues["/tmp/proj"][0].id == "q1"
+
+    def test_empty_active_tasks_returns_empty(self, ptm):
+        """Returns empty list when there are no active tasks."""
+        with patch.object(ptm, "_is_session_running", return_value=False):
+            results = ptm.process_completed_tasks()
+        assert results == []
+
+    def test_orphaned_queue_starts_task(self, ptm):
+        """Orphaned queue (no active task) starts next task automatically."""
+        from src.telegram_bot.tasks import QueuedTask, Task
+
+        # No active task, but queue has items
+        ptm.queues["/tmp/proj"] = [
+            QueuedTask(
+                id="q1",
+                project="proj",
+                project_path=Path("/tmp/proj"),
+                mode="build",
+                iterations=5,
+                idea=None,
+            ),
+        ]
+
+        new_task = Task(
+            project="proj",
+            project_path=Path("/tmp/proj"),
+            mode="build",
+            iterations=5,
+            idea=None,
+            session_name="loop-proj",
+        )
+
+        def fake_start_task_now(**kwargs):
+            ptm.active_tasks["/tmp/proj"] = new_task
+            return (True, "Started")
+
+        with (
+            patch.object(ptm, "_is_session_running", return_value=False),
+            patch.object(ptm, "_start_task_now", side_effect=lambda **kw: fake_start_task_now(**kw)),
+            patch.object(ptm, "_save_tasks"),
+        ):
+            results = ptm.process_completed_tasks()
+
+        assert len(results) == 1
+        completed, next_started = results[0]
+        assert completed is None  # orphaned — no completed task
+        assert next_started is not None
+        assert next_started.project == "proj"
+
+    def test_orphaned_queue_skipped_when_session_running(self, ptm):
+        """Orphaned queue is skipped if a tmux session is running for it."""
+        from src.telegram_bot.tasks import QueuedTask
+
+        ptm.queues["/tmp/proj"] = [
+            QueuedTask(
+                id="q1",
+                project="proj",
+                project_path=Path("/tmp/proj"),
+                mode="build",
+                iterations=5,
+                idea=None,
+            ),
+        ]
+
+        with patch.object(ptm, "_is_session_running", return_value=True):
+            results = ptm.process_completed_tasks()
+
+        # Session running but no active task — could be recovering, don't start
+        assert results == []
+
+    def test_multiple_completed_tasks(self, ptm):
+        """Multiple tasks completing in one cycle are all processed."""
+        task_a = self._make_task(project="proj-a")
+        task_b = self._make_task(project="proj-b", mode="plan", iterations=3)
+        ptm.active_tasks["/tmp/proj-a"] = task_a
+        ptm.active_tasks["/tmp/proj-b"] = task_b
+
+        with (
+            patch.object(ptm, "_is_session_running", return_value=False),
+            patch.object(ptm, "_save_tasks"),
+        ):
+            results = ptm.process_completed_tasks()
+
+        assert len(results) == 2
+        projects = {r[0].project for r in results}
+        assert projects == {"proj-a", "proj-b"}
+        assert len(ptm.active_tasks) == 0
+
+    def test_return_tuple_format(self, ptm):
+        """Return value is list of (Task|None, Task|None) tuples."""
+        task = self._make_task()
+        ptm.active_tasks["/tmp/proj"] = task
+
+        with (
+            patch.object(ptm, "_is_session_running", return_value=False),
+            patch.object(ptm, "_save_tasks"),
+        ):
+            results = ptm.process_completed_tasks()
+
+        assert isinstance(results, list)
+        assert len(results) == 1
+        completed, next_task = results[0]
+        from src.telegram_bot.tasks import Task
+        assert isinstance(completed, Task)
+        assert next_task is None
