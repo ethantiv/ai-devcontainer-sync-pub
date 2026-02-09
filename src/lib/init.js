@@ -103,7 +103,7 @@ function init({ force = false } = {}) {
 
   // Add loop artifacts to .gitignore
   const gitignorePath = path.join(projectRoot, '.gitignore');
-  const entries = ['loop/logs/', '.brainstorm/'];
+  const entries = ['loop/logs/'];
 
   if (fs.existsSync(gitignorePath)) {
     const content = fs.readFileSync(gitignorePath, 'utf-8');
