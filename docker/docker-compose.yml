@@ -7,7 +7,7 @@ services:
     container_name: ${APP_NAME:-claude-code}
     hostname: ${APP_NAME:-claude-code}
     env_file:
-      - ../.env
+      - ../.devcontainer/.env
     volumes:
       # Persistent configuration
       - claude-config:/home/developer/.claude

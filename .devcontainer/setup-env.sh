@@ -4,6 +4,9 @@
 
 set -e
 
+# Ensure ~/.local/bin is in PATH (Claude CLI installed there by install.sh)
+export PATH="$HOME/.local/bin:$PATH"
+
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
@@ -61,7 +64,7 @@ detect_workspace_folder() {
 }
 
 load_env_file() {
-    local env_file="$WORKSPACE_FOLDER/.env"
+    local env_file="$WORKSPACE_FOLDER/.devcontainer/.env"
     if [[ -f "$env_file" ]]; then
         while IFS= read -r line || [[ -n "$line" ]]; do
             # Skip empty lines and comments

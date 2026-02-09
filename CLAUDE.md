@@ -49,7 +49,7 @@ Available as local marketplace plugins (`dev-marketplace`):
 
 `LOOP_*` env vars (thresholds, timeouts, queue limits) are defined with defaults in `src/telegram_bot/config.py`.
 
-Codespaces: add as repository secrets. Local: create `.env` (copy from `.env.example`).
+Codespaces: add as repository secrets. Local: create `.devcontainer/.env` (copy from `.devcontainer/.env.example`).
 
 ### MCP Servers
 
