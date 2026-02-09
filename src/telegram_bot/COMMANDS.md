@@ -55,7 +55,7 @@ The bot uses inline keyboard buttons for most interactions:
 - **Back** - Go back to project list
 
 ### After Brainstorming
-- **Run Plan** - Start Plan mode with saved IDEA
+- **Run Plan** - Start Plan mode with saved roadmap
 - **Finish** - End session without running Plan
 
 ## Usage Examples

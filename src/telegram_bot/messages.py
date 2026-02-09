@@ -241,11 +241,11 @@ MSG_SESSION_ALREADY_ACTIVE = "Brainstorming session already active. Finish or ca
 MSG_FAILED_TO_START_CLAUDE = "Failed to start Claude"
 MSG_NO_ACTIVE_BRAINSTORM = "No active brainstorming session. Use /brainstorming <prompt>."
 MSG_SESSION_NOT_READY = "Brainstorming session is not ready."
-MSG_IDEA_SAVED = "IDEA saved to {path}"
+MSG_IDEA_SAVED = "Roadmap saved to {path}"
 MSG_SUMMARY_PROMPT = (
-    "Summarize our brainstorming as an IDEA specification. "
-    "Format: '# User Idea\\n\\n[project description]'. "
-    "Write only the IDEA content, no extra text."
+    "Summarize our brainstorming session. "
+    "Write a clear project description with goals and key decisions. "
+    "Write only the summary content, no extra text."
 )
 
 # --- projects.py strings ---

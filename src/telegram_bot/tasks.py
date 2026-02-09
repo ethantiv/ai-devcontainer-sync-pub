@@ -818,7 +818,7 @@ class BrainstormManager:
             "CONTEXT: This is a Telegram brainstorming session. "
             "DO NOT write code, create files, or make commits. "
             "Focus only on discussion and design exploration. "
-            "The user will send /done when ready to save the final IDEA. "
+            "The user will send /done when ready to save the result to ROADMAP. "
             "Until then, continue the conversation naturally.\n\n"
         )
         brainstorm_prompt = f"/brainstorming {brainstorm_context}{prompt}"

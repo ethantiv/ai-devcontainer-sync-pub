@@ -167,7 +167,7 @@ write_idea() {
 
     mkdir -p docs
     cat > docs/ROADMAP.md << EOF
-# User Idea
+# Roadmap
 
 $IDEA
 EOF

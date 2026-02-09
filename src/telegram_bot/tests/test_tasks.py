@@ -2158,7 +2158,7 @@ class TestBrainstormManagerFinish:
             patch.object(
                 brainstorm_manager,
                 "_wait_for_response",
-                return_value=(None, "# User Idea\n\nA cool project", "sess-new"),
+                return_value=(None, "# Roadmap\n\nA cool project", "sess-new"),
             ),
             patch.object(brainstorm_manager, "_cleanup_session"),
         ):
@@ -2219,7 +2219,7 @@ class TestBrainstormManagerFinish:
     async def test_success_writes_roadmap_file(self, brainstorm_manager, tmp_path):
         """finish() writes Claude's response to docs/ROADMAP.md in the project directory."""
         self._setup_active_session(brainstorm_manager, tmp_path)
-        idea_text = "# User Idea\n\nBuild a distributed cache layer"
+        idea_text = "# Roadmap\n\nBuild a distributed cache layer"
 
         with (
             patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
@@ -2262,7 +2262,7 @@ class TestBrainstormManagerFinish:
     async def test_success_return_tuple_format(self, brainstorm_manager, tmp_path):
         """finish() returns (True, MSG_IDEA_SAVED with path, idea_content) on success."""
         session = self._setup_active_session(brainstorm_manager, tmp_path)
-        idea_text = "# User Idea\n\nAmazing project"
+        idea_text = "# Roadmap\n\nAmazing project"
 
         with (
             patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
