@@ -34,6 +34,10 @@ Always load the correct skills at the beginning of the relevant tasks.
 
 Always maintain README.md as a simple instruction guide for new or returning users — not as technical documentation. Write it in second person ("you"), focus on getting started quickly, and keep explanations minimal. Technical details, architecture notes, and codebase patterns belong in CLAUDE.md. When the project changes significantly, update README.md to reflect the current state.
 
+### CLAUDE.md Size Limit
+
+CLAUDE.md files should not exceed ~200 lines. When approaching this limit, remove outdated or obvious entries, consolidate redundant notes, and refactor verbose descriptions into concise rules. Prefer deleting over relocating — if information isn't essential for day-to-day development, it doesn't belong in CLAUDE.md.
+
 ### CLAUDE.md Template
 
 When generating the CLAUDE.md file with project guidelines, use the following structure:

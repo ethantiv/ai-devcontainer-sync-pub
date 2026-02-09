@@ -1,8 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-DevContainer for multi-AI agent development with Claude Code and Gemini CLI. Configuration-only repository - no build, test, or lint commands.
+DevContainer for multi-AI agent development with Claude Code and Gemini CLI. Configuration-only repository.
 
 ## Build & Run
 
@@ -20,19 +18,14 @@ python3 -m pytest src/telegram_bot/tests/ -v  # Run Telegram bot tests (438 test
 npm install --prefix src && npm test --prefix src  # Run JS tests (20 tests, requires install)
 ```
 
-Run a single Python test file or test:
-```bash
-python3 -m pytest src/telegram_bot/tests/test_config.py -v
-python3 -m pytest src/telegram_bot/tests/test_tasks.py::TestTaskManager::test_start_task -v
-```
+Single test: `python3 -m pytest src/telegram_bot/tests/test_tasks.py::TestTaskManager::test_start_task -v`
 
 ## Custom Slash Commands
 
 Available as local marketplace plugins (`dev-marketplace`):
 - `/code-review` - parallel code review with multiple agents
 - `/roadmap` - manage ROADMAP.md with features and proposals
-- `/git-worktree:create <name>` - create worktree with naming convention `{project}-{name}`
-- `/git-worktree:delete <name>` - delete worktree and its branch
+- `/git-worktree:create <name>` / `/git-worktree:delete <name>` - manage worktrees
 - `/loop-analyzer` - analyze autonomous loop logs with 5 parallel subagents
 
 ## Operational Notes
@@ -48,131 +41,62 @@ Available as local marketplace plugins (`dev-marketplace`):
 | `CONTEXT7_API_KEY` | No | API key for Context7 MCP server |
 | `COOLIFY_BASE_URL` | No | URL of Coolify instance |
 | `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |
-| `GIT_USER_NAME` | No | Git global user.name |
-| `GIT_USER_EMAIL` | No | Git global user.email |
-| `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for remote loop control |
-| `TELEGRAM_CHAT_ID` | No | Authorized Telegram chat ID |
-| `APP_NAME` | No | Container/image/volume name prefix (default: `claude-code`, use `dev-claude-code` for dev) |
+| `GIT_USER_NAME` / `GIT_USER_EMAIL` | No | Git global identity |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | No | Telegram bot auth |
+| `APP_NAME` | No | Volume name prefix (default: `claude-code`, `dev-claude-code` for dev) |
 | `DEV_MODE` | No | Disable Telegram bot in dev containers (true/1/yes) |
-| `LOOP_STALE_THRESHOLD` | No | Stale progress detection seconds (default: 1800) |
-| `LOOP_BRAINSTORM_POLL_INTERVAL` | No | Brainstorm polling interval seconds (default: 0.5) |
-| `LOOP_BRAINSTORM_TIMEOUT` | No | Brainstorm max wait seconds (default: 300) |
-| `LOOP_MAX_QUEUE_SIZE` | No | Max queued tasks per project (default: 10) |
-| `LOOP_GIT_DIFF_RANGE` | No | Git diff range for completion summary (default: HEAD~5..HEAD) |
-| `LOOP_QUEUE_TTL` | No | Queue task expiry in seconds (default: 3600) |
-| `LOOP_LOG_RETENTION_DAYS` | No | Log file retention in days (default: 7) |
-| `LOOP_LOG_MAX_SIZE_MB` | No | Max total log size in MB (default: 500) |
-| `LOOP_MIN_DISK_MB` | No | Minimum free disk space in MB to start tasks (default: 500) |
+
+`LOOP_*` env vars (thresholds, timeouts, queue limits) are defined with defaults in `src/telegram_bot/config.py`.
 
 Codespaces: add as repository secrets. Local: create `.devcontainer/.env`.
 
-### MCP Servers (pre-configured)
+### MCP Servers
 
-- `aws-documentation` - AWS docs search and reading
-- `terraform` - Terraform/Terragrunt execution, AWS provider docs
-- `context7` - Context7 documentation search (requires `CONTEXT7_API_KEY`)
-- `coolify` - Coolify deployment platform management (requires `COOLIFY_BASE_URL`, `COOLIFY_ACCESS_TOKEN`)
+`aws-documentation`, `terraform`, `context7` (needs `CONTEXT7_API_KEY`), `coolify` (needs `COOLIFY_BASE_URL` + `COOLIFY_ACCESS_TOKEN`). All require `uvx` (from `uv`).
 
-MCP servers require `uvx` (from `uv`). Installed via Dockerfile in DevContainer/Docker paths. Not available in `setup-local.sh` (macOS manual install).
+### Loop System
 
-### Gemini CLI
-
-Pre-installed alongside Claude Code. Reset config with `RESET_GEMINI_CONFIG=true`.
-
-### Loop System (dev-loop)
-
-Built-in autonomous development loop at `src/` in this repository. Includes CLI (`loop` command), shell scripts, prompts, Telegram bot, and templates. Installed to Docker image at `/opt/loop/` via `COPY src /opt/loop` in Dockerfile.
+Source at `src/`. Docker: `COPY src /opt/loop` + `npm install`, symlinked as `/usr/bin/loop`. Telegram bot: `/opt/loop/telegram_bot/` with `PYTHONPATH="/opt"`.
 
 ```bash
-loop --help             # Show available subcommands
-loop init               # Initialize loop config in current project (symlinks scripts/prompts)
-loop plan               # Run planning phase (default: 3 iterations)
-loop build              # Run build phase (default: 5 iterations)
-loop run                # Plan then build (3+5 iterations)
-loop summary            # Show summary of last loop run (tool usage, files, tokens)
-loop cleanup            # Clean up loop artifacts
-loop update             # Force-refresh symlinks and templates
+loop init / update      # Initialize/refresh symlinks in project
+loop plan / build / run # Run planning (3 iter), build (5 iter), or both
+loop summary / cleanup  # Show run stats / clean artifacts
 ```
 
-**Structure**: `src/scripts/` (shell), `src/prompts/` (Claude prompts), `src/templates/` (project templates), `src/telegram_bot/` (Python bot with `handlers/` package), `src/bin/` + `src/lib/` (Node.js CLI).
+**Structure**: `src/scripts/` (shell), `src/prompts/`, `src/templates/`, `src/telegram_bot/` (Python bot + `handlers/`), `src/bin/` + `src/lib/` (Node.js CLI).
 
-**Telegram bot**: Starts automatically in Docker if `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` env vars are set. Runs from `/opt/loop/telegram_bot/` via entrypoint.sh. Command reference: `src/telegram_bot/COMMANDS.md`.
+**Telegram bot**: Starts in Docker if `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` set. Commands: `src/telegram_bot/COMMANDS.md`.
 
-**Post-iteration auto-commit**: `ensure_committed()` in `loop.sh` auto-commits and pushes after each iteration if the agent skipped git. Auto-commits use the `chore(loop):` prefix — absence of these in `git log` means the prompt fix is working.
+**Auto-commit**: `ensure_committed()` in `loop.sh` auto-commits after each iteration (prefix `chore(loop):`).
 
-### Adding New Global npm Tools
+### Adding New Components
 
-Requires changes in 4 files:
-1. `.devcontainer/Dockerfile` — `npm install -g` + symlink in runtime stage
-2. `docker/Dockerfile` — `npm install -g` + symlink after COPY
-3. `setup-local.sh` — dedicated `install_<tool>()` function + call in `main()`
-4. `.devcontainer/configuration/skills-plugins.txt` — if it has a skill/plugin
+**Global npm tools** — 4 files: `.devcontainer/Dockerfile`, `docker/Dockerfile`, `setup-local.sh`, `skills-plugins.txt` (if plugin).
 
-### Adding New Plugins/Skills/Commands
+**Plugins/Skills** — Edit `.devcontainer/configuration/skills-plugins.txt`, then `setup-env.sh`. Local plugins: add to `.devcontainer/plugins/dev-marketplace/` + register in `marketplace.json`.
 
-1. **Plugins**: Edit `.devcontainer/configuration/skills-plugins.txt` (see file for format examples)
-2. **Local plugins**: Add to `.devcontainer/plugins/dev-marketplace/` and register in `marketplace.json`
-3. **Scripts**: Add `.sh` files to `.devcontainer/scripts/`
-4. **Run** `./.devcontainer/setup-env.sh` to sync changes
+**Local plugin layout**: `plugins/dev-marketplace/<name>/.claude-plugin/plugin.json` + `commands/<cmd>.md` (YAML frontmatter: `allowed-tools`, `description`, `argument-hint`).
 
-### Local Plugin Structure
+### Key Files for Parallel Changes
 
-```
-plugins/dev-marketplace/<plugin-name>/
-  .claude-plugin/plugin.json    # name, version, description, author
-  commands/<command>.md          # slash command (with YAML frontmatter)
-  hooks/                        # optional hooks
-```
+Setup/sync — apply across all:
+- `.devcontainer/setup-env.sh` — DevContainer/Codespaces
+- `setup-local.sh` — macOS local (plugins and skills only, no MCP)
+- `docker/Dockerfile` + `docker/entrypoint.sh` + `docker/setup-claude.sh` — Docker
+- `README.md` — docs for all deployment options
 
-Register in `plugins/dev-marketplace/.claude-plugin/marketplace.json`.
+Loop system: `src/` + `docker/Dockerfile` + `docker/entrypoint.sh`.
 
-Command `.md` files use YAML frontmatter:
-```yaml
----
-allowed-tools: Bash(git worktree:*), Bash(git branch:*)
-description: Short description of the command
-argument-hint: <name>
----
-```
-`allowed-tools` restricts which tools the command can use (glob patterns supported).
-
-### Key Files for Config Changes
-
-Changes to setup/sync logic must be applied in parallel across:
-- `.devcontainer/setup-env.sh` — DevContainer/Codespaces setup
-- `setup-local.sh` — macOS local setup (no MCP servers — plugins and skills only)
-- `docker/Dockerfile` + `docker/entrypoint.sh` + `docker/setup-claude.sh` — Docker image build and runtime
-- `README.md` — single documentation file for all deployment options (Codespaces, DevContainer, Docker)
-
-Loop system changes require parallel updates across:
-- `src/` — source code (scripts, prompts, templates, telegram bot, npm CLI)
-- `docker/Dockerfile` — `COPY src /opt/loop` and `npm install`
-- `docker/entrypoint.sh` — Telegram bot startup path
-
-Loop CLI changes (flags, defaults) require edits across 4 files: `src/bin/cli.js` (Commander option), `src/lib/run.js` (JS→shell bridge), `src/scripts/loop.sh` (bash implementation), and optionally `src/lib/init.js` (suggested commands). `init()` accepts `{ force }` only — `loop init` skips existing files, `loop update` calls `init({ force: true })` to overwrite everything.
-
-### Planning Workflow
-
-Feature development uses structured planning documents:
-- `docs/ROADMAP.md` — feature requests and proposals (managed via `/roadmap` slash command)
-- `docs/plans/IMPLEMENTATION_PLAN.md` — active implementation plan with phases and status tracking
-- Templates in `src/templates/` — `IMPLEMENTATION_PLAN_template.md`, `CLAUDE_template.md` (copied by `loop init`)
+Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.sh`, optionally `src/lib/init.js`. `loop init` skips existing; `loop update` calls `init({ force: true })`.
 
 ### Setup Flow
 
-**DevContainer/Codespaces**: Container start → `setup-env.sh` → SSH/GH auth → Claude config → sync plugins → add MCP servers
+**DevContainer**: start → `setup-env.sh` → SSH/GH auth → Claude config → sync plugins → MCP servers.
 
-**Docker image**: Container start → `entrypoint.sh` → sync config from `/opt/claude-config` to `~/.claude` → first-run setup (`.configured` marker) → `setup-claude.sh` for plugins/MCP
+**Docker**: start → `entrypoint.sh` → sync `/opt/claude-config` → first-run (`.configured` marker) → `setup-claude.sh`. Claude binary installed to `~/.claude/bin/` (volume) at first start, not during build. GH auth via `gh auth login --with-token`.
 
-**Docker GitHub auth**: `entrypoint.sh` automatically runs `gh auth login --with-token` using `GH_TOKEN` env var at every container start. No manual login required.
-
-**Docker Claude persistence**: Claude installed to `~/.claude/bin/` (volume) at first container start, not during image build. This preserves updates across `docker compose down && up`. The `CLAUDE_INSTALL_DIR` env var controls install location; fallback moves binary from `~/.local/bin/` if installer ignores it.
-
-**Docker volumes**: Four named volumes persist data across container rebuilds. Volume names are prefixed with `APP_NAME` (default: `claude-code`) via the `name:` field in `docker-compose.yml`:
-- `{APP_NAME}-claude-config` → `~/.claude` — Claude binary, settings, credentials, skills symlinks
-- `{APP_NAME}-agents-skills` → `~/.agents` — Global skills installed via `npx skills add -g` (symlinked from `~/.claude/skills/`)
-- `{APP_NAME}-gemini-config` → `~/.gemini` — Gemini CLI configuration
-- `{APP_NAME}-projects` → `~/projects` — Working directory for projects
+**Docker volumes** (4, prefixed with `APP_NAME`): `claude-config` (~/.claude), `agents-skills` (~/.agents), `gemini-config` (~/.gemini), `projects` (~/projects).
 
 ### File Sync Mapping
 
@@ -182,53 +106,20 @@ Feature development uses structured planning documents:
 | `scripts/*.sh` | `~/.claude/scripts/` |
 | `plugins/dev-marketplace/` | local plugin marketplace |
 
-### Claude Config Persistence
-
-- `CLAUDE_CONFIG_DIR` env var controls where Claude stores `.claude.json` (main config with `installMethod`, `userID`, `oauthAccount`)
-- Without it: `~/.claude.json` (home dir, outside volume = lost on rebuild)
-- With `CLAUDE_CONFIG_DIR=~/.claude`: `~/.claude/.claude.json` (inside volume = persisted)
-- DevContainer sets this in `devcontainer.json`, Docker sets it in `Dockerfile`
-
 ### Codebase Patterns
 
-- `~/.claude` is a named Docker volume (ext4), `/tmp` is tmpfs — `rename()` fails cross-device (EXDEV). Setup scripts export `TMPDIR="$CLAUDE_DIR/tmp"` to keep all temp ops on the same filesystem.
-- `skills-plugins.txt` formats:
-  - Skills (new): `- https://github.com/owner/repo --skill skill-name` — installed with `--agent claude-code gemini-cli`
-  - Skills (legacy): `name@skills=owner/repo` — still supported for backward compatibility
-  - GitHub skills: `name@github=owner/repo/path-to-SKILL.md`
-  - External plugins: `name@type=owner/repo` — `type` is treated as marketplace name
-- **Gotcha**: `setup-env.sh` accepts any `type` as marketplace (fallthrough `*)`), but `setup-local.sh` requires `type` to match `*-marketplace` glob. Always name external marketplace types with `-marketplace` suffix to work in both scripts.
-- Shell scripts use `ok()`, `warn()`, `fail()` helpers for status output (colored ANSI with ✔︎/⚠️/❌). Use these instead of raw emoji in `setup-local.sh`, `setup-env.sh`, and `docker/setup-claude.sh`. Section headers with informational emoji (📄, 📦, 🔧, 🔄, 🔐, 🚀, 🌍) remain as plain `echo`.
-- `uv`/`uvx`: installed via `pip3 install --break-system-packages uv` in Dockerfiles (builder stage → COPY to runtime). MCP servers `aws-documentation` and `terraform` depend on `uvx`. Ad-hoc install without rebuild: `pip3 install --break-system-packages uv`.
-- Skills install syntax: `npx -y skills add "$url" --skill "$name" --agent claude-code gemini-cli -g -y`. The `-g` flag installs globally to `~/.agents/skills/` with symlinks to `~/.claude/skills/`. The `-y` flag skips interactive confirmation prompts. The `--agent claude-code gemini-cli` flag limits installation to Claude Code and Gemini CLI agents only.
-- **Claude binary in Docker**: Lives at `~/.claude/bin/claude` (volume). Scripts should define wrapper: `CLAUDE_CMD="${CLAUDE_DIR}/bin/claude"; claude() { "$CLAUDE_CMD" "$@"; }` to ensure correct binary is used regardless of PATH.
-- **Testing Docker on Raspberry Pi**: `ssh mirek@raspberrypi.local`, then `cd ~/Downloads/ai-devcontainer-sync/docker && git pull && sudo docker compose down && sudo docker compose build --no-cache && sudo docker compose up -d`. Verify with `sudo docker exec claude-code bash -c 'echo $VAR_NAME'`.
-- **Loop system in Docker**: Installed at `/opt/loop/` via `COPY src /opt/loop` + `npm install`. Symlinked as `/usr/bin/loop`. Telegram bot runs from `/opt/loop/telegram_bot/` with `PYTHONPATH="/opt"`. Shell scripts at `/opt/loop/scripts/loop.sh`.
-- **Loop script path resolution**: `loop.sh` resolves `LOOP_SCRIPTS_DIR` via `readlink -f "$0"` to find sibling scripts (cleanup.sh). Prompt files: uses project-local `loop/PROMPT_*.md` if present (symlinked by `loop init`), falls back to `$LOOP_ROOT/prompts/`. `tasks.py` resolves loop.sh: `/opt/loop/scripts/loop.sh` first, then project-local `./loop/loop.sh`.
-- **UTF-8 locale in Docker**: debian:bookworm-slim has no locales generated by default. Required: `apt install locales`, `sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen`, and `ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`. Without this, Polish characters in tmux display as `_`.
-- **Coolify MCP limitations**: `base_directory` and `docker_compose_location` are not available in the Coolify MCP tool. Use `curl -X PATCH` against the Coolify API directly to set these fields.
-- **Setup scripts must be non-fatal**: In Docker/Coolify containers, `~/.bashrc` may not be writable. All writes to user dotfiles in setup scripts should use `|| warn` / `|| true` instead of relying on `set -e`. Critical setup (plugins, MCP servers) must not be blocked by non-essential operations.
-- **Loop `init` for external projects**: `loop init` creates symlinks from `/opt/loop/scripts/` and `/opt/loop/prompts/` into project's `loop/` directory. Templates are copied (not symlinked) so they can be customized per project. Also adds `loop/logs/` and `.brainstorm/` to project `.gitignore`.
-- **Brainstorm session persistence**: `BrainstormManager` persists sessions to `PROJECTS_ROOT/.brainstorm_sessions.json` via atomic writes (`os.replace`). `_save_sessions()` is called via `_cleanup_session()` (covers `finish()`/`cancel()`) and after `start()`/`respond()`. Sessions are restored in `__init__()` via `_load_sessions()`, which validates tmux sessions exist and removes stale entries. Brainstorm output files (JSONL) are stored in `PROJECTS_ROOT/.brainstorm/` (not `/tmp`) — same filesystem avoids EXDEV errors, survives container restarts. Directory created in `__init__()` with OSError fallback for missing PROJECTS_ROOT.
-- **Loop run summary**: `src/lib/summary.js` parses JSONL log files for tool usage counts, files modified (Edit/Write), token usage, and test results. `loop summary` CLI command reads from `./loop/logs/` by default. `loop.sh` cleanup trap auto-generates `summary-latest.txt` in log dir on each run completion. Uses `$LOOP_ROOT/lib/summary` path (resolved via `readlink -f`) so it works in both Docker (`/opt/loop`) and local dev.
-- **Telegram bot handler architecture**: `bot.py` is a thin wiring layer (~190 lines) with `create_application()` and a `handle_action()` router. All handler logic lives in `handlers/` package: `common.py` (State, decorators, keyboard helpers), `projects.py`, `tasks.py`, `brainstorm.py`, `jobs.py`. Each domain module has a `_handle_*_action()` sub-dispatcher returning coroutines or None. `handlers/__init__.py` re-exports all handler functions for clean imports. `bot.py` re-exports handler names for backward compatibility with test imports.
-- **Telegram bot string localization**: All user-facing strings live in `src/telegram_bot/messages.py` as named constants (e.g. `MSG_NO_PROJECT_SELECTED`). Handler modules import from `messages.py` — no inline strings. Error codes (`ERR_SESSION_ACTIVE`, `ERR_START_FAILED`, etc.) decouple error detection from display language. `BrainstormManager.start()`/`respond()` yield `(error_code, status, is_final)` tuples; `_is_brainstorm_error()` checks `error_code in BRAINSTORM_ERROR_CODES`.
-- **Telegram bot project list pagination**: `show_projects()` in `handlers/projects.py` paginates with `PROJECTS_PER_PAGE` (5, hardcoded in `config.py`). Page state stored in `user_data["projects_page"]` (0-indexed), reset to 0 on `/start`. `handle_page_navigation()` handles `page:prev`/`page:next` callbacks, registered in `State.SELECT_PROJECT`. Prev button hidden on first page, Next hidden on last page. Page indicator ("Page 1/2") appended to message text for multi-page lists. Out-of-range pages clamped to valid range. Create/Clone footer appears on every page.
-- **Telegram bot inline buttons**: Text-input states use `_cancel_keyboard(callback_data)` helper to add inline cancel buttons. Navigation dead-ends use `_nav_keyboard(project_name=None)` helper — includes optional "View Project" (`project:{name}`) and always-present "Projects" (`action:back`) buttons. Cancel/end handlers return `State.SELECT_PROJECT` (not `ConversationHandler.END`) so follow-up button callbacks route correctly. `callback_data` uses colon-separated namespaces: `input:cancel` (text-input states), `iter:cancel` (iterations), `idea:skip`/`idea:cancel` (idea), `bs:done`/`bs:save`/`bs:cancel` (brainstorm). Button handlers use `@authorized_callback` decorator and must `query.answer()` + `query.edit_message_text()` (not `reply_text`, since callbacks don't have `update.message`). Slash commands (/cancel, /skip, /done, /save) remain as fallback `CommandHandler`s for backward compatibility.
-- **Telegram bot startup validation**: `config.validate()` returns `(errors, warnings)` tuple. Fatal checks: TELEGRAM_BOT_TOKEN non-empty, TELEGRAM_CHAT_ID non-zero integer, PROJECTS_ROOT exists/is-dir/writable. Warning checks: DEV_MODE active, Claude CLI in PATH or `~/.claude/bin/claude`, tmux in PATH, loop script at `/opt/loop/scripts/loop.sh` or `loop` in PATH. `run.py` calls `validate()` before `create_application()` — exits on errors, prints warnings. When `DEV_MODE` is truthy, `run.py` exits with code 0 after printing `MSG_DEV_MODE_SKIP`.
-- **DEV_MODE for dev containers**: `DEV_MODE` env var (true/1/yes, case-insensitive) disables Telegram bot. Checked in two layers: `entrypoint.sh` (prevents process spawn via `${DEV_MODE,,}` bash lowercase + regex) and `run.py` (graceful exit 0 after `validate()`). Uses `_is_truthy()` helper in `config.py` for boolean env var parsing. `validate()` adds a warning (not error) when active.
-- **Notification consolidation**: `notify-telegram.sh` is no longer called from `loop.sh` cleanup trap (file kept for standalone use). Task completion + queue start are consolidated into a single message via `_format_completion_summary(next_task=...)` in `handlers/jobs.py`. Orphaned queue starts (no completed task) still send standalone `MSG_STARTED_FROM_QUEUE`. Result: 2 messages between tasks (completion+queue summary, iteration progress) instead of 4.
-- **Log rotation**: `log_rotation.py` module manages JSONL log pruning (by age and size), orphaned brainstorm file cleanup, and disk space checks. Runs daily via `job_queue.run_repeating()` in `bot.py`. CLI: `loop cleanup --logs`. `TaskManager.start_task()` refuses tasks when disk is below `MIN_DISK_MB`.
-- **Queue TTL expiry**: Queued tasks older than `QUEUE_TTL` (default 3600s) are automatically removed during `process_completed_tasks()`. `check_task_completion()` sends `MSG_QUEUE_EXPIRED` notification for each expired task. `process_completed_tasks()` returns `(completions, expired)` tuple — callers must unpack both values.
-- **Clone retry logic**: `clone_repo()` retries up to 3 times with exponential backoff (2s, 4s) on `TimeoutExpired` and transient git errors (`network unreachable`, `connection reset`, `could not resolve host`). Non-retryable errors (e.g. `repo not found`) and `OSError` fail immediately. Partial clone directories are cleaned up between retries via `shutil.rmtree()`.
-- **Test infrastructure**: Python tests use pytest + pytest-asyncio at `src/telegram_bot/tests/` (424 tests across bot, config, git_utils, log_rotation, projects, tasks). JS tests use Jest at `src/lib/__tests__/` (20 tests for summary.js). Shared pytest fixtures in `src/telegram_bot/tests/conftest.py` (`tmp_projects_root`, `env_with_valid_config`). Python tests patch `PROJECTS_ROOT` in module namespace (`patch("src.telegram_bot.projects.PROJECTS_ROOT", ...)`), not via env vars. Async generator tests (BrainstormManager.start/respond) require `@pytest.mark.asyncio`. Fixtures that patch module-level constants must use `yield` (not `return`) to keep patches active during tests. Bot handler tests in `test_bot.py` use `make_callback_update(chat_id, data)` helper with `AsyncMock(spec=CallbackQuery)` and patch `TELEGRAM_CHAT_ID` in handler modules where decorated functions are defined (e.g. `handlers.common.TELEGRAM_CHAT_ID`, `handlers.jobs.TELEGRAM_CHAT_ID`). Patch targets must reference the module where the name is looked up at runtime, not where it's originally defined.
-- **Sync/Pull button**: Project menu includes a "Sync" button (`action:sync`) that runs `git pull` via `pull_project()`. Button label shows remote update count from `check_remote_updates()` (git fetch + rev-list HEAD..@{u} --count), called synchronously on menu open (10s timeout). Handler shows "Pulling..." status, then result (success/failure/up-to-date), refreshes project data and menu. Button appears for projects with loop init or active task; hidden for uninitialized projects.
-- **Brainstorm history**: `BrainstormManager._archive_session()` saves session metadata to `PROJECTS_ROOT/.brainstorm_history.json` (atomic write) before `_cleanup_session()` deletes JSONL files. Called from `finish()` (outcome "saved") and `cancel()` (outcome "cancelled"). `list_brainstorm_history(project=None)` returns entries sorted newest-first. `/history` Telegram command shows up to 10 entries, filters by selected project. History file is separate from `.brainstorm_sessions.json` (active sessions only).
-- **Subprocess timeout pattern**: All `subprocess.run()` calls in both `git_utils.py` and `projects.py` use `timeout` parameter + `try/except (subprocess.TimeoutExpired, OSError)`. Timeouts: `_get_branch()` 10s, `create_worktree()` 30s, `clone_repo()` 60s (network, with retry), `_run_loop_init()` 30s, `create_project()` git init/commit 10s each, `create_github_repo()` 60s, `check_remote_updates()` 10s (fetch + rev-list), `pull_project()` 30s. On failure: `_get_branch()` returns `"unknown"`, `_run_loop_init()` returns `False`, `check_remote_updates()` returns `0`, others return `(False, message)` tuple. `clone_repo()` retries transient errors (timeout, network unreachable, connection reset) up to 3 times with exponential backoff.
-- **Configurable thresholds**: 6 hardcoded values extracted to `config.py` as env-var-overridable constants: `STALE_THRESHOLD` (LOOP_STALE_THRESHOLD, default 1800), `BRAINSTORM_POLL_INTERVAL` (LOOP_BRAINSTORM_POLL_INTERVAL, default 0.5), `BRAINSTORM_TIMEOUT` (LOOP_BRAINSTORM_TIMEOUT, default 300), `MAX_QUEUE_SIZE` (LOOP_MAX_QUEUE_SIZE, default 10), `QUEUE_TTL` (LOOP_QUEUE_TTL, default 3600), `GIT_DIFF_RANGE` (LOOP_GIT_DIFF_RANGE, default HEAD~5..HEAD). Uses `_safe_int()` and `_safe_float()` helpers for graceful fallback on invalid values. `handlers/jobs.py` imports `STALE_THRESHOLD`, `GIT_DIFF_RANGE`, and `QUEUE_TTL`; `tasks.py` imports `BRAINSTORM_POLL_INTERVAL`, `BRAINSTORM_TIMEOUT`, `MAX_QUEUE_SIZE`, and `QUEUE_TTL`.
-- **Task state persistence**: `TaskManager` persists active tasks and queues to `PROJECTS_ROOT/.tasks.json` via atomic writes (`os.replace`), same pattern as `BrainstormManager`. `_save_tasks()` is called after `_start_task_now()`, queue additions, `process_completed_tasks()`, and `cancel_queued_task()`. `_load_tasks()` runs in `__init__()`, validates tmux sessions exist via `_is_session_running()`, removes stale active tasks, and always restores queues. Deadlock prevention: `_save_tasks()` acquires `_queue_lock` internally, so callers must NOT hold the lock when calling it.
-- **Docker Compose volume parameterization**: Docker Compose does NOT interpolate env vars in YAML keys — only in values. Volume definition keys in `docker-compose.yml` stay static (`claude-config`, `agents-skills`, etc.), while the `name:` field (a value) uses `${APP_NAME:-claude-code}-<volume>` for parameterized Docker volume names. This enables volume isolation between prod (`APP_NAME=claude-code`) and dev (`APP_NAME=dev-claude-code`) instances on the same host. Note: Coolify adds its own UUID prefix on top of this.
-- **Python dependencies via requirements.txt**: Telegram bot Python dependencies are declared in `src/telegram_bot/requirements.txt` (`python-telegram-bot[job-queue]>=21.0,<22.0`). Dockerfile runtime stage COPYs this file and runs `pip3 install --break-system-packages -r`. Builder stage only installs `uv` (no Python app packages). To add new Python dependencies, update `requirements.txt` — no need to edit Dockerfile.
-- **Dual deployment (dev/prod)**: Two Coolify apps in `mirek-rpi/production` on the same RPi. Prod app (`mcggwo0co804sccscwkggswc`) uses `docker-compose.yml` on `main` branch; dev app (`fg0ksg8wsgw0gs4wk0wkws08`) uses `docker-compose.dev.yml` on `develop` branch. The dev compose has `dev-claude-code` as service key (Coolify names containers from the service key). Dev app env vars: `DEV_MODE=true`, `APP_NAME=dev-claude-code`. Coolify overrides `docker_compose_raw` with repo content at deploy — separate compose files are the only way to get different service names.
-- **Coolify docker_compose_raw override**: Coolify re-parses compose from the repo at every deploy, overriding any `docker_compose_raw` passed at creation. The `docker_compose_raw` field is also not PATCHable via API. To get different service names for dev/prod, use separate compose files via `docker_compose_location`.
-- **SSH aliases for RPi host**: `docker/rpi-aliases.sh` provides `cc` (prod) and `dev-cc` (dev) shell functions. Install: `scp docker/rpi-aliases.sh mirek@raspberrypi.local:~/.bash_aliases`. Uses `sudo docker ps --format '{{.Names}}' | grep "^claude-code-"` (not `docker ps --filter` which has `^` anchor bug).
+- **EXDEV gotcha**: `~/.claude` is ext4 volume, `/tmp` is tmpfs — `rename()` fails cross-device. Scripts export `TMPDIR="$CLAUDE_DIR/tmp"`.
+- **Claude binary in Docker**: Scripts use `CLAUDE_CMD="${CLAUDE_DIR}/bin/claude"; claude() { "$CLAUDE_CMD" "$@"; }` to ensure correct binary.
+- **Claude config persistence**: `CLAUDE_CONFIG_DIR=~/.claude` keeps `.claude.json` inside the volume. Set in `devcontainer.json` and `Dockerfile`.
+- **Setup scripts must be non-fatal**: Writes to dotfiles use `|| warn` / `|| true`. Don't block plugin/MCP setup on non-essential ops.
+- **UTF-8 locale**: Dockerfile must generate `en_US.UTF-8` locale. Without it, Polish chars in tmux show as `_`.
+- **Shell helpers**: `ok()`, `warn()`, `fail()` for colored status output in setup scripts.
+- **skills-plugins.txt formats**: `- https://github.com/owner/repo --skill name` (new), `name@skills=owner/repo` (legacy), `name@github=owner/repo/path`, `name@type=owner/repo` (external). Gotcha: `setup-local.sh` requires type to match `*-marketplace` glob.
+- **Skills install**: `npx -y skills add "$url" --skill "$name" --agent claude-code gemini-cli -g -y`
+- **Python deps**: Add to `src/telegram_bot/requirements.txt` — Dockerfile auto-installs.
+- **Test patterns**: pytest + pytest-asyncio. Patch `PROJECTS_ROOT` in module namespace, not via env vars. Fixtures with `with patch(...)` must `yield` not `return`. Bot tests patch `TELEGRAM_CHAT_ID` in the module where the decorated function is defined.
+- **Deadlock prevention**: `_save_tasks()` acquires `_queue_lock` internally — never call while holding the lock.
+- **State persistence**: `TaskManager` and `BrainstormManager` use atomic `os.replace()` to JSON files in `PROJECTS_ROOT`. Validate tmux sessions on load, remove stale entries.
+- **Coolify MCP limitations**: `base_directory` and `docker_compose_location` not in MCP tool — use `curl -X PATCH` directly.
+- **Docker Compose volumes**: Env var interpolation works only in YAML values (not keys). Volume `name:` uses `${APP_NAME:-claude-code}-<vol>` for dev/prod isolation.
+- **Dual deployment**: Prod uses `docker-compose.yml` (main branch), dev uses `docker-compose.dev.yml` (develop branch). Separate compose files = separate Coolify container names.
