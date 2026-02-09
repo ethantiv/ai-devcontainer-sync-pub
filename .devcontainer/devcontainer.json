@@ -15,10 +15,7 @@
     "setup-gemini-dir": "sudo mkdir -p /home/vscode/.gemini && sudo chown -R vscode:vscode /home/vscode/.gemini",
     "setup-google-auth-dir": "sudo mkdir -p /home/vscode/.cache/google-vscode-extension/auth && sudo chown -R vscode:vscode /home/vscode/.cache/google-vscode-extension"
   },
-  "postCreateCommand": {
-    "install-claude": "curl -fsSL https://claude.ai/install.sh | bash && if [ -f .devcontainer/setup-env.sh ]; then chmod +x .devcontainer/setup-env.sh && ./.devcontainer/setup-env.sh; fi",
-    "install-gemini": "sudo npm install -g @google/gemini-cli"
-  },
+  "postCreateCommand": "sudo npm install -g @google/gemini-cli && curl -fsSL https://claude.ai/install.sh | bash && chmod +x .devcontainer/setup-env.sh && ./.devcontainer/setup-env.sh",
   "mounts": [
     {
       "source": "claude-config-${devcontainerId}",

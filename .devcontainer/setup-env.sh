@@ -444,7 +444,7 @@ setup_mcp_servers() {
     # Stitch: remote HTTP MCP — only add when API key is available
     if [[ -n "${STITCH_API_KEY:-}" ]]; then
         add_mcp_server "stitch" '{
-            "type": "url",
+            "type": "http",
             "url": "https://stitch.googleapis.com/mcp",
             "headers": {
                 "X-Goog-Api-Key": "'"${STITCH_API_KEY}"'"

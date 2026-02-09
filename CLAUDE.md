@@ -122,5 +122,6 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 - **Deadlock prevention**: `_save_tasks()` acquires `_queue_lock` internally — never call while holding the lock.
 - **State persistence**: `TaskManager` and `BrainstormManager` use atomic `os.replace()` to JSON files in `PROJECTS_ROOT`. Validate tmux sessions on load, remove stale entries.
 - **Coolify MCP limitations**: `base_directory` and `docker_compose_location` not in MCP tool — use `curl -X PATCH` directly.
+- **MCP server JSON type**: Remote HTTP MCP servers require `"type": "http"` in `add-json` config, not `"type": "url"` (which silently fails).
 - **Docker Compose volumes**: Env var interpolation works only in YAML values (not keys). Volume `name:` uses `${APP_NAME:-claude-code}-<vol>` for dev/prod isolation.
 - **Dual deployment**: Prod uses `docker-compose.yml` (main branch), dev uses `docker-compose.dev.yml` (develop branch). Separate compose files = separate Coolify container names.
