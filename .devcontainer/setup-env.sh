@@ -63,7 +63,14 @@ detect_workspace_folder() {
 load_env_file() {
     local env_file="$WORKSPACE_FOLDER/.env"
     if [[ -f "$env_file" ]]; then
-        set -a && source "$env_file" && set +a
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            # Skip empty lines and comments
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+            # Export KEY=VALUE (split on first =)
+            local key="${line%%=*}"
+            local value="${line#*=}"
+            export "$key=$value"
+        done < "$env_file"
         ok "Loaded .env"
     fi
 }
