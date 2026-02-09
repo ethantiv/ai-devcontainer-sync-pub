@@ -6,7 +6,6 @@ set -e
 export TERM=dumb  # Suppress ANSI escape sequences during startup
 
 readonly CLAUDE_DIR="$HOME/.claude"
-readonly CONFIGURED_MARKER="$CLAUDE_DIR/.configured"
 readonly CONFIG_SOURCE="/opt/claude-config"
 readonly CLAUDE_BIN="$CLAUDE_DIR/bin/claude"
 
@@ -109,18 +108,14 @@ setup_gh_auth() {
 setup_gh_auth
 
 # =============================================================================
-# FIRST-RUN SETUP (MCP servers, settings, plugins)
+# SETUP (MCP servers, settings, plugins — runs every startup, idempotent)
 # =============================================================================
 
-# Run full setup on first start (no token required)
-if [[ ! -f "$CONFIGURED_MARKER" ]]; then
-    echo "🚀 First run detected - configuring Claude Code..."
-    if /usr/local/bin/setup-claude.sh; then
-        touch "$CONFIGURED_MARKER"
-        echo "✅ Configuration complete!"
-    else
-        echo "⚠️  Setup encountered errors (will retry on next start)"
-    fi
+echo "🚀 Configuring Claude Code..."
+if /usr/local/bin/setup-claude.sh; then
+    echo "✅ Configuration complete!"
+else
+    echo "⚠️  Setup encountered errors (will retry on next start)"
 fi
 
 # =============================================================================
