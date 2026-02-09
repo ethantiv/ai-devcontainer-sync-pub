@@ -26,8 +26,7 @@ program
 program
   .command('init')
   .description('Symlink scripts/prompts and copy templates into current project')
-  .option('--force', 'Overwrite existing symlinks')
-  .action((opts) => init({ force: opts.force }));
+  .action(() => init());
 
 addLoopOptions(
   program
@@ -72,8 +71,8 @@ program
 
 program
   .command('update')
-  .description('Re-create symlinks from package to project (after npm update)')
-  .action(() => init({ force: true, symlinkOnly: true }));
+  .description('Force-refresh all symlinks and templates from package')
+  .action(() => init({ force: true }));
 
 program.addHelpText('after', `
 Examples:
@@ -86,6 +85,6 @@ Examples:
   $ loop summary            Show summary of last loop run
   $ loop cleanup            Kill dev server processes
   $ loop cleanup --logs     Rotate and prune log files
-  $ loop update             Refresh symlinks after package update`);
+  $ loop update             Force-refresh symlinks and templates`);
 
 program.parse();

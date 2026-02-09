@@ -29,7 +29,7 @@ function fileExists(p) {
   try { return fs.statSync(p).nlink > 0; } catch { return false; }
 }
 
-function init({ force = false, symlinkOnly = false } = {}) {
+function init({ force = false } = {}) {
   const projectRoot = process.cwd();
 
   // Don't create symlinks if running from the source repo itself
@@ -47,20 +47,18 @@ function init({ force = false, symlinkOnly = false } = {}) {
     }
   }
 
-  // Copy templates (skip existing)
-  if (!symlinkOnly) {
-    for (const { src, dest } of TEMPLATES) {
-      const srcPath = path.join(PACKAGE_ROOT, src);
-      const destPath = path.join(projectRoot, dest);
+  // Copy templates (skip existing unless force)
+  for (const { src, dest } of TEMPLATES) {
+    const srcPath = path.join(PACKAGE_ROOT, src);
+    const destPath = path.join(projectRoot, dest);
 
-      if (!fs.existsSync(srcPath)) continue;
+    if (!fs.existsSync(srcPath)) continue;
 
-      if (!force && fileExists(destPath)) {
-        console.log(`  skip ${dest} (exists)`);
-      } else {
-        fs.copyFileSync(srcPath, destPath);
-        console.log(`  copied ${dest}`);
-      }
+    if (!force && fileExists(destPath)) {
+      console.log(`  skip ${dest} (exists)`);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+      console.log(`  copied ${dest}`);
     }
   }
 

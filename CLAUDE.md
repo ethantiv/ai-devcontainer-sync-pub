@@ -91,7 +91,7 @@ loop build              # Run build phase (default: 5 iterations)
 loop run                # Plan then build (3+5 iterations)
 loop summary            # Show summary of last loop run (tool usage, files, tokens)
 loop cleanup            # Clean up loop artifacts
-loop update             # Refresh symlinks after update
+loop update             # Force-refresh symlinks and templates
 ```
 
 **Structure**: `src/scripts/` (shell), `src/prompts/` (Claude prompts), `src/templates/` (project templates), `src/telegram_bot/` (Python bot with `handlers/` package), `src/bin/` + `src/lib/` (Node.js CLI).
@@ -149,7 +149,7 @@ Loop system changes require parallel updates across:
 - `docker/Dockerfile` — `COPY src /opt/loop` and `npm install`
 - `docker/entrypoint.sh` — Telegram bot startup path
 
-Loop CLI changes (flags, defaults) require edits across 4 files: `src/bin/cli.js` (Commander option), `src/lib/run.js` (JS→shell bridge), `src/scripts/loop.sh` (bash implementation), and optionally `src/lib/init.js` (suggested commands).
+Loop CLI changes (flags, defaults) require edits across 4 files: `src/bin/cli.js` (Commander option), `src/lib/run.js` (JS→shell bridge), `src/scripts/loop.sh` (bash implementation), and optionally `src/lib/init.js` (suggested commands). `init()` accepts `{ force }` only — `loop init` skips existing files, `loop update` calls `init({ force: true })` to overwrite everything.
 
 ### Planning Workflow
 
