@@ -2,7 +2,7 @@
 
 **Status:** IN_PROGRESS
 **Progress:** 0/17 (0%)
-**Last Verified:** 2026-02-09
+**Last Verified:** 2026-02-09 (line numbers re-verified via parallel subagent scan)
 
 ## Goal
 
@@ -28,8 +28,8 @@ Phase 1: Consolidate .env Files
 
 ### Phase 2: Google Stitch Integration (Feature 2 - Medium Priority)
 - [ ] Add 6 Stitch skill lines to `.devcontainer/configuration/skills-plugins.txt` in a new `# Google Stitch` section (after existing skills): `design-md`, `react:components`, `stitch-loop`, `enhance-prompt`, `remotion`, `shadcn-ui` — format: `- https://github.com/google-labs-code/stitch-skills --skill <name>`
-- [ ] Add conditional Stitch MCP server block to `.devcontainer/setup-env.sh` after coolify block (line ~432): wrap in `if [[ -n "${STITCH_API_KEY:-}" ]]; then ... fi` guard, use `url` type with `headers` field (`X-Goog-Api-Key`), endpoint `https://stitch.googleapis.com/mcp`. Note: existing servers (context7, coolify) use unconditional interpolation, but Stitch needs explicit guard because `url` type with empty header would fail
-- [ ] Add same conditional Stitch MCP server block to `docker/setup-claude.sh` after coolify block (line ~381)
+- [ ] Add conditional Stitch MCP server block to `.devcontainer/setup-env.sh` after coolify block (after line 432): wrap in `if [[ -n "${STITCH_API_KEY:-}" ]]; then ... fi` guard, use `url` type with `headers` field (`X-Goog-Api-Key`), endpoint `https://stitch.googleapis.com/mcp`. Note: existing servers (context7 lines 415-422, coolify lines 424-432) use unconditional interpolation, but Stitch needs explicit guard because `url` type with empty header would fail
+- [ ] Add same conditional Stitch MCP server block to `docker/setup-claude.sh` after coolify block (between lines 381-382, before closing `}` of `setup_mcp_servers()`). Docker script has only 2 MCP servers (context7 lines 364-371, coolify lines 373-381) vs DevContainer's 4
 - [ ] Add `STITCH_API_KEY` to root `.env.example` (created in Phase 1) in MCP servers section
 - [ ] Update `CLAUDE.md`: add `, stitch (needs STITCH_API_KEY, remote HTTP)` to MCP servers list (line 55); add `STITCH_API_KEY` row to env vars table (after `COOLIFY_ACCESS_TOKEN`)
 - [ ] Update `README.md`: add `, Stitch` to MCP servers mention (line 10); add `STITCH_API_KEY` row to env vars table (lines 170-188)
@@ -48,7 +48,7 @@ Phase 1: Consolidate .env Files
 | Is `STITCH_API_KEY` already in .env files? | Yes — already present in both `.devcontainer/.env` and `docker/.env` with actual values. Missing only from `.env.example` templates and documentation |
 | What's the Docker Compose variable substitution concern? | `docker-compose.yml` uses `${APP_NAME:-claude-code}` for volume names. Docker Compose reads `.env` from CWD for substitution. After consolidation, running from repo root with `-f docker/docker-compose.yml` will auto-read root `.env` |
 | Does Coolify deployment need changes? | Coolify ignores `env_file` in compose (injects its own env vars). Only action: add `STITCH_API_KEY` env var to both Coolify apps if not already present |
-| Are there any existing Stitch skills installed? | No — `skills-plugins.txt` has 21 items (10 official plugins + 11 external skills), none from Stitch. Note: `remotion-best-practices` skill exists from `remotion-dev/skills` — different from Stitch's `remotion` skill (from `google-labs-code/stitch-skills`) |
+| Are there any existing Stitch skills installed? | No — `skills-plugins.txt` has 20 items (10 official plugins + 10 external skills), none from Stitch. Note: `remotion-best-practices` skill exists from `remotion-dev/skills` — different from Stitch's `remotion` skill (from `google-labs-code/stitch-skills`) |
 | Does `setup-local.sh` need Stitch MCP? | No — `setup-local.sh` handles only plugins and skills, no MCP servers. The `- <url> --skill <name>` format in `skills-plugins.txt` is auto-parsed by `setup-local.sh` (line 361-366). No script changes needed — adding skills to `skills-plugins.txt` is sufficient |
 | How many total tests exist currently? | 438 Python + 20 JS = 458 total. All passing, no skips/xfails |
 | Do existing MCP servers use conditional guards? | No — context7 and coolify use unconditional `add_mcp_server` calls with `${VAR:-}` interpolation (empty string if unset). Stitch needs explicit `if [[ -n ... ]]` guard because `url` type with empty `X-Goog-Api-Key` header would create a non-functional server |
@@ -85,6 +85,9 @@ Phase 1: Consolidate .env Files
 - **Codebase clean**: Zero TODO/FIXME/HACK comments, zero skipped tests, zero NotImplementedError. 458 tests all passing
 - **No functional code changes needed**: Both features are configuration-only (setup scripts, env files, documentation). No Python/JS source code changes required
 - **Coolify apps already have STITCH_API_KEY**: Present in both .env files but not confirmed in Coolify MCP env vars
+- **Verified line numbers (2026-02-09 scan)**: devcontainer.json:54, setup-env.sh load_env_file:63-69, setup-env.sh MCP servers:396-432, setup-claude.sh add_mcp_server:345-359 MCP servers:364-381, docker-compose.yml env_file:9-10, docker-compose.dev.yml env_file:9-10, CLAUDE.md .env ref:51 MCP list:55, README.md .env refs:20,24,34-35,168 MCP list:10
+- **Test suite verified**: 458 tests (438 Python in 6 files + 20 JS in 1 file), zero skips, zero xfails, zero flaky markers. No test changes needed for config-only features
+- **No TODO/FIXME/HACK/NotImplementedError/placeholder/stub** found anywhere in codebase. All STITCH references are in docs/plans only (not in config files yet)
 
 ### Technical Decisions
 | Decision | Rationale |
