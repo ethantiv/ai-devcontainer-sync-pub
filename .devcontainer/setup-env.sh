@@ -430,6 +430,17 @@ setup_mcp_servers() {
             "COOLIFY_ACCESS_TOKEN": "'"${COOLIFY_ACCESS_TOKEN:-}"'"
         }
     }'
+
+    # Stitch: remote HTTP MCP — only add when API key is available
+    if [[ -n "${STITCH_API_KEY:-}" ]]; then
+        add_mcp_server "stitch" '{
+            "type": "url",
+            "url": "https://stitch.googleapis.com/mcp",
+            "headers": {
+                "X-Goog-Api-Key": "'"${STITCH_API_KEY}"'"
+            }
+        }'
+    fi
 }
 
 # =============================================================================

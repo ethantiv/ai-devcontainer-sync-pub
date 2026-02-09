@@ -41,6 +41,7 @@ Available as local marketplace plugins (`dev-marketplace`):
 | `CONTEXT7_API_KEY` | No | API key for Context7 MCP server |
 | `COOLIFY_BASE_URL` | No | URL of Coolify instance |
 | `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |
+| `STITCH_API_KEY` | No | Google Stitch API key for Stitch MCP server |
 | `GIT_USER_NAME` / `GIT_USER_EMAIL` | No | Git global identity |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | No | Telegram bot auth |
 | `APP_NAME` | No | Volume name prefix (default: `claude-code`, `dev-claude-code` for dev) |
@@ -52,7 +53,7 @@ Codespaces: add as repository secrets. Local: create `.env` (copy from `.env.exa
 
 ### MCP Servers
 
-`aws-documentation`, `terraform`, `context7` (needs `CONTEXT7_API_KEY`), `coolify` (needs `COOLIFY_BASE_URL` + `COOLIFY_ACCESS_TOKEN`). All require `uvx` (from `uv`).
+`aws-documentation`, `terraform`, `context7` (needs `CONTEXT7_API_KEY`), `coolify` (needs `COOLIFY_BASE_URL` + `COOLIFY_ACCESS_TOKEN`), `stitch` (needs `STITCH_API_KEY`, remote HTTP). First four require `uvx` (from `uv`).
 
 ### Loop System
 

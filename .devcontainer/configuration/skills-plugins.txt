@@ -41,3 +41,11 @@ typescript-lsp
 - https://github.com/nextlevelbuilder/ui-ux-pro-max-skill --skill ui-ux-pro-max
 - https://github.com/vercel-labs/agent-skills --skill vercel-react-best-practices
 - https://github.com/vercel-labs/agent-skills --skill web-design-guidelines
+
+# Google Stitch (https://github.com/google-labs-code/stitch-skills)
+- https://github.com/google-labs-code/stitch-skills --skill design-md
+- https://github.com/google-labs-code/stitch-skills --skill react:components
+- https://github.com/google-labs-code/stitch-skills --skill stitch-loop
+- https://github.com/google-labs-code/stitch-skills --skill enhance-prompt
+- https://github.com/google-labs-code/stitch-skills --skill remotion
+- https://github.com/google-labs-code/stitch-skills --skill shadcn-ui

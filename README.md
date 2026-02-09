@@ -7,7 +7,7 @@ Ready-to-use development environment with Claude Code, Gemini CLI, autonomous de
 - **Claude Code** and **Gemini CLI** — pre-installed and configured
 - **dev-loop** — autonomous plan/build cycles powered by Claude CLI (`loop` command)
 - **Telegram Bot** — remote control for loop tasks and brainstorming sessions
-- **MCP Servers** — AWS docs, Terraform, Context7, Coolify
+- **MCP Servers** — AWS docs, Terraform, Context7, Coolify, Stitch
 - **Custom Slash Commands** — code review, design system, roadmap, git worktrees
 - **Skills & Plugins** — auto-installed from `skills-plugins.txt`
 
@@ -174,6 +174,7 @@ Set these in `.env` at the repo root. See `.env.example` for a template.
 | `CONTEXT7_API_KEY` | No | API key for Context7 MCP server |
 | `COOLIFY_BASE_URL` | No | URL of Coolify instance for deployment management |
 | `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |
+| `STITCH_API_KEY` | No | Google Stitch API key for Stitch MCP server |
 | `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for remote loop control |
 | `TELEGRAM_CHAT_ID` | No | Authorized Telegram chat ID |
 | `DEV_MODE` | No | Disable Telegram bot in dev containers (true/1/yes) |
