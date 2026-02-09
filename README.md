@@ -17,10 +17,11 @@ Ready-to-use development environment with Claude Code, Gemini CLI, autonomous de
 
 1. Install [Docker](https://www.docker.com/) and [VS Code](https://code.visualstudio.com/) with [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 2. Clone this repository
-3. Create `.devcontainer/.env`:
+3. Create `.env` at the repo root:
 
    ```bash
-   GH_TOKEN=ghp_your_token_here
+   cp .env.example .env
+   # Edit .env — at minimum set GH_TOKEN
    ```
 
 4. Open in VS Code and click **Reopen in Container**
@@ -30,11 +31,10 @@ Ready-to-use development environment with Claude Code, Gemini CLI, autonomous de
 Works on ARM64 (Raspberry Pi 5, Apple Silicon) and x86_64.
 
 ```bash
-cd docker
 cp .env.example .env
 # Edit .env — at minimum set GH_TOKEN
 
-docker compose up -d
+docker compose -f docker/docker-compose.yml up -d
 docker exec -it claude-code bash
 ```
 
@@ -46,7 +46,7 @@ Deploy as a Docker Compose application on a server managed by [Coolify](https://
 
 1. In Coolify, create a new **Docker Compose** resource pointing to this repository
 2. Set **Base Directory** to `/docker` and **Docker Compose Location** to `/docker-compose.yml`
-3. Add environment variables (same as `docker/.env`) in the Coolify app settings
+3. Add environment variables (same as `.env`) in the Coolify app settings
 4. Deploy — Coolify builds the image from `docker/Dockerfile` with `context: ..` resolving to the repo root
 
 The container runs headless with auto-restart. Manage it through Coolify UI or API.
@@ -165,7 +165,7 @@ Commands: `/projects`, `/status`, `/brainstorming <prompt>`, `/help`
 
 ## Environment Variables
 
-Set these in `.devcontainer/.env` (DevContainer) or `docker/.env` (Docker).
+Set these in `.env` at the repo root. See `.env.example` for a template.
 
 | Variable | Required | Description |
 |----------|----------|-------------|

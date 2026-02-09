@@ -61,10 +61,10 @@ detect_workspace_folder() {
 }
 
 load_env_file() {
-    local env_file="$WORKSPACE_FOLDER/.devcontainer/.env"
+    local env_file="$WORKSPACE_FOLDER/.env"
     if [[ -f "$env_file" ]]; then
         set -a && source "$env_file" && set +a
-        ok "Loaded .devcontainer/.env"
+        ok "Loaded .env"
     fi
 }
 

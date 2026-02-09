@@ -1,8 +1,8 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 0/17 (0%)
-**Last Verified:** 2026-02-09 (line numbers re-verified via parallel subagent scan)
+**Progress:** 9/17 (53%)
+**Last Verified:** 2026-02-09
 
 ## Goal
 
@@ -10,27 +10,27 @@ Implement current proposals from docs/ROADMAP.md: Feature 1 (High priority) cons
 
 ## Current Phase
 
-Phase 1: Consolidate .env Files
+Phase 2: Google Stitch Integration
 
 ## Phases
 
 ### Phase 1: Consolidate .env Files (Feature 1 - High Priority)
-- [ ] Create `.env.example` at repo root merging all variables from `.devcontainer/.env.example` (5 vars: `GH_TOKEN`, `SSH_PRIVATE_KEY`, `CONTEXT7_API_KEY`, `RESET_CLAUDE_CONFIG`, `RESET_GEMINI_CONFIG`) and `docker/.env.example` (2 vars: `GH_TOKEN`, `APP_NAME`) plus undocumented vars from both `.env` files (`COOLIFY_BASE_URL`, `COOLIFY_ACCESS_TOKEN`, `GIT_USER_NAME`, `GIT_USER_EMAIL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `STITCH_API_KEY`, `DEV_MODE`). Group by category with comments: GitHub (required), SSH (optional), MCP servers (optional), Docker deployment (optional), DevContainer config (optional)
-- [ ] Update `.devcontainer/devcontainer.json` line 54: change `runArgs` from `"--env-file", ".devcontainer/.env"` to `"--env-file", ".env"`
-- [ ] Update `docker/docker-compose.yml` line 10: change `env_file: - .env` to `env_file: - ../.env`
-- [ ] Update `docker/docker-compose.dev.yml` line 10: change `env_file: - .env` to `env_file: - ../.env`
-- [ ] Update `.devcontainer/setup-env.sh` lines 64-68: change `load_env_file()` path from `$WORKSPACE_FOLDER/.devcontainer/.env` to `$WORKSPACE_FOLDER/.env` and update ok message
-- [ ] Delete `.devcontainer/.env.example` and `docker/.env.example` (replaced by root `.env.example`)
-- [ ] Update `README.md`: change DevContainer setup (line 20,24: `.devcontainer/.env` → `.env`), Docker quickstart (lines 34-39: `cd docker && cp .env.example .env` → `cp .env.example .env && docker compose -f docker/docker-compose.yml up -d`), env vars intro (line 168: remove dual-path reference)
-- [ ] Update `CLAUDE.md` line 51: change `Local: create .devcontainer/.env` to `Local: create .env`
-- [ ] Run full test suite (438 Python + 20 JS) to verify no regressions
-- **Status:** pending
+- [x] Create `.env.example` at repo root merging all variables
+- [x] Update `.devcontainer/devcontainer.json`: `--env-file .env`
+- [x] Update `docker/docker-compose.yml`: `env_file: - ../.env`
+- [x] Update `docker/docker-compose.dev.yml`: `env_file: - ../.env`
+- [x] Update `.devcontainer/setup-env.sh` `load_env_file()` path
+- [x] Delete `.devcontainer/.env.example` and `docker/.env.example`
+- [x] Update `README.md` .env references
+- [x] Update `CLAUDE.md` .env reference
+- [x] Run full test suite (458 tests) — all passing
+- **Status:** complete
 
 ### Phase 2: Google Stitch Integration (Feature 2 - Medium Priority)
 - [ ] Add 6 Stitch skill lines to `.devcontainer/configuration/skills-plugins.txt` in a new `# Google Stitch` section (after existing skills): `design-md`, `react:components`, `stitch-loop`, `enhance-prompt`, `remotion`, `shadcn-ui` — format: `- https://github.com/google-labs-code/stitch-skills --skill <name>`
 - [ ] Add conditional Stitch MCP server block to `.devcontainer/setup-env.sh` after coolify block (after line 432): wrap in `if [[ -n "${STITCH_API_KEY:-}" ]]; then ... fi` guard, use `url` type with `headers` field (`X-Goog-Api-Key`), endpoint `https://stitch.googleapis.com/mcp`. Note: existing servers (context7 lines 415-422, coolify lines 424-432) use unconditional interpolation, but Stitch needs explicit guard because `url` type with empty header would fail
 - [ ] Add same conditional Stitch MCP server block to `docker/setup-claude.sh` after coolify block (between lines 381-382, before closing `}` of `setup_mcp_servers()`). Docker script has only 2 MCP servers (context7 lines 364-371, coolify lines 373-381) vs DevContainer's 4
-- [ ] Add `STITCH_API_KEY` to root `.env.example` (created in Phase 1) in MCP servers section
+- [x] Add `STITCH_API_KEY` to root `.env.example` (done in Phase 1)
 - [ ] Update `CLAUDE.md`: add `, stitch (needs STITCH_API_KEY, remote HTTP)` to MCP servers list (line 55); add `STITCH_API_KEY` row to env vars table (after `COOLIFY_ACCESS_TOKEN`)
 - [ ] Update `README.md`: add `, Stitch` to MCP servers mention (line 10); add `STITCH_API_KEY` row to env vars table (lines 170-188)
 - [ ] Add `STITCH_API_KEY` env var to Coolify apps via MCP tool: prod (`mcggwo0co804sccscwkggswc`) and dev (`fg0ksg8wsgw0gs4wk0wkws08`)

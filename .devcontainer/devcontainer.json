@@ -51,7 +51,7 @@
   },
   "runArgs": [
     "--env-file",
-    ".devcontainer/.env",
+    ".env",
     "--shm-size=256m"
   ],
   "customizations": {
