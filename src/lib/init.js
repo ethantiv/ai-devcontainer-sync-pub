@@ -101,6 +101,12 @@ function init({ force = false } = {}) {
     console.log(`  linked ${dest}`);
   }
 
+  // Write version file for run-time checks
+  const versionPath = path.join(projectRoot, 'loop/.version');
+  const version = require('../package.json').version;
+  fs.writeFileSync(versionPath, version + '\n');
+  console.log(`  wrote loop/.version (${version})`);
+
   // Add loop artifacts to .gitignore
   const gitignorePath = path.join(projectRoot, '.gitignore');
   const entries = ['loop/logs/'];

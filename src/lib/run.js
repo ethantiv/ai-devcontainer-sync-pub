@@ -7,6 +7,17 @@ function checkLoopScript() {
     console.error('Error: loop/loop.sh not found. Run "loop init" first.');
     process.exit(1);
   }
+
+  // Check version mismatch (warning only)
+  const versionPath = './loop/.version';
+  if (fs.existsSync(versionPath)) {
+    const fileVersion = fs.readFileSync(versionPath, 'utf-8').trim();
+    const pkgVersion = require('../package.json').version;
+    if (fileVersion !== pkgVersion) {
+      console.warn(`Warning: loop version mismatch — project: ${fileVersion}, installed: ${pkgVersion}. Run "loop update" to refresh.`);
+    }
+  }
+
   return loopScript;
 }
 
