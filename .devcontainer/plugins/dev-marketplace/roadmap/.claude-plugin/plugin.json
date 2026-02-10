@@ -1,6 +1,6 @@
 {
   "name": "roadmap",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Generate or update ROADMAP.md with completed features and future proposals",
   "author": {
     "name": "Mirek Zaniewicz"

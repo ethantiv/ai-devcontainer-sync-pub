@@ -102,12 +102,19 @@ Generate 3-5 proposals distributed across priorities:
 | `P2` | Important | Significant improvements, new features, performance gains |
 | `P3` | Nice to Have | Polish, minor improvements, ideas for future consideration |
 
+**Proposal ordering — user value first:**
+- Prioritize proposals that directly improve the **user experience**: quality of life improvements, workflow enhancements, new useful features, better defaults, reduced friction
+- Then propose **new capabilities** that extend what the project can do
+- Place **purely technical changes** (refactoring, tech debt, dependency upgrades, internal restructuring) last within each priority level
+- A user-facing bug fix or UX improvement at P2 should appear before a refactoring item at P2
+
 **Guidelines:**
 - Each proposal should be specific and actionable
 - Align with project's existing direction and technology stack
 - Consider dependencies and prerequisites
 - Avoid vague or overly broad suggestions
 - Base proposals on actual project analysis, not generic ideas
+- When in doubt whether something is user-facing or technical, ask: "Would a user notice this change?" If yes, rank it higher
 </proposal_generation>
 
 <output_format>
