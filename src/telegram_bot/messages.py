@@ -229,6 +229,18 @@ MSG_BRAINSTORM_SESSION_ENTRY = (
     "   {date} \u2022 {turns} turn(s)\n"
 )
 
+# Task history
+MSG_TASK_HISTORY_TITLE = "\u25ce *Task history: {project}*\n\n"
+MSG_TASK_HISTORY_EMPTY = "No completed tasks yet."
+MSG_TASK_HISTORY_ENTRY = (
+    "{num}. {icon} {mode} \u2022 {status_icon} {iters_done}/{iters_total} iter \u2022 {duration}\n"
+    "   {date}\n"
+)
+MSG_TASK_HISTORY_BTN = "\u25ce History"
+MSG_TASK_HISTORY_LOG_TITLE = "\u25ce *Log summary:*\n\n```\n{summary}\n```"
+MSG_TASK_HISTORY_NO_LOG = "No log available for this task."
+MSG_TASK_HISTORY_VIEW_LOG_BTN = "\u25b8 View log #{num}"
+
 # --- tasks.py strings ---
 
 MSG_QUEUE_FULL = "Queue full ({max_size} tasks)"

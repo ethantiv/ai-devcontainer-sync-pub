@@ -50,9 +50,11 @@ from .tasks import (
     handle_idea,
     handle_idea_button,
     handle_iterations,
+    handle_task_history_log,
     show_iterations_menu,
     show_queue,
     show_status,
+    show_task_history,
     skip_idea,
     start_task,
 )
@@ -89,9 +91,11 @@ __all__ = [
     "handle_idea",
     "handle_idea_button",
     "handle_iterations",
+    "handle_task_history_log",
     "show_iterations_menu",
     "show_queue",
     "show_status",
+    "show_task_history",
     "skip_idea",
     "start_task",
     # brainstorm

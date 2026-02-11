@@ -30,6 +30,12 @@ from ..messages import (
     MSG_SESSION_LABEL,
     MSG_STATUS_TITLE,
     MSG_TASK_ERROR,
+    MSG_TASK_HISTORY_EMPTY,
+    MSG_TASK_HISTORY_ENTRY,
+    MSG_TASK_HISTORY_LOG_TITLE,
+    MSG_TASK_HISTORY_NO_LOG,
+    MSG_TASK_HISTORY_TITLE,
+    MSG_TASK_HISTORY_VIEW_LOG_BTN,
     MSG_TASK_NOT_FOUND,
     MSG_TASK_STARTED,
 )
@@ -308,6 +314,112 @@ async def handle_cancel_queue(update: Update, context: ContextTypes.DEFAULT_TYPE
     return await show_queue(update, context)
 
 
+async def show_task_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:  # noqa: ARG001
+    """Show completed task history for current project."""
+    query = update.callback_query
+    assert query is not None
+    assert update.effective_chat is not None
+    user_data = get_user_data(update.effective_chat.id)
+    project = user_data.get("project")
+
+    if not project:
+        await query.edit_message_text(MSG_NO_PROJECT_SELECTED)
+        return ConversationHandler.END
+
+    history = task_manager.list_task_history(project=project.name)
+
+    if not history:
+        text = MSG_TASK_HISTORY_TITLE.format(project=project.name) + MSG_TASK_HISTORY_EMPTY
+        buttons = [[InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back_to_project")]]
+    else:
+        text = MSG_TASK_HISTORY_TITLE.format(project=project.name)
+        buttons = []
+        # Show last 10 entries
+        for i, entry in enumerate(history[:10], 1):
+            mode_icon = "\u25c7" if entry.get("mode") == "plan" else "\u25a0"
+            status = entry.get("status", "unknown")
+            status_icon = "\u2713" if status == "success" else "\u2717"
+            duration_s = entry.get("duration_seconds", 0)
+            minutes = int(duration_s // 60)
+            seconds = int(duration_s % 60)
+            duration = f"{minutes}m {seconds}s" if minutes > 0 else f"{seconds}s"
+            finished = entry.get("finished_at", "")[:16].replace("T", " ")
+
+            text += MSG_TASK_HISTORY_ENTRY.format(
+                num=i,
+                icon=mode_icon,
+                mode=entry.get("mode", "?").title(),
+                status_icon=status_icon,
+                iters_done=entry.get("iterations_completed", "?"),
+                iters_total=entry.get("iterations_total", "?"),
+                duration=duration,
+                date=finished,
+            )
+
+            # Add "View log" button if log_dir is available
+            if entry.get("log_dir"):
+                buttons.append([
+                    InlineKeyboardButton(
+                        MSG_TASK_HISTORY_VIEW_LOG_BTN.format(num=i),
+                        callback_data=f"task_log:{i - 1}",
+                    )
+                ])
+
+        buttons.append([InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back_to_project")])
+
+    reply_markup = InlineKeyboardMarkup(buttons)
+    await query.edit_message_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+
+    return State.PROJECT_MENU
+
+
+@authorized_callback
+async def handle_task_history_log(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle tap on a task history entry to show log summary."""
+    query = update.callback_query
+    assert query is not None
+    assert query.data is not None
+    assert update.effective_chat is not None
+    await query.answer()
+
+    index = int(query.data.replace("task_log:", ""))
+    user_data = get_user_data(update.effective_chat.id)
+    project = user_data.get("project")
+
+    if not project:
+        await query.edit_message_text(MSG_NO_PROJECT_SELECTED)
+        return ConversationHandler.END
+
+    history = task_manager.list_task_history(project=project.name)
+
+    if index >= len(history):
+        await query.edit_message_text(MSG_TASK_HISTORY_NO_LOG)
+        return State.PROJECT_MENU
+
+    entry = history[index]
+    log_dir = entry.get("log_dir")
+
+    if not log_dir:
+        await query.edit_message_text(MSG_TASK_HISTORY_NO_LOG)
+        return State.PROJECT_MENU
+
+    summary = task_manager.get_task_log_summary(log_dir)
+
+    if not summary:
+        text = MSG_TASK_HISTORY_NO_LOG
+    else:
+        # Truncate to Telegram's 4096 char limit, accounting for markdown overhead
+        if len(summary) > 3800:
+            summary = summary[:3800] + "\n... (truncated)"
+        text = MSG_TASK_HISTORY_LOG_TITLE.format(summary=summary)
+
+    buttons = [[InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:task_history")]]
+    reply_markup = InlineKeyboardMarkup(buttons)
+    await query.edit_message_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+
+    return State.PROJECT_MENU
+
+
 def _handle_task_action(action, query, update, context, user_data, project):
     """Check if action is task-related and return a coroutine, or None."""
     if action == "status":
@@ -355,5 +467,8 @@ def _handle_task_action(action, query, update, context, user_data, project):
 
     if action == "queue":
         return show_queue(update, context)
+
+    if action == "task_history":
+        return show_task_history(update, context)
 
     return None

@@ -1,7 +1,7 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 1/37 (3%)
+**Progress:** 11/37 (30%)
 
 ## Goal
 
@@ -9,24 +9,24 @@ Implement all features from the project ROADMAP: 4 P2 (Important) features and 2
 
 ## Current Phase
 
-Phase 1
+Phase 2
 
 ## Phases
 
 ### Phase 1: Telegram bot — task history and log viewing
 Add a "History" button to the project menu that lists recent completed tasks with their outcomes (success/fail/iterations used), and allow viewing a summary of the last log file directly in Telegram.
 
-- [ ] Add `TaskHistory` dataclass to `src/telegram_bot/tasks.py` with fields: project, mode, iterations_completed, iterations_total, duration_seconds, status (success/fail/interrupted), started_at, finished_at, summary_path
-- [ ] Add `_archive_completed_task()` method to `TaskManager` — called from `process_completed_tasks()` to persist completed task data to `.task_history.json` (atomic write, append-only, same pattern as `_archive_session()` in `BrainstormManager` at tasks.py:548-571)
-- [ ] Add `list_task_history()` method to `TaskManager` — returns history entries sorted by `finished_at` descending, with optional project filter
-- [ ] Add `get_task_log_summary()` method to `TaskManager` — invokes `summary.js:generateSummary(logDir)` via subprocess for a given project's `loop/logs/` directory, returns formatted text summary
-- [ ] Add `MSG_TASK_HISTORY_*` constants to `src/telegram_bot/messages.py` — title, empty state, entry format, log summary header (follow existing `MSG_BRAINSTORM_HISTORY_*` pattern at messages.py:224-230)
-- [ ] Add `show_task_history()` handler in `src/telegram_bot/handlers/tasks.py` — paginated list of completed tasks with mode icon (◇ plan/▪ build), status emoji, duration, iterations
-- [ ] Add "History" button to project menu in `src/telegram_bot/handlers/projects.py` — route `action:task_history` callback via `_handle_task_action()` dispatcher
-- [ ] Add `view_task_log` callback handler — when user taps a history entry, show the log summary text (truncated to Telegram 4096 char message limit)
-- [ ] Add tests for `_archive_completed_task()`, `list_task_history()`, `get_task_log_summary()` in `src/telegram_bot/tests/test_tasks.py`
-- [ ] Add tests for `show_task_history()` and `view_task_log` handlers in `src/telegram_bot/tests/test_bot.py`
-- **Status:** pending
+- [x] Add `TaskHistory` dataclass to `src/telegram_bot/tasks.py` with fields: project, mode, iterations_completed, iterations_total, duration_seconds, status (success/fail/interrupted), started_at, finished_at, log_dir
+- [x] Add `_archive_completed_task()` method to `TaskManager` — called from `process_completed_tasks()` to persist completed task data to `.task_history.json` (atomic write, append-only, same pattern as `_archive_session()`)
+- [x] Add `list_task_history()` method to `TaskManager` — returns history entries sorted by `finished_at` descending, with optional project filter
+- [x] Add `get_task_log_summary()` method to `TaskManager` — invokes `summary.js:generateSummary(logDir)` via subprocess, returns formatted text summary
+- [x] Add `MSG_TASK_HISTORY_*` constants to `src/telegram_bot/messages.py` — title, empty state, entry format, log summary header, view log button, no log message
+- [x] Add `show_task_history()` handler in `src/telegram_bot/handlers/tasks.py` — list of last 10 completed tasks with mode icon, status emoji, duration, iterations
+- [x] Add "History" button to project menu in `src/telegram_bot/handlers/projects.py` — route `action:task_history` callback via `_handle_task_action()` dispatcher
+- [x] Add `handle_task_history_log` callback handler — when user taps a history entry, show the log summary text (truncated to Telegram 4096 char message limit)
+- [x] Add tests for `_archive_completed_task()`, `list_task_history()`, `get_task_log_summary()` in `src/telegram_bot/tests/test_tasks.py` (11 tests)
+- [x] Add tests for `show_task_history()` and `handle_task_history_log` handlers in `src/telegram_bot/tests/test_bot.py` (7 tests)
+- **Status:** complete
 
 ### Phase 2: Loop — idea seeding from file and URL sources
 Extend `loop plan -I` to accept `@file.md` (read idea from file) and `https://...` (fetch issue/PR body as idea seed) in addition to inline text.
@@ -84,49 +84,15 @@ Add a Mermaid state diagram to `src/telegram_bot/COMMANDS.md` showing the full c
 
 | Question | Answer |
 |----------|--------|
-| Is there existing task history? | No. Only brainstorm history exists (`.brainstorm_history.json`). Tasks have no post-completion archival — `process_completed_tasks()` removes completed tasks from `active_tasks` dict without saving. |
+| Is there existing task history? | **Yes (Phase 1 complete).** `TaskManager` now archives completed tasks to `.task_history.json` with atomic writes. History is viewable in Telegram via "History" button. |
 | Does `-I` already support files/URLs? | No. `write_idea()` in `loop.sh` (lines 165-175) writes `$IDEA` directly to `docs/ROADMAP.md` using an unquoted heredoc. No detection for `@` prefix or `http(s)://` URLs. However, `-I` passthrough from cli.js → run.js → loop.sh works correctly and requires no changes. |
 | Is brainstorm export implemented? | No. `_archive_session()` stores only truncated data (topic: 100 chars, last_response: 500 chars). Full JSONL output is deleted in `_cleanup_session()`. No Markdown export or post-restart continuation. |
 | Is Playwright lazily installed? | No. Builder stage runs `npx playwright install chromium --with-deps` (Dockerfile:25). Runtime copies browsers from builder and installs 16 system deps (lines 48-50). |
-| Are there integration tests? | No. Only unit tests: 438 Python + 20 JS. `init.js`, `run.js`, `cleanup.js`, `cli.js` have zero tests. `generateSummary()` is not tested end-to-end. |
+| Are there integration tests? | No. Only unit tests: 456 Python + 20 JS. `init.js`, `run.js`, `cleanup.js`, `cli.js` have zero tests. `generateSummary()` is not tested end-to-end. |
 | Is there a state diagram? | No. COMMANDS.md documents commands and buttons but has no Mermaid diagram. |
 | How many bot states exist? | 10 states in `State` enum (SELECT_PROJECT through GITHUB_CHOICE), 5 entry points, 40+ transitions across 5 handler modules. ROADMAP.md says "9 states" which is outdated — GITHUB_CHOICE was added later. |
 
 ## Findings & Decisions
-
-### Requirements
-
-**Functional:**
-- P2.1: Task history with paginated list, status/duration/iterations display, log summary viewing via `summary.js`
-- P2.2: Idea seeding from local files (`@path`) and URLs (GitHub issues/PRs via `gh`, generic URLs via `curl`)
-- P2.3: Brainstorm export to Markdown files in `docs/brainstorms/`, session continuation from archived history after restart
-- P2.4: Lazy Playwright installation on first `agent-browser` use instead of at Docker build time
-
-**Non-functional:**
-- P3.1: Integration tests for `loop init`, `loop update`, `loop summary` (Jest, longer timeouts)
-- P3.2: Mermaid state diagram for bot conversation handler (10 states, 40+ transitions)
-
-**Cross-cutting:**
-- All new features must have tests (TDD: write tests first)
-- Follow existing patterns: atomic JSON persistence (`os.replace()`), async generators for long ops, `MSG_*` message constants
-- Maintain backward compatibility with existing task/brainstorm flows
-- Docker image must still work for users who DO use Playwright (lazy install must be reliable)
-
-### Research Findings
-
-- **Brainstorm history pattern** at `tasks.py:548-571` — proven archival pattern with atomic JSON, append-only history, load/save/list methods; replicate for task history
-- **`write_idea()` in `loop.sh:165-175`** — simple shell function using unquoted heredoc (`<< EOF`); extending to detect `@file`/URL prefixes is straightforward; current heredoc expands `$` variables which is a risk with fetched content — must switch to `<< 'EOF'`
-- **`-I` option passthrough verified** — cli.js (line 12) uses Commander.js `.option('-I, --idea <text>')`, run.js (line 34) passes via `args.push('-I', opts.idea)`, loop.sh (line 195) receives via `getopts "...I:"`. All pass `@file` and URL values unmodified. No changes needed.
-- **`gh` CLI** available in Docker image — `gh issue view --json body -q .body` and `gh pr view --json body -q .body` extract issue/PR body cleanly
-- **`summary.js:generateSummary(logDir)`** — finds latest JSONL, parses tool usage/tokens/test results, returns formatted report; can be invoked from Python via `subprocess.run(['node', '-e', '...'])`
-- **Playwright in Dockerfile** — builder installs with `--with-deps` (line 25), copies to `/opt/playwright` (line 74), user copies to `$HOME/.cache/ms-playwright` (lines 89-91); runtime installs 16 X11/GTK system deps (lines 48-50); `.devcontainer/Dockerfile` has parallel structure (lines 23, 46-61, 70, 80)
-- **Bot state machine** — 10 states in `State` enum at `handlers/common.py:25-37` (using `auto()`), 5 entry points in `bot.py:103-109`, 3 action dispatchers (`_handle_project_action`, `_handle_task_action`, `_handle_brainstorm_action_dispatch`), 12 callback data prefixes
-- **No TODOs, FIXMEs, or incomplete work** in production code — all 3 `pass` statements in non-test code are legitimate exception handlers (tasks.py:708, git_utils.py:24, git_utils.py:91)
-- **No empty test classes, no skipped/flaky tests** — all 68 test classes across 6 Python test files + 1 JS test file contain test methods
-- **Test counts** — 438 Python tests across 6 files (test_tasks.py, test_bot.py, test_projects.py, test_git_utils.py, test_config.py, test_log_rotation.py) + 20 JS tests in summary.test.js = 458 total
-- **3 orphaned MSG_* constants** in messages.py never imported: `MSG_LOG_ROTATION_COMPLETE`, `MSG_PROJECT_CREATE_FAILED`, `MSG_TASK_QUEUED` (out of scope)
-- **1 non-atomic write** — `idea_file.write_text(idea_content)` at tasks.py:948 in `BrainstormManager.finish()` (out of scope — writes to project's docs/ROADMAP.md, not to state files)
-- **`handle_completion_diff()` in jobs.py** missing `@authorized_callback` decorator but manually checks chat ID (out of scope — authorization handled inline)
 
 ### Technical Decisions
 
@@ -151,24 +117,14 @@ Add a Mermaid state diagram to `src/telegram_bot/COMMANDS.md` showing the full c
 | `_archive_session()` truncates data (500 chars) | Phase 3 must preserve full conversation before `_cleanup_session()` deletes output file |
 | `write_idea()` uses unquoted heredoc | Phase 2 must switch to quoted heredoc (`<< 'EOF'`) to safely handle fetched content with `$` or backticks |
 | `.devcontainer/Dockerfile` also has Playwright | Phase 4 only targets `docker/Dockerfile` (production); devcontainer can retain build-time install for development speed |
-| 3 orphaned MSG_* constants in messages.py | Out of scope: `MSG_LOG_ROTATION_COMPLETE`, `MSG_PROJECT_CREATE_FAILED`, `MSG_TASK_QUEUED` — existing code works correctly |
-| `handle_completion_diff()` missing `@authorized_callback` | Out of scope; manual auth check at jobs.py:264-266 is functionally equivalent |
-| ROADMAP.md says "9 states" but code has 10 | GITHUB_CHOICE (state 10) was added after ROADMAP was written; plan correctly uses 10 |
-| Phase 2 task 3 already verified | `-I` passthrough works unmodified through cli.js → run.js → loop.sh; marked as complete |
 
 ### Resources
 
 - ROADMAP: `docs/ROADMAP.md`
-- Task manager: `src/telegram_bot/tasks.py` (976 lines)
-- Brainstorm history pattern: `tasks.py:548-571` (`_archive_session`)
-- Brainstorm cleanup: `tasks.py:700-709` (`_cleanup_session`)
-- Loop shell script: `src/scripts/loop.sh` (278 lines, `write_idea` at 165-175)
-- CLI entry point: `src/bin/cli.js` (idea option at line 12, passthrough confirmed)
-- Run module: `src/lib/run.js` (spawn at line 34, idea passed via `args.push`)
+- Task manager: `src/telegram_bot/tasks.py`
+- Loop shell script: `src/scripts/loop.sh`
 - Summary module: `src/lib/summary.js` (`generateSummary` at line 182)
-- Init module: `src/lib/init.js` (CORE_FILES at 7-14, TEMPLATES at 17-23, DIRS at 25)
-- Bot wiring: `src/telegram_bot/bot.py` (entry points at 103-109, states at 110-163)
-- State enum: `src/telegram_bot/handlers/common.py` (10 states at lines 25-37, using `auto()`)
-- Messages: `src/telegram_bot/messages.py` (136 MSG_* constants, 3 orphaned)
-- Dockerfile: `docker/Dockerfile` (Playwright at lines 25, 48-50, 74, 89-91, 113)
-- Test files: `src/telegram_bot/tests/` (6 files, 438 tests), `lib/__tests__/summary.test.js` (20 tests)
+- Bot wiring: `src/telegram_bot/bot.py`
+- Messages: `src/telegram_bot/messages.py`
+- Dockerfile: `docker/Dockerfile`
+- Test files: `src/telegram_bot/tests/` (456 tests), `lib/__tests__/summary.test.js` (20 tests)

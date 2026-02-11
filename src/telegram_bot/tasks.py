@@ -97,6 +97,21 @@ class BrainstormSession:
 
 
 @dataclass
+class TaskHistory:
+    """Represents a completed task archived for history viewing."""
+
+    project: str
+    mode: str  # "plan" | "build"
+    iterations_completed: int
+    iterations_total: int
+    duration_seconds: float
+    status: str  # "success" | "fail" | "interrupted"
+    started_at: str  # ISO format
+    finished_at: str  # ISO format
+    log_dir: str | None = None  # Path to loop/logs/ for summary generation
+
+
+@dataclass
 class QueuedTask:
     """Represents a task waiting in queue."""
 
@@ -421,6 +436,103 @@ class TaskManager:
 
         return None
 
+    # --- Task history ---
+
+    def _task_history_file(self) -> Path:
+        """Path to persistent task history file."""
+        return Path(PROJECTS_ROOT) / ".task_history.json"
+
+    def _load_task_history(self) -> list[dict]:
+        """Load task history from JSON file."""
+        path = self._task_history_file()
+        if not path.exists():
+            return []
+        try:
+            return json.loads(path.read_text())
+        except (json.JSONDecodeError, OSError):
+            logger.warning("Failed to load task history from %s", path)
+            return []
+
+    def _save_task_history(self, history: list[dict]) -> None:
+        """Persist task history to JSON file via atomic write."""
+        path = self._task_history_file()
+        tmp_path = path.with_suffix(".tmp")
+        try:
+            tmp_path.write_text(json.dumps(history, ensure_ascii=False, indent=2))
+            os.replace(tmp_path, path)
+        except OSError:
+            logger.warning("Failed to save task history to %s", path)
+
+    def _archive_completed_task(self, task: Task) -> None:
+        """Archive a completed task to history for later viewing."""
+        duration = (datetime.now() - task.started_at).total_seconds()
+        current_iter = self.get_current_iteration(task)
+        iterations_completed = current_iter if current_iter else task.iterations
+
+        # Determine status based on iterations completed vs total
+        if iterations_completed >= task.iterations:
+            status = "success"
+        else:
+            status = "fail"
+
+        # Resolve log directory path
+        log_dir = str(task.project_path / "loop" / "logs")
+
+        history = self._load_task_history()
+        entry = {
+            "project": task.project,
+            "mode": task.mode,
+            "iterations_completed": iterations_completed,
+            "iterations_total": task.iterations,
+            "duration_seconds": duration,
+            "status": status,
+            "started_at": task.started_at.isoformat(),
+            "finished_at": datetime.now().isoformat(),
+            "log_dir": log_dir,
+        }
+        history.append(entry)
+        self._save_task_history(history)
+
+    def list_task_history(self, project: str | None = None) -> list[dict]:
+        """Return task history entries, newest first.
+
+        Args:
+            project: If given, filter by project name.
+        """
+        history = self._load_task_history()
+        if project:
+            history = [e for e in history if e.get("project") == project]
+        history.sort(key=lambda e: e.get("finished_at", ""), reverse=True)
+        return history
+
+    def get_task_log_summary(self, log_dir: str) -> str | None:
+        """Generate a log summary by invoking summary.js.
+
+        Args:
+            log_dir: Path to the project's loop/logs/ directory.
+
+        Returns:
+            Formatted summary text, or None if unavailable.
+        """
+        summary_script = Path("/opt/loop/lib/summary.js")
+        if not summary_script.exists():
+            summary_script = Path(__file__).parent.parent / "lib" / "summary.js"
+        if not summary_script.exists():
+            return None
+
+        try:
+            result = subprocess.run(
+                ["node", "-e", f"const {{generateSummary}}=require('{summary_script}');generateSummary('{log_dir}').then(r=>console.log(r))"],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout.strip()
+        except (subprocess.TimeoutExpired, OSError):
+            logger.warning("Failed to generate task log summary for %s", log_dir)
+        return None
+
     def process_completed_tasks(self) -> tuple[list[tuple[Task | None, Task | None]], list[QueuedTask]]:
         """Check for completed tasks, expire old queued tasks, and start next in queue.
 
@@ -458,6 +570,7 @@ class TaskManager:
             task = self.active_tasks[path_key]
             if not self._is_session_running(task.session_name):
                 logger.info(f"Task completed: {task.project} ({task.mode})")
+                self._archive_completed_task(task)
                 completed_task = self.active_tasks.pop(path_key)
                 self._save_tasks()
 

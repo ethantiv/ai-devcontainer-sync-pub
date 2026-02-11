@@ -2553,3 +2553,239 @@ class TestHandlePageNavigation:
             await handle_page_navigation(update, context)
 
         assert user_data_store[self.CHAT_ID]["projects_page"] == 1
+
+
+class TestShowTaskHistory:
+    """Tests for show_task_history() handler."""
+
+    CHAT_ID = 42
+
+    @pytest.mark.asyncio
+    async def test_shows_empty_state(self):
+        """show_task_history shows empty message when no history exists."""
+        from src.telegram_bot.handlers.tasks import show_task_history
+        from src.telegram_bot.handlers.common import user_data_store
+        from src.telegram_bot.messages import MSG_TASK_HISTORY_TITLE, MSG_TASK_HISTORY_EMPTY
+
+        update = make_callback_update(self.CHAT_ID, "action:task_history")
+        context = make_context()
+
+        project = MagicMock()
+        project.name = "testproj"
+        project.path = Path("/tmp/testproj")
+        user_data_store[self.CHAT_ID] = {"project": project}
+
+        with (
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.tasks.task_manager") as mock_tm,
+        ):
+            mock_tm.list_task_history.return_value = []
+            result = await show_task_history(update, context)
+
+        call_args = update.callback_query.edit_message_text.call_args
+        text = call_args[0][0]
+        assert MSG_TASK_HISTORY_TITLE.format(project="testproj") in text
+        assert MSG_TASK_HISTORY_EMPTY in text
+
+    @pytest.mark.asyncio
+    async def test_shows_history_entries(self):
+        """show_task_history formats and shows history entries."""
+        from src.telegram_bot.handlers.tasks import show_task_history
+        from src.telegram_bot.handlers.common import user_data_store
+        from src.telegram_bot.messages import MSG_TASK_HISTORY_TITLE
+
+        update = make_callback_update(self.CHAT_ID, "action:task_history")
+        context = make_context()
+
+        project = MagicMock()
+        project.name = "testproj"
+        project.path = Path("/tmp/testproj")
+        user_data_store[self.CHAT_ID] = {"project": project}
+
+        history = [
+            {
+                "project": "testproj",
+                "mode": "build",
+                "iterations_completed": 5,
+                "iterations_total": 5,
+                "duration_seconds": 125.0,
+                "status": "success",
+                "started_at": "2026-02-10T10:00:00",
+                "finished_at": "2026-02-10T10:02:05",
+                "log_dir": "/tmp/testproj/loop/logs",
+            },
+        ]
+
+        with (
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.tasks.task_manager") as mock_tm,
+        ):
+            mock_tm.list_task_history.return_value = history
+            result = await show_task_history(update, context)
+
+        call_args = update.callback_query.edit_message_text.call_args
+        text = call_args[0][0]
+        assert MSG_TASK_HISTORY_TITLE.format(project="testproj") in text
+        assert "Build" in text
+        assert "5/5" in text
+        assert "2m 5s" in text
+
+    @pytest.mark.asyncio
+    async def test_includes_view_log_buttons(self):
+        """show_task_history includes View log buttons when log_dir present."""
+        from src.telegram_bot.handlers.tasks import show_task_history
+        from src.telegram_bot.handlers.common import user_data_store
+
+        update = make_callback_update(self.CHAT_ID, "action:task_history")
+        context = make_context()
+
+        project = MagicMock()
+        project.name = "testproj"
+        project.path = Path("/tmp/testproj")
+        user_data_store[self.CHAT_ID] = {"project": project}
+
+        history = [
+            {
+                "project": "testproj",
+                "mode": "plan",
+                "iterations_completed": 3,
+                "iterations_total": 3,
+                "duration_seconds": 60.0,
+                "status": "success",
+                "started_at": "2026-02-10T10:00:00",
+                "finished_at": "2026-02-10T10:01:00",
+                "log_dir": "/tmp/testproj/loop/logs",
+            },
+        ]
+
+        with (
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.tasks.task_manager") as mock_tm,
+        ):
+            mock_tm.list_task_history.return_value = history
+            await show_task_history(update, context)
+
+        call_kwargs = update.callback_query.edit_message_text.call_args[1]
+        markup = call_kwargs["reply_markup"]
+        button_data = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert "task_log:0" in button_data
+
+    @pytest.mark.asyncio
+    async def test_no_project_returns_end(self):
+        """show_task_history shows error when no project selected."""
+        from src.telegram_bot.handlers.tasks import show_task_history
+        from src.telegram_bot.handlers.common import user_data_store
+
+        update = make_callback_update(self.CHAT_ID, "action:task_history")
+        context = make_context()
+
+        user_data_store[self.CHAT_ID] = {}
+
+        with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID):
+            result = await show_task_history(update, context)
+
+        assert result == ConversationHandler.END
+
+
+class TestHandleTaskHistoryLog:
+    """Tests for handle_task_history_log() handler."""
+
+    CHAT_ID = 42
+
+    @pytest.mark.asyncio
+    async def test_shows_log_summary(self):
+        """handle_task_history_log shows formatted summary."""
+        from src.telegram_bot.handlers.tasks import handle_task_history_log
+        from src.telegram_bot.handlers.common import user_data_store
+        from src.telegram_bot.messages import MSG_TASK_HISTORY_LOG_TITLE
+
+        update = make_callback_update(self.CHAT_ID, "task_log:0")
+        context = make_context()
+
+        project = MagicMock()
+        project.name = "testproj"
+        project.path = Path("/tmp/testproj")
+        user_data_store[self.CHAT_ID] = {"project": project}
+
+        history = [
+            {
+                "project": "testproj",
+                "mode": "build",
+                "finished_at": "2026-02-10T10:00:00",
+                "log_dir": "/tmp/testproj/loop/logs",
+            },
+        ]
+
+        with (
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.tasks.task_manager") as mock_tm,
+        ):
+            mock_tm.list_task_history.return_value = history
+            mock_tm.get_task_log_summary.return_value = "=== Summary ===\nTool Usage: Read: 5"
+            result = await handle_task_history_log(update, context)
+
+        call_args = update.callback_query.edit_message_text.call_args
+        text = call_args[0][0]
+        assert "Summary" in text
+
+    @pytest.mark.asyncio
+    async def test_shows_no_log_message(self):
+        """handle_task_history_log shows MSG_TASK_HISTORY_NO_LOG when summary unavailable."""
+        from src.telegram_bot.handlers.tasks import handle_task_history_log
+        from src.telegram_bot.handlers.common import user_data_store
+        from src.telegram_bot.messages import MSG_TASK_HISTORY_NO_LOG
+
+        update = make_callback_update(self.CHAT_ID, "task_log:0")
+        context = make_context()
+
+        project = MagicMock()
+        project.name = "testproj"
+        project.path = Path("/tmp/testproj")
+        user_data_store[self.CHAT_ID] = {"project": project}
+
+        history = [
+            {
+                "project": "testproj",
+                "mode": "build",
+                "finished_at": "2026-02-10T10:00:00",
+                "log_dir": "/tmp/testproj/loop/logs",
+            },
+        ]
+
+        with (
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.tasks.task_manager") as mock_tm,
+        ):
+            mock_tm.list_task_history.return_value = history
+            mock_tm.get_task_log_summary.return_value = None
+            result = await handle_task_history_log(update, context)
+
+        call_args = update.callback_query.edit_message_text.call_args
+        text = call_args[0][0]
+        assert text == MSG_TASK_HISTORY_NO_LOG
+
+    @pytest.mark.asyncio
+    async def test_invalid_index_shows_no_log(self):
+        """handle_task_history_log shows no log message for out-of-range index."""
+        from src.telegram_bot.handlers.tasks import handle_task_history_log
+        from src.telegram_bot.handlers.common import user_data_store
+        from src.telegram_bot.messages import MSG_TASK_HISTORY_NO_LOG
+
+        update = make_callback_update(self.CHAT_ID, "task_log:99")
+        context = make_context()
+
+        project = MagicMock()
+        project.name = "testproj"
+        project.path = Path("/tmp/testproj")
+        user_data_store[self.CHAT_ID] = {"project": project}
+
+        with (
+            patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID),
+            patch("src.telegram_bot.handlers.tasks.task_manager") as mock_tm,
+        ):
+            mock_tm.list_task_history.return_value = []
+            result = await handle_task_history_log(update, context)
+
+        call_args = update.callback_query.edit_message_text.call_args
+        text = call_args[0][0]
+        assert text == MSG_TASK_HISTORY_NO_LOG

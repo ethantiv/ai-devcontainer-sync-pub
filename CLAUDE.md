@@ -14,7 +14,7 @@ Re-sync configuration after changes:
 ```bash
 claude mcp list                    # Verify MCP servers
 claude plugin marketplace list     # List installed plugins
-python3 -m pytest src/telegram_bot/tests/ -v  # Run Telegram bot tests (438 tests)
+python3 -m pytest src/telegram_bot/tests/ -v  # Run Telegram bot tests (456 tests)
 npm install --prefix src && npm test --prefix src  # Run JS tests (20 tests, requires install)
 ```
 

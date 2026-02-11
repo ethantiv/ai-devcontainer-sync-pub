@@ -45,6 +45,7 @@ from .handlers import (
     handle_name,
     handle_page_navigation,
     handle_project_name,
+    handle_task_history_log,
     help_command,
     project_selected,
     run_log_rotation,
@@ -116,6 +117,7 @@ def create_application() -> Application:
             State.PROJECT_MENU: [
                 CallbackQueryHandler(handle_action, pattern=r"^action:"),
                 CallbackQueryHandler(handle_cancel_queue, pattern=r"^cancel_queue:"),
+                CallbackQueryHandler(handle_task_history_log, pattern=r"^task_log:"),
                 CallbackQueryHandler(project_selected, pattern=r"^project:"),
             ],
             State.ENTER_NAME: [

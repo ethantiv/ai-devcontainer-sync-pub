@@ -57,6 +57,7 @@ from ..messages import (
     MSG_SYNC_NO_UPDATES,
     MSG_SYNC_PULLING,
     MSG_SYNC_SUCCESS,
+    MSG_TASK_HISTORY_BTN,
     MSG_UNAUTHORIZED,
 )
 from ..projects import (
@@ -242,6 +243,8 @@ async def show_project_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
 
     sync_btn = InlineKeyboardButton(sync_label, callback_data="action:sync")
 
+    history_btn = InlineKeyboardButton(MSG_TASK_HISTORY_BTN, callback_data="action:task_history")
+
     if task:
         duration = task_manager.get_task_duration(task)
         current = task_manager.get_current_iteration(task) or "?"
@@ -261,7 +264,7 @@ async def show_project_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
                 InlineKeyboardButton(MSG_BUILD_BTN, callback_data="action:build"),
             ],
             brainstorm_row,
-            [sync_btn, InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")],
+            [history_btn, sync_btn, InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")],
         ]
     elif project.has_loop:
         buttons = [
@@ -273,6 +276,7 @@ async def show_project_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
             [
                 InlineKeyboardButton(MSG_NEW_WORKTREE_BTN, callback_data="action:worktree"),
                 InlineKeyboardButton(MSG_STATUS_BTN, callback_data="action:status"),
+                history_btn,
             ],
             [sync_btn, InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")],
         ]

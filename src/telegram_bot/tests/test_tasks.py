@@ -2549,3 +2549,158 @@ class TestBrainstormHistory:
         """cancel() on nonexistent session doesn't create history entry."""
         brainstorm_manager.cancel(999)
         assert brainstorm_manager._load_history() == []
+
+
+class TestTaskHistory:
+    """Tests for TaskManager task history archival and retrieval."""
+
+    def _make_task(self, tmp_path, project="myproject", mode="build", iterations=5):
+        """Helper to create a Task instance for testing."""
+        from src.telegram_bot.tasks import Task
+
+        return Task(
+            project=project,
+            project_path=tmp_path / project,
+            mode=mode,
+            iterations=iterations,
+            idea=None,
+            session_name=f"loop-{project}",
+            started_at=datetime(2026, 2, 10, 10, 0, 0),
+        )
+
+    def test_archive_creates_history_file(self, task_manager, tmp_path):
+        """_archive_completed_task() creates .task_history.json with entry."""
+        task = self._make_task(tmp_path)
+        # Create progress file so get_current_iteration works
+        log_dir = tmp_path / "myproject" / "loop" / "logs"
+        log_dir.mkdir(parents=True)
+        (log_dir / ".progress").write_text("5")
+
+        task_manager._archive_completed_task(task)
+
+        history_file = tmp_path / ".task_history.json"
+        assert history_file.exists()
+        history = json.loads(history_file.read_text())
+        assert len(history) == 1
+        assert history[0]["project"] == "myproject"
+        assert history[0]["mode"] == "build"
+        assert history[0]["iterations_completed"] == 5
+        assert history[0]["iterations_total"] == 5
+        assert history[0]["status"] == "success"
+        assert "log_dir" in history[0]
+
+    def test_archive_appends_to_existing(self, task_manager, tmp_path):
+        """_archive_completed_task() appends, not overwrites."""
+        history_file = tmp_path / ".task_history.json"
+        history_file.write_text(json.dumps([{"project": "old"}]))
+
+        task = self._make_task(tmp_path, project="newproj")
+        task_manager._archive_completed_task(task)
+
+        history = json.loads(history_file.read_text())
+        assert len(history) == 2
+        assert history[0]["project"] == "old"
+        assert history[1]["project"] == "newproj"
+
+    def test_archive_partial_iterations_is_fail(self, task_manager, tmp_path):
+        """Task with fewer iterations completed than total gets status 'fail'."""
+        task = self._make_task(tmp_path, iterations=10)
+        log_dir = tmp_path / "myproject" / "loop" / "logs"
+        log_dir.mkdir(parents=True)
+        (log_dir / ".progress").write_text("3")
+
+        task_manager._archive_completed_task(task)
+
+        history = task_manager._load_task_history()
+        assert history[0]["status"] == "fail"
+        assert history[0]["iterations_completed"] == 3
+        assert history[0]["iterations_total"] == 10
+
+    def test_archive_no_progress_file_uses_total(self, task_manager, tmp_path):
+        """Without progress file, iterations_completed falls back to iterations_total."""
+        task = self._make_task(tmp_path, iterations=5)
+        # No progress file created
+
+        task_manager._archive_completed_task(task)
+
+        history = task_manager._load_task_history()
+        assert history[0]["iterations_completed"] == 5
+        assert history[0]["status"] == "success"
+
+    def test_list_task_history_sorted_newest_first(self, task_manager, tmp_path):
+        """list_task_history() returns entries sorted by finished_at descending."""
+        history = [
+            {"project": "a", "finished_at": "2026-01-01T10:00:00"},
+            {"project": "b", "finished_at": "2026-02-01T10:00:00"},
+            {"project": "c", "finished_at": "2026-01-15T10:00:00"},
+        ]
+        (tmp_path / ".task_history.json").write_text(json.dumps(history))
+
+        result = task_manager.list_task_history()
+        assert [e["project"] for e in result] == ["b", "c", "a"]
+
+    def test_list_task_history_filter_by_project(self, task_manager, tmp_path):
+        """list_task_history(project=...) filters by project name."""
+        history = [
+            {"project": "alpha", "finished_at": "2026-01-01T10:00:00"},
+            {"project": "beta", "finished_at": "2026-02-01T10:00:00"},
+            {"project": "alpha", "finished_at": "2026-01-15T10:00:00"},
+        ]
+        (tmp_path / ".task_history.json").write_text(json.dumps(history))
+
+        result = task_manager.list_task_history(project="alpha")
+        assert len(result) == 2
+        assert all(e["project"] == "alpha" for e in result)
+
+    def test_list_task_history_empty_file(self, task_manager, tmp_path):
+        """list_task_history() returns [] when no history file exists."""
+        result = task_manager.list_task_history()
+        assert result == []
+
+    def test_load_corrupted_history(self, task_manager, tmp_path):
+        """_load_task_history() returns [] on corrupted JSON."""
+        (tmp_path / ".task_history.json").write_text("not json")
+        result = task_manager._load_task_history()
+        assert result == []
+
+    def test_get_task_log_summary_no_script(self, task_manager, tmp_path):
+        """get_task_log_summary() returns None when summary.js not found."""
+        with patch("pathlib.Path.exists", return_value=False):
+            result = task_manager.get_task_log_summary(str(tmp_path))
+        assert result is None
+
+    def test_get_task_log_summary_success(self, task_manager, tmp_path):
+        """get_task_log_summary() returns formatted summary from subprocess."""
+        fake_summary = "=== Loop Run Summary ===\nTool Usage: Read: 5"
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout=fake_summary)
+            # Patch Path.exists to return True for the summary script
+            with patch("pathlib.Path.exists", return_value=True):
+                result = task_manager.get_task_log_summary(str(tmp_path / "logs"))
+        assert result == fake_summary
+
+    def test_process_completed_archives_task(self, task_manager, tmp_path):
+        """process_completed_tasks() archives task when tmux session ends."""
+        from src.telegram_bot.tasks import Task
+
+        project_path = tmp_path / "testproj"
+        project_path.mkdir()
+
+        task = Task(
+            project="testproj",
+            project_path=project_path,
+            mode="plan",
+            iterations=3,
+            idea=None,
+            session_name="loop-testproj",
+            started_at=datetime(2026, 2, 10, 10, 0, 0),
+        )
+        task_manager.active_tasks[str(project_path)] = task
+
+        with patch.object(task_manager, "_is_session_running", return_value=False):
+            task_manager.process_completed_tasks()
+
+        history = task_manager._load_task_history()
+        assert len(history) == 1
+        assert history[0]["project"] == "testproj"
+        assert history[0]["mode"] == "plan"
