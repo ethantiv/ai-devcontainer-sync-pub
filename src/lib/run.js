@@ -28,7 +28,7 @@ function spawnLoop(opts, isPlan) {
   if (isPlan) args.push('-p');
   if (!opts.interactive) args.push('-a');
 
-  const iterations = opts.iterations || (isPlan ? '3' : '5');
+  const iterations = opts.iterations || (isPlan ? '5' : '10');
   args.push('-i', iterations);
 
   if (opts.idea) args.push('-I', opts.idea);

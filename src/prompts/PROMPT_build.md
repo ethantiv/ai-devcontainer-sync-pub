@@ -6,7 +6,7 @@
 
 0d. For reference: source code is in @src/.
 
-1. **Pick a task and search.** Follow @docs/plans/IMPLEMENTATION_PLAN.md and choose the most important unchecked item to address. Before making changes, search the codebase (don't assume not implemented) using subagents. You may use up to 10 parallel **Haiku** subagents for searches/reads. Use **Opus** subagents when complex reasoning is needed (debugging, architectural decisions). Complete implementation - no placeholders or stubs.
+1. **Pick ONE PHASE and implement it.** Open @docs/plans/IMPLEMENTATION_PLAN.md and find the **first phase** with status `pending` or `in_progress` (not `complete`). Implement **all unchecked tasks** within that single phase. Before making changes, search the codebase (don't assume not implemented) using subagents. You may use up to 10 parallel **Haiku** subagents for searches/reads. Use **Opus** subagents when complex reasoning is needed (debugging, architectural decisions). Complete implementation - no placeholders or stubs. **ONE PHASE PER ITERATION.** After completing the current phase, proceed to steps 2-6 (test, update plan, validate, commit) and stop. Do NOT start the next phase — it will be handled in a fresh iteration with clean context.
 
 2. **Test-Driven Development.** Follow the Red-Green-Refactor cycle: write a failing test first, implement until it passes, then refactor. You MUST have a passing test run before proceeding to step 3. If the project has no test framework set up, set one up first.
 
