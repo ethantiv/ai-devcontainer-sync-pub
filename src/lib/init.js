@@ -10,6 +10,7 @@ const CORE_FILES = [
   { src: 'prompts/PROMPT_build.md', dest: 'loop/PROMPT_build.md' },
   { src: 'scripts/cleanup.sh', dest: 'loop/cleanup.sh' },
   { src: 'scripts/notify-telegram.sh', dest: 'loop/notify-telegram.sh' },
+  { src: 'scripts/kill-loop.sh', dest: 'loop/kill-loop.sh' },
 ];
 
 // Templates: copied (not symlinked) so they can be customized per project
