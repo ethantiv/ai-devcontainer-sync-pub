@@ -10,7 +10,13 @@ from ..messages import (
     MSG_BRAINSTORM_CLAUDE_THINKING,
     MSG_BRAINSTORM_CMD_PROMPT_REQUIRED,
     MSG_BRAINSTORM_CMD_USAGE,
+    MSG_BRAINSTORM_CONTINUE_BTN,
+    MSG_BRAINSTORM_CONTINUE_NO_SESSION,
+    MSG_BRAINSTORM_CONTINUE_RESUMING,
     MSG_BRAINSTORM_END_BTN,
+    MSG_BRAINSTORM_EXPORT_BTN,
+    MSG_BRAINSTORM_EXPORT_FAIL,
+    MSG_BRAINSTORM_EXPORT_SUCCESS,
     MSG_BRAINSTORM_HISTORY_EMPTY,
     MSG_BRAINSTORM_HISTORY_TITLE,
     MSG_BRAINSTORM_NO_ACTIVE,
@@ -35,7 +41,6 @@ from .common import (
     State,
     _brainstorm_hint_keyboard,
     _brainstorm_hint_long_keyboard,
-    _cancel_keyboard,
     _is_brainstorm_error,
     _nav_keyboard,
     authorized,
@@ -122,6 +127,7 @@ async def show_brainstorm_history(update: Update, context: ContextTypes.DEFAULT_
     # Show up to 10 most recent entries
     PAGE_SIZE = 10
     text = MSG_BRAINSTORM_HISTORY_TITLE
+    export_buttons = []
     for i, entry in enumerate(history[:PAGE_SIZE], 1):
         finished_at = entry.get("finished_at", "")
         try:
@@ -139,10 +145,27 @@ async def show_brainstorm_history(update: Update, context: ContextTypes.DEFAULT_
         )
         text += "\n"
 
+        # Add export button only for entries with conversation data
+        if entry.get("conversation"):
+            export_buttons.append(
+                InlineKeyboardButton(
+                    MSG_BRAINSTORM_EXPORT_BTN.format(num=i),
+                    callback_data=f"bs:export:{i - 1}",
+                )
+            )
+
     if len(history) > PAGE_SIZE:
         text += f"_...and {len(history) - PAGE_SIZE} more_\n"
 
-    reply_markup = _nav_keyboard(project_name)
+    # Build keyboard: export buttons in rows of 3, plus nav buttons
+    buttons = []
+    for j in range(0, len(export_buttons), 3):
+        buttons.append(export_buttons[j:j + 3])
+
+    nav = _nav_keyboard(project_name)
+    buttons.extend(nav.inline_keyboard)
+
+    reply_markup = InlineKeyboardMarkup(buttons)
     await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
     return State.SELECT_PROJECT
 
@@ -394,17 +417,120 @@ async def handle_brainstorm_hint_button(update: Update, context: ContextTypes.DE
     return State.BRAINSTORMING
 
 
+@authorized_callback
+async def handle_brainstorm_continue(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle 'Continue last' button to resume an archived brainstorm session."""
+    query = update.callback_query
+    assert query is not None
+    assert update.effective_chat is not None
+    await query.answer()
+
+    user_data = get_user_data(update.effective_chat.id)
+    project = user_data.get("project")
+
+    if not project:
+        await query.edit_message_text(MSG_NO_PROJECT_SELECTED)
+        return ConversationHandler.END
+
+    resumable = brainstorm_manager.get_resumable_session(project.name)
+    if not resumable:
+        await query.edit_message_text(
+            MSG_BRAINSTORM_CONTINUE_NO_SESSION,
+            reply_markup=_nav_keyboard(project.name),
+        )
+        return State.SELECT_PROJECT
+
+    topic = resumable.get("topic", "")[:60]
+    await query.edit_message_text(
+        MSG_BRAINSTORM_CONTINUE_RESUMING.format(project=project.name, topic=topic),
+        parse_mode="Markdown",
+    )
+
+    last_status = MSG_BRAINSTORM_STARTING
+
+    async for error_code, status, is_final in brainstorm_manager.resume_archived_session(
+        chat_id=update.effective_chat.id,
+        project=project.name,
+        project_path=project.path,
+        history_entry=resumable,
+    ):
+        if is_final:
+            if _is_brainstorm_error(error_code):
+                await query.edit_message_text(f"\u2717 {status}", parse_mode="Markdown")
+                return ConversationHandler.END
+
+            await query.edit_message_text(
+                f"\u203a *Claude:*\n\n{status}\n\n"
+                + MSG_BRAINSTORM_REPLY_HINT,
+                parse_mode="Markdown",
+                reply_markup=_brainstorm_hint_keyboard(),
+            )
+            return State.BRAINSTORMING
+
+        if status != last_status:
+            last_status = status
+            await query.edit_message_text(
+                MSG_BRAINSTORM_THINKING.format(project=project.name, status=status),
+                parse_mode="Markdown",
+            )
+
+    return ConversationHandler.END
+
+
+@authorized_callback
+async def handle_brainstorm_export(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle export button press from brainstorm history."""
+    query = update.callback_query
+    assert query is not None
+    assert query.data is not None
+    await query.answer()
+
+    # Parse index from callback data: bs:export:{index}
+    try:
+        index = int(query.data.split(":")[-1])
+    except (ValueError, IndexError):
+        await query.edit_message_text(MSG_BRAINSTORM_EXPORT_FAIL.format(message="Invalid export index."))
+        return State.SELECT_PROJECT
+
+    success, message, _ = brainstorm_manager.export_session(index)
+
+    if success:
+        await query.edit_message_text(
+            MSG_BRAINSTORM_EXPORT_SUCCESS.format(message=message),
+            parse_mode="Markdown",
+            reply_markup=_nav_keyboard(),
+        )
+    else:
+        await query.edit_message_text(
+            MSG_BRAINSTORM_EXPORT_FAIL.format(message=message),
+            reply_markup=_nav_keyboard(),
+        )
+
+    return State.SELECT_PROJECT
+
+
 def _handle_brainstorm_action_dispatch(action, query, update, context, user_data, project):
     """Check if action is brainstorm-related and return a coroutine, or None."""
     if action == "brainstorm":
-        async def _do():
+        async def _do_brainstorm():
+            # Build keyboard: Cancel + optional Continue last
+            buttons = [[InlineKeyboardButton(
+                "\u2717 Cancel", callback_data="input:cancel",
+            )]]
+            resumable = brainstorm_manager.get_resumable_session(project.name)
+            if resumable:
+                buttons.insert(0, [InlineKeyboardButton(
+                    MSG_BRAINSTORM_CONTINUE_BTN,
+                    callback_data="bs:continue",
+                )])
+            reply_markup = InlineKeyboardMarkup(buttons)
             await query.edit_message_text(
                 MSG_BRAINSTORM_HEADER.format(project=project.name),
                 parse_mode="Markdown",
-                reply_markup=_cancel_keyboard("input:cancel"),
+                reply_markup=reply_markup,
             )
             return State.ENTER_BRAINSTORM_PROMPT
-        return _do()
+        return _do_brainstorm()
 
     if action == "resume_brainstorm":
         if not project:

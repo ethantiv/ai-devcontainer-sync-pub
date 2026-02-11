@@ -30,6 +30,8 @@ from .handlers import (
     check_task_progress,
     finish_brainstorming,
     handle_brainstorm_action,
+    handle_brainstorm_continue,
+    handle_brainstorm_export,
     handle_brainstorm_hint_button,
     handle_brainstorm_message,
     handle_brainstorm_prompt,
@@ -112,6 +114,7 @@ def create_application() -> Application:
             State.SELECT_PROJECT: [
                 CallbackQueryHandler(project_selected, pattern=r"^project:"),
                 CallbackQueryHandler(handle_page_navigation, pattern=r"^page:"),
+                CallbackQueryHandler(handle_brainstorm_export, pattern=r"^bs:export:"),
                 CallbackQueryHandler(handle_action, pattern=r"^action:"),
             ],
             State.PROJECT_MENU: [
@@ -137,6 +140,7 @@ def create_application() -> Application:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_idea),
             ],
             State.ENTER_BRAINSTORM_PROMPT: [
+                CallbackQueryHandler(handle_brainstorm_continue, pattern=r"^bs:continue$"),
                 CallbackQueryHandler(handle_input_cancel, pattern=r"^input:cancel$"),
                 CommandHandler("cancel", cancel),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_brainstorm_prompt),

@@ -94,6 +94,7 @@ class BrainstormSession:
     started_at: datetime = field(default_factory=datetime.now)
     status: str = "waiting"  # "waiting" | "responding" | "ready" | "error"
     last_response: str = ""
+    conversation: list = field(default_factory=list)  # List of {"role": "user"|"assistant", "text": str}
 
 
 @dataclass
@@ -661,6 +662,8 @@ class BrainstormManager:
     def _archive_session(self, session: BrainstormSession, outcome: str) -> None:
         """Archive a brainstorm session to history before cleanup.
 
+        Preserves the full conversation for export and continuation.
+
         Args:
             session: The session being finished/cancelled.
             outcome: "saved" if idea was saved, "cancelled" if cancelled.
@@ -671,14 +674,19 @@ class BrainstormManager:
         if len(session.initial_prompt) > 100:
             topic += "..."
 
+        # Count turns from conversation log (each user+assistant pair = 1 turn)
+        turns = max(1, len(session.conversation) // 2)
+
         entry = {
             "project": session.project,
             "topic": topic,
             "started_at": session.started_at.isoformat(),
             "finished_at": datetime.now().isoformat(),
             "outcome": outcome,
-            "turns": 1 if not session.last_response else len(session.last_response.split("\n\n---\n\n")) if "---" in session.last_response else 1,
+            "turns": turns,
             "last_response": session.last_response[:500] if session.last_response else "",
+            "conversation": session.conversation,
+            "session_id": session.session_id,
         }
         history.append(entry)
         self._save_history(history)
@@ -712,6 +720,7 @@ class BrainstormManager:
                 "initial_prompt": session.initial_prompt,
                 "started_at": session.started_at.isoformat(),
                 "status": session.status,
+                "conversation": session.conversation,
             })
         path = self._sessions_file()
         tmp_path = path.with_suffix(".tmp")
@@ -748,6 +757,7 @@ class BrainstormManager:
                 initial_prompt=entry.get("initial_prompt", ""),
                 started_at=datetime.fromisoformat(entry["started_at"]),
                 status=entry.get("status", "ready"),
+                conversation=entry.get("conversation", []),
             )
             self.sessions[session.chat_id] = session
             logger.info("Restored brainstorm session for chat %d, project %s", session.chat_id, session.project)
@@ -955,6 +965,8 @@ class BrainstormManager:
         session.session_id = session_id
         session.last_response = response
         session.status = "ready"
+        session.conversation.append({"role": "user", "text": prompt})
+        session.conversation.append({"role": "assistant", "text": response})
         self._save_sessions()
 
         yield None, response, True
@@ -1012,6 +1024,8 @@ class BrainstormManager:
             session.session_id = new_session_id
         session.last_response = response
         session.status = "ready"
+        session.conversation.append({"role": "user", "text": message})
+        session.conversation.append({"role": "assistant", "text": response})
         self._save_sessions()
 
         yield None, response, True
@@ -1067,6 +1081,167 @@ class BrainstormManager:
         self._cleanup_session(chat_id)
 
         return True, MSG_IDEA_SAVED.format(path=idea_file), idea_content
+
+    def export_session(self, history_index: int) -> tuple[bool, str, Path | None]:
+        """Export a brainstorm session from history as Markdown.
+
+        Args:
+            history_index: Index into the history list (0 = most recent).
+
+        Returns:
+            (success, message, file_path) — file_path is the exported .md file.
+        """
+        history = self.list_brainstorm_history()
+        if history_index < 0 or history_index >= len(history):
+            return False, "Session not found.", None
+
+        entry = history[history_index]
+        conversation = entry.get("conversation", [])
+        if not conversation:
+            return False, "No conversation data to export.", None
+
+        project = entry.get("project", "unknown")
+        started_at = entry.get("started_at", "")
+        finished_at = entry.get("finished_at", "")
+        topic = entry.get("topic", "untitled")
+
+        # Format as Markdown
+        lines = [
+            f"# Brainstorm: {topic}",
+            "",
+            f"**Project:** {project}",
+            f"**Started:** {started_at}",
+            f"**Finished:** {finished_at}",
+            "",
+            "---",
+            "",
+        ]
+        for turn in conversation:
+            role = turn.get("role", "unknown")
+            text = turn.get("text", "")
+            if role == "user":
+                lines.append(f"## User")
+            else:
+                lines.append(f"## Assistant")
+            lines.append("")
+            lines.append(text)
+            lines.append("")
+            lines.append("---")
+            lines.append("")
+
+        content = "\n".join(lines)
+
+        # Determine date for filename
+        try:
+            dt = datetime.fromisoformat(started_at)
+            date_str = dt.strftime("%Y%m%d_%H%M")
+        except (ValueError, TypeError):
+            date_str = "undated"
+
+        # Find the project path from PROJECTS_ROOT
+        project_dir = Path(PROJECTS_ROOT) / project
+        docs_dir = project_dir / "docs" / "brainstorms"
+        docs_dir.mkdir(parents=True, exist_ok=True)
+
+        filename = f"{project}_{date_str}.md"
+        export_path = docs_dir / filename
+        export_path.write_text(content)
+
+        return True, f"Exported to {export_path}", export_path
+
+    def get_resumable_session(self, project: str) -> dict | None:
+        """Find the most recent archived session that can be resumed.
+
+        A resumable session must have a non-empty conversation and a session_id.
+
+        Args:
+            project: Project name to filter by.
+
+        Returns:
+            History entry dict or None if no resumable session found.
+        """
+        history = self.list_brainstorm_history(project=project)
+        for entry in history:
+            if entry.get("conversation") and entry.get("session_id"):
+                return entry
+        return None
+
+    async def resume_archived_session(
+        self,
+        chat_id: int,
+        project: str,
+        project_path: Path,
+        history_entry: dict,
+    ) -> AsyncGenerator[tuple[str | None, str, bool], None]:
+        """Resume a brainstorm session from an archived history entry.
+
+        Creates a new Claude session using --resume with the archived session_id,
+        seeded with the previous conversation context.
+
+        Yields:
+            (error_code, status_message, is_final) tuples for progress updates.
+        """
+        if chat_id in self.sessions:
+            yield ERR_SESSION_ACTIVE, MSG_SESSION_ALREADY_ACTIVE, True
+            return
+
+        archived_session_id = history_entry.get("session_id")
+        if not archived_session_id:
+            yield ERR_NOT_READY, "Archived session has no session ID.", True
+            return
+
+        tmux_name = self._tmux_session_name(chat_id)
+        output_file = self._output_file_path(chat_id)
+
+        # Restore conversation history from archive
+        conversation = list(history_entry.get("conversation", []))
+
+        session = BrainstormSession(
+            chat_id=chat_id,
+            project=project,
+            project_path=project_path,
+            session_id=archived_session_id,
+            tmux_session=tmux_name,
+            output_file=output_file,
+            initial_prompt=history_entry.get("topic", ""),
+            status="waiting",
+            conversation=conversation,
+        )
+        self.sessions[chat_id] = session
+
+        yield None, MSG_BRAINSTORM_STARTING, False
+
+        # Resume the Claude session with a continuation prompt
+        resume_prompt = "Continue our brainstorming session. What should we explore next?"
+        if not self._start_claude_in_tmux(
+            tmux_name,
+            project_path,
+            resume_prompt,
+            output_file,
+            resume_session_id=archived_session_id,
+        ):
+            self._cleanup_session(chat_id)
+            yield ERR_START_FAILED, MSG_FAILED_TO_START_CLAUDE, True
+            return
+
+        session.status = "responding"
+        yield None, MSG_BRAINSTORM_CLAUDE_THINKING, False
+
+        error_code, response, new_session_id = await self._wait_for_response(output_file, tmux_name)
+
+        if error_code is not None:
+            self._cleanup_session(chat_id)
+            yield error_code, response, True
+            return
+
+        if new_session_id:
+            session.session_id = new_session_id
+        session.last_response = response
+        session.status = "ready"
+        session.conversation.append({"role": "assistant", "text": response})
+        self._save_sessions()
+
+        yield None, response, True
 
     def cancel(self, chat_id: int) -> bool:
         """Cancel a brainstorming session without saving.

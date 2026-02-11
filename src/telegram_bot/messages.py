@@ -229,6 +229,17 @@ MSG_BRAINSTORM_SESSION_ENTRY = (
     "   {date} \u2022 {turns} turn(s)\n"
 )
 
+# Brainstorm export
+MSG_BRAINSTORM_EXPORT_BTN = "\u21e9 Export #{num}"
+MSG_BRAINSTORM_EXPORT_SUCCESS = "\u2713 {message}"
+MSG_BRAINSTORM_EXPORT_FAIL = "\u2717 {message}"
+MSG_BRAINSTORM_EXPORT_NO_DATA = "No conversation data to export."
+
+# Brainstorm continue (resume archived session)
+MSG_BRAINSTORM_CONTINUE_BTN = "\u21ba Continue last"
+MSG_BRAINSTORM_CONTINUE_NO_SESSION = "No resumable brainstorm session found for this project."
+MSG_BRAINSTORM_CONTINUE_RESUMING = "~ *Resuming archived session*\n\nProject: `{project}`\nTopic: {topic}"
+
 # Task history
 MSG_TASK_HISTORY_TITLE = "\u25ce *Task history: {project}*\n\n"
 MSG_TASK_HISTORY_EMPTY = "No completed tasks yet."

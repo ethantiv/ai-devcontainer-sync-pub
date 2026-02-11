@@ -1,7 +1,7 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 15/37 (41%)
+**Progress:** 23/37 (62%)
 
 ## Goal
 
@@ -9,47 +9,28 @@ Implement all features from the project ROADMAP: 4 P2 (Important) features and 2
 
 ## Current Phase
 
-Phase 3
+Phase 4
 
 ## Phases
 
 ### Phase 1: Telegram bot — task history and log viewing
-Add a "History" button to the project menu that lists recent completed tasks with their outcomes (success/fail/iterations used), and allow viewing a summary of the last log file directly in Telegram.
-
-- [x] Add `TaskHistory` dataclass to `src/telegram_bot/tasks.py` with fields: project, mode, iterations_completed, iterations_total, duration_seconds, status (success/fail/interrupted), started_at, finished_at, log_dir
-- [x] Add `_archive_completed_task()` method to `TaskManager` — called from `process_completed_tasks()` to persist completed task data to `.task_history.json` (atomic write, append-only, same pattern as `_archive_session()`)
-- [x] Add `list_task_history()` method to `TaskManager` — returns history entries sorted by `finished_at` descending, with optional project filter
-- [x] Add `get_task_log_summary()` method to `TaskManager` — invokes `summary.js:generateSummary(logDir)` via subprocess, returns formatted text summary
-- [x] Add `MSG_TASK_HISTORY_*` constants to `src/telegram_bot/messages.py` — title, empty state, entry format, log summary header, view log button, no log message
-- [x] Add `show_task_history()` handler in `src/telegram_bot/handlers/tasks.py` — list of last 10 completed tasks with mode icon, status emoji, duration, iterations
-- [x] Add "History" button to project menu in `src/telegram_bot/handlers/projects.py` — route `action:task_history` callback via `_handle_task_action()` dispatcher
-- [x] Add `handle_task_history_log` callback handler — when user taps a history entry, show the log summary text (truncated to Telegram 4096 char message limit)
-- [x] Add tests for `_archive_completed_task()`, `list_task_history()`, `get_task_log_summary()` in `src/telegram_bot/tests/test_tasks.py` (11 tests)
-- [x] Add tests for `show_task_history()` and `handle_task_history_log` handlers in `src/telegram_bot/tests/test_bot.py` (7 tests)
 - **Status:** complete
 
 ### Phase 2: Loop — idea seeding from file and URL sources
-Extend `loop plan -I` to accept `@file.md` (read idea from file) and `https://...` (fetch issue/PR body as idea seed) in addition to inline text.
-
-- [x] Extend `write_idea()` in `src/scripts/loop.sh` — added `resolve_idea()` helper that detects `@`-prefixed file paths (reads with `cat`) and `http(s)://` URLs; `write_idea()` uses quoted heredoc (`<< 'IDEA_EOF'`) to prevent shell expansion
-- [x] Add URL fetching logic in `resolve_idea()` — GitHub issue URLs use `gh issue view --json body -q .body`, PR URLs use `gh pr view --json body -q .body`, generic URLs use `curl -sL` with HTML tag stripping; all emit warnings and return 1 on failure
-- [x] Verify `-I` option passthrough in `src/bin/cli.js` (line 12) and `src/lib/run.js` (line 34) — confirmed `@file` and URL values pass through unmodified to `loop.sh` via Commander.js parsing and `args.push('-I', opts.idea)`
-- [x] Add shell tests for file-based idea seeding — 18 tests in `src/scripts/tests/test_write_idea.sh` covering @file, inline text, special chars
-- [x] Add shell tests for URL-based idea seeding — mock `gh`/`curl` commands in same test file, verify ROADMAP.md content for GitHub issues, PRs, and generic URLs
 - **Status:** complete
 
 ### Phase 3: Brainstorm session export and continuation
 Add export command to save the full brainstorm conversation as Markdown, and allow resuming the last archived session after bot restart.
 
-- [ ] Preserve full conversation on session finish — before `_cleanup_session()` deletes the JSONL output file (tasks.py:706), copy/read its content for archival; extend `_archive_session()` to store full conversation text (not just 500-char truncation)
-- [ ] Add `export_session()` method to `BrainstormManager` — reads archived session data with full conversation, formats as Markdown with timestamps and turn separators, saves to `docs/brainstorms/{project}_{date}.md`
-- [ ] Add `get_resumable_session()` method to `BrainstormManager` — finds the most recent archived session for a project that has non-empty conversation data and returns it
-- [ ] Add `resume_archived_session()` method to `BrainstormManager` — reconstructs session state from history entry, creates new tmux session with `--resume` flag using the archived conversation as context seed
-- [ ] Add `MSG_BRAINSTORM_EXPORT_*` and `MSG_BRAINSTORM_CONTINUE_*` constants to `src/telegram_bot/messages.py`
-- [ ] Add "Export" button to brainstorm history entries in `src/telegram_bot/handlers/brainstorm.py` (show_brainstorm_history at lines 104-147) — triggers `export_session()` and sends file path confirmation
-- [ ] Add "Continue last" button to brainstorm prompt in `src/telegram_bot/handlers/brainstorm.py` — triggers `resume_archived_session()` and enters BRAINSTORMING state
-- [ ] Add tests for `export_session()`, `get_resumable_session()`, `resume_archived_session()` in `src/telegram_bot/tests/test_tasks.py`
-- **Status:** pending
+- [x] Preserve full conversation on session finish — added `conversation` field to `BrainstormSession` dataclass to accumulate user/assistant turns during `start()` and `respond()`; `_archive_session()` stores full conversation list and session_id in history (not just 500-char truncation)
+- [x] Add `export_session()` method to `BrainstormManager` — reads archived session data with full conversation, formats as Markdown with timestamps and turn separators, saves to `docs/brainstorms/{project}_{date}.md`
+- [x] Add `get_resumable_session()` method to `BrainstormManager` — finds the most recent archived session for a project that has non-empty conversation data and a session_id
+- [x] Add `resume_archived_session()` method to `BrainstormManager` — reconstructs session state from history entry, creates new tmux session with `--resume` flag using the archived session_id
+- [x] Add `MSG_BRAINSTORM_EXPORT_*` and `MSG_BRAINSTORM_CONTINUE_*` constants to `src/telegram_bot/messages.py`
+- [x] Add "Export" button to brainstorm history entries in `src/telegram_bot/handlers/brainstorm.py` — `handle_brainstorm_export()` callback handler triggered via `bs:export:{index}` pattern, registered in SELECT_PROJECT state
+- [x] Add "Continue last" button to brainstorm prompt in `src/telegram_bot/handlers/brainstorm.py` — `handle_brainstorm_continue()` callback handler triggered via `bs:continue` pattern in ENTER_BRAINSTORM_PROMPT state; button shown only when `get_resumable_session()` finds a match
+- [x] Add tests for `export_session()`, `get_resumable_session()`, `resume_archived_session()`, conversation accumulation in `src/telegram_bot/tests/test_tasks.py` (20 tests across 4 new test classes)
+- **Status:** complete
 
 ### Phase 4: Docker ARM build optimization
 Move Playwright browser installation from Dockerfile build time to lazy first-use pattern triggered by `agent-browser` skill invocation.
@@ -84,13 +65,10 @@ Add a Mermaid state diagram to `src/telegram_bot/COMMANDS.md` showing the full c
 
 | Question | Answer |
 |----------|--------|
-| Is there existing task history? | **Yes (Phase 1 complete).** `TaskManager` now archives completed tasks to `.task_history.json` with atomic writes. History is viewable in Telegram via "History" button. |
-| Does `-I` already support files/URLs? | **Yes (Phase 2 complete).** `resolve_idea()` in `loop.sh` handles `@file` paths, GitHub issue/PR URLs (via `gh`), and generic URLs (via `curl`). Quoted heredoc prevents shell expansion. 18 shell tests in `src/scripts/tests/test_write_idea.sh`. |
-| Is brainstorm export implemented? | No. `_archive_session()` stores only truncated data (topic: 100 chars, last_response: 500 chars). Full JSONL output is deleted in `_cleanup_session()`. No Markdown export or post-restart continuation. |
+| Is brainstorm export implemented? | **Yes (Phase 3 complete).** `BrainstormSession` now has a `conversation` field that accumulates turns. `_archive_session()` stores full conversation + session_id. `export_session()` writes Markdown to `docs/brainstorms/`. `resume_archived_session()` uses `--resume` with archived session_id. |
 | Is Playwright lazily installed? | No. Builder stage runs `npx playwright install chromium --with-deps` (Dockerfile:25). Runtime copies browsers from builder and installs 16 system deps (lines 48-50). |
-| Are there integration tests? | Partial. 456 Python + 20 JS + 18 shell tests. Shell tests cover `resolve_idea()`/`write_idea()`. `init.js`, `run.js`, `cleanup.js`, `cli.js` have zero tests. `generateSummary()` is not tested end-to-end. |
+| Are there integration tests? | Partial. 476 Python + 20 JS + 18 shell tests. Shell tests cover `resolve_idea()`/`write_idea()`. `init.js`, `run.js`, `cleanup.js`, `cli.js` have zero tests. `generateSummary()` is not tested end-to-end. |
 | Is there a state diagram? | No. COMMANDS.md documents commands and buttons but has no Mermaid diagram. |
-| How many bot states exist? | 10 states in `State` enum (SELECT_PROJECT through GITHUB_CHOICE), 5 entry points, 40+ transitions across 5 handler modules. ROADMAP.md says "9 states" which is outdated — GITHUB_CHOICE was added later. |
 
 ## Findings & Decisions
 
@@ -98,24 +76,21 @@ Add a Mermaid state diagram to `src/telegram_bot/COMMANDS.md` showing the full c
 
 | Decision | Rationale |
 |----------|-----------|
-| Reuse `_archive_session()` pattern for task history | Proven atomic persistence pattern at tasks.py:548-571, consistent codebase style |
-| Handle `@file` and URL resolution in `loop.sh` (not Node.js) | Shell script already manages idea writing; `gh` CLI and `curl` are native shell tools |
-| Use `gh issue view --json body -q .body` for GitHub URLs | `gh` is already installed in Docker; avoids custom API parsing; `-q .body` extracts cleanly |
-| Use quoted heredoc (`<< 'EOF'`) for fetched content | Prevents shell expansion of `$`, backticks in fetched issue/PR bodies |
-| Preserve full JSONL before cleanup for brainstorm export | Current `_cleanup_session()` deletes output file; must read before delete |
+| Accumulate conversation in `BrainstormSession.conversation` field | JSONL output files are per-turn and deleted; in-memory list survives across turns and is persisted to sessions JSON |
+| Store full conversation + session_id in archive | Enables both Markdown export (full text) and session resumption (--resume with session_id) |
+| Export to `docs/brainstorms/{project}_{date}.md` | Per-project organization, date-based filenames for uniqueness |
+| Resume via `--resume` with archived session_id | Claude CLI supports resuming by session_id; no need to re-inject conversation as prompt |
 | Lazy Playwright via idempotent `ensure-playwright.sh` | Simple to integrate as pre-hook; can be run manually or automatically; exits 0 if already present |
 | Integration tests in Jest (not pytest) | Tests `loop init`/`update`/`summary` which are Node.js modules; keeps test tooling consistent with existing `summary.test.js` |
-| Mermaid stateDiagram-v2 in COMMANDS.md | Diagram lives next to the command documentation it describes; `beautiful-mermaid` skill for rendering |
-| Scope limited to ROADMAP.md proposals only | No new features beyond the 6 documented proposals; pattern fixes (orphaned MSG_*, missing decorator) are out of scope |
+| Scope limited to ROADMAP.md proposals only | No new features beyond the 6 documented proposals |
 
 ### Issues Encountered
 
 | Issue | Resolution |
 |-------|------------|
-| No `docs/specs/` directory exists | ROADMAP.md is sufficiently detailed for all 6 proposals; no separate specs needed |
 | Brainstorm "resume" already exists for active sessions | Phase 3 is specifically about resuming ARCHIVED sessions after restart — different from existing in-session resume at brainstorm.py:409-437 |
-| `_archive_session()` truncates data (500 chars) | Phase 3 must preserve full conversation before `_cleanup_session()` deletes output file |
-| `write_idea()` uses unquoted heredoc | Resolved: switched to `<< 'IDEA_EOF'` quoted heredoc in Phase 2 |
+| `_archive_session()` truncated data (500 chars) | Resolved: added `conversation` list and `session_id` to archive entries; last_response still truncated for display but full data in conversation field |
+| No single JSONL file with full conversation | Resolved: accumulate turns in `BrainstormSession.conversation` field during `start()` and `respond()`, persist via `_save_sessions()` |
 | `.devcontainer/Dockerfile` also has Playwright | Phase 4 only targets `docker/Dockerfile` (production); devcontainer can retain build-time install for development speed |
 
 ### Resources
@@ -127,4 +102,4 @@ Add a Mermaid state diagram to `src/telegram_bot/COMMANDS.md` showing the full c
 - Bot wiring: `src/telegram_bot/bot.py`
 - Messages: `src/telegram_bot/messages.py`
 - Dockerfile: `docker/Dockerfile`
-- Test files: `src/telegram_bot/tests/` (456 tests), `lib/__tests__/summary.test.js` (20 tests), `src/scripts/tests/test_write_idea.sh` (18 tests)
+- Test files: `src/telegram_bot/tests/` (476 tests), `lib/__tests__/summary.test.js` (20 tests), `src/scripts/tests/test_write_idea.sh` (18 tests)

@@ -2550,6 +2550,408 @@ class TestBrainstormHistory:
         brainstorm_manager.cancel(999)
         assert brainstorm_manager._load_history() == []
 
+    def test_archive_session_stores_conversation(self, brainstorm_manager, tmp_path):
+        """_archive_session() stores the full conversation list in history."""
+        from src.telegram_bot.tasks import BrainstormSession
+        conversation = [
+            {"role": "user", "text": "Build a REST API"},
+            {"role": "assistant", "text": "Here is the plan..."},
+            {"role": "user", "text": "Add auth"},
+            {"role": "assistant", "text": "Sure, here's auth..."},
+        ]
+        session = BrainstormSession(
+            chat_id=42,
+            project="myproject",
+            project_path=tmp_path / "myproject",
+            session_id="sess-1",
+            tmux_session="brainstorm-42",
+            output_file=tmp_path / ".brainstorm" / "out.jsonl",
+            initial_prompt="Build a REST API",
+            last_response="Sure, here's auth...",
+            conversation=conversation,
+        )
+        brainstorm_manager._archive_session(session, "saved")
+
+        history = json.loads((tmp_path / ".brainstorm_history.json").read_text())
+        assert history[0]["conversation"] == conversation
+        assert history[0]["session_id"] == "sess-1"
+        assert history[0]["turns"] == 2  # 4 entries / 2 = 2 turns
+
+    def test_archive_session_counts_turns_from_conversation(self, brainstorm_manager, tmp_path):
+        """_archive_session() counts turns from conversation pairs, not response splitting."""
+        from src.telegram_bot.tasks import BrainstormSession
+        session = BrainstormSession(
+            chat_id=42,
+            project="proj",
+            project_path=tmp_path / "proj",
+            session_id="sess-1",
+            tmux_session="brainstorm-42",
+            output_file=tmp_path / ".brainstorm" / "out.jsonl",
+            initial_prompt="topic",
+            conversation=[
+                {"role": "user", "text": "q1"},
+                {"role": "assistant", "text": "a1"},
+                {"role": "user", "text": "q2"},
+                {"role": "assistant", "text": "a2"},
+                {"role": "user", "text": "q3"},
+                {"role": "assistant", "text": "a3"},
+            ],
+        )
+        brainstorm_manager._archive_session(session, "saved")
+
+        history = json.loads((tmp_path / ".brainstorm_history.json").read_text())
+        assert history[0]["turns"] == 3
+
+
+class TestBrainstormExport:
+    """Tests for brainstorm session export to Markdown."""
+
+    def test_export_session_success(self, brainstorm_manager, tmp_path):
+        """export_session() creates a Markdown file with conversation data."""
+        project_dir = tmp_path / "myproject" / "docs" / "brainstorms"
+        history = [{
+            "project": "myproject",
+            "topic": "Build a REST API",
+            "started_at": "2026-02-01T10:00:00",
+            "finished_at": "2026-02-01T11:00:00",
+            "outcome": "saved",
+            "turns": 1,
+            "conversation": [
+                {"role": "user", "text": "Build a REST API"},
+                {"role": "assistant", "text": "Here is the plan..."},
+            ],
+            "session_id": "sess-1",
+        }]
+        (tmp_path / ".brainstorm_history.json").write_text(json.dumps(history))
+
+        success, message, path = brainstorm_manager.export_session(0)
+
+        assert success is True
+        assert path is not None
+        assert path.exists()
+        content = path.read_text()
+        assert "# Brainstorm: Build a REST API" in content
+        assert "**Project:** myproject" in content
+        assert "## User" in content
+        assert "## Assistant" in content
+        assert "Build a REST API" in content
+        assert "Here is the plan..." in content
+
+    def test_export_session_invalid_index(self, brainstorm_manager, tmp_path):
+        """export_session() returns error for out-of-range index."""
+        success, message, path = brainstorm_manager.export_session(0)
+        assert success is False
+        assert path is None
+        assert "not found" in message
+
+    def test_export_session_no_conversation(self, brainstorm_manager, tmp_path):
+        """export_session() returns error when entry has no conversation data."""
+        history = [{
+            "project": "myproject",
+            "topic": "Old session",
+            "started_at": "2026-01-01T10:00:00",
+            "finished_at": "2026-01-01T11:00:00",
+            "conversation": [],
+        }]
+        (tmp_path / ".brainstorm_history.json").write_text(json.dumps(history))
+
+        success, message, path = brainstorm_manager.export_session(0)
+        assert success is False
+        assert "No conversation data" in message
+
+    def test_export_session_creates_brainstorms_dir(self, brainstorm_manager, tmp_path):
+        """export_session() creates docs/brainstorms/ directory if it doesn't exist."""
+        history = [{
+            "project": "newproj",
+            "topic": "New idea",
+            "started_at": "2026-02-10T09:00:00",
+            "finished_at": "2026-02-10T10:00:00",
+            "conversation": [
+                {"role": "user", "text": "Hello"},
+                {"role": "assistant", "text": "Hi there"},
+            ],
+        }]
+        (tmp_path / ".brainstorm_history.json").write_text(json.dumps(history))
+
+        success, _, path = brainstorm_manager.export_session(0)
+        assert success is True
+        assert (tmp_path / "newproj" / "docs" / "brainstorms").is_dir()
+
+    def test_export_session_filename_format(self, brainstorm_manager, tmp_path):
+        """export_session() uses {project}_{YYYYMMDD_HHMM}.md filename."""
+        history = [{
+            "project": "myapp",
+            "topic": "Feature design",
+            "started_at": "2026-03-15T14:30:00",
+            "finished_at": "2026-03-15T15:30:00",
+            "conversation": [
+                {"role": "user", "text": "Design a feature"},
+                {"role": "assistant", "text": "OK"},
+            ],
+        }]
+        (tmp_path / ".brainstorm_history.json").write_text(json.dumps(history))
+
+        success, _, path = brainstorm_manager.export_session(0)
+        assert success is True
+        assert path.name == "myapp_20260315_1430.md"
+
+    def test_export_session_negative_index(self, brainstorm_manager, tmp_path):
+        """export_session() returns error for negative index."""
+        success, message, path = brainstorm_manager.export_session(-1)
+        assert success is False
+
+
+class TestBrainstormResumable:
+    """Tests for finding and resuming archived brainstorm sessions."""
+
+    def test_get_resumable_session_found(self, brainstorm_manager, tmp_path):
+        """get_resumable_session() returns most recent entry with conversation and session_id."""
+        history = [
+            {
+                "project": "myproject",
+                "finished_at": "2026-01-01T10:00:00",
+                "conversation": [{"role": "user", "text": "q"}],
+                "session_id": "sess-old",
+            },
+            {
+                "project": "myproject",
+                "finished_at": "2026-02-01T10:00:00",
+                "conversation": [{"role": "user", "text": "q2"}],
+                "session_id": "sess-new",
+            },
+        ]
+        (tmp_path / ".brainstorm_history.json").write_text(json.dumps(history))
+
+        result = brainstorm_manager.get_resumable_session("myproject")
+        assert result is not None
+        assert result["session_id"] == "sess-new"
+
+    def test_get_resumable_session_none_without_conversation(self, brainstorm_manager, tmp_path):
+        """get_resumable_session() returns None when entries have no conversation."""
+        history = [{
+            "project": "myproject",
+            "finished_at": "2026-02-01T10:00:00",
+            "conversation": [],
+            "session_id": "sess-1",
+        }]
+        (tmp_path / ".brainstorm_history.json").write_text(json.dumps(history))
+
+        assert brainstorm_manager.get_resumable_session("myproject") is None
+
+    def test_get_resumable_session_none_without_session_id(self, brainstorm_manager, tmp_path):
+        """get_resumable_session() returns None when entries have no session_id."""
+        history = [{
+            "project": "myproject",
+            "finished_at": "2026-02-01T10:00:00",
+            "conversation": [{"role": "user", "text": "q"}],
+        }]
+        (tmp_path / ".brainstorm_history.json").write_text(json.dumps(history))
+
+        assert brainstorm_manager.get_resumable_session("myproject") is None
+
+    def test_get_resumable_session_filters_by_project(self, brainstorm_manager, tmp_path):
+        """get_resumable_session() only returns entries for the specified project."""
+        history = [{
+            "project": "other-project",
+            "finished_at": "2026-02-01T10:00:00",
+            "conversation": [{"role": "user", "text": "q"}],
+            "session_id": "sess-1",
+        }]
+        (tmp_path / ".brainstorm_history.json").write_text(json.dumps(history))
+
+        assert brainstorm_manager.get_resumable_session("myproject") is None
+
+    def test_get_resumable_session_empty_history(self, brainstorm_manager):
+        """get_resumable_session() returns None with no history."""
+        assert brainstorm_manager.get_resumable_session("myproject") is None
+
+    @pytest.mark.asyncio
+    async def test_resume_archived_session_happy_path(self, brainstorm_manager, tmp_path):
+        """resume_archived_session() creates session and returns Claude response."""
+        history_entry = {
+            "project": "myproject",
+            "topic": "Build API",
+            "started_at": "2026-02-01T10:00:00",
+            "finished_at": "2026-02-01T11:00:00",
+            "conversation": [
+                {"role": "user", "text": "Build a REST API"},
+                {"role": "assistant", "text": "Here is the plan..."},
+            ],
+            "session_id": "sess-archived",
+        }
+        project_path = tmp_path / "myproject"
+        project_path.mkdir()
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True) as mock_tmux,
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "Continuing our discussion...", "sess-new"),
+            ),
+        ):
+            results = []
+            async for error_code, status, is_final in brainstorm_manager.resume_archived_session(
+                chat_id=42,
+                project="myproject",
+                project_path=project_path,
+                history_entry=history_entry,
+            ):
+                results.append((error_code, status, is_final))
+
+        # Should have 3 tuples: starting, thinking, response
+        assert len(results) == 3
+        assert results[0] == (None, MSG_BRAINSTORM_STARTING, False)
+        assert results[2][0] is None
+        assert results[2][1] == "Continuing our discussion..."
+        assert results[2][2] is True
+
+        # Verify --resume was used with archived session_id
+        mock_tmux.assert_called_once()
+        call_kwargs = mock_tmux.call_args
+        assert call_kwargs[1]["resume_session_id"] == "sess-archived"
+
+        # Session should be registered
+        assert 42 in brainstorm_manager.sessions
+        session = brainstorm_manager.sessions[42]
+        assert session.session_id == "sess-new"
+        assert session.status == "ready"
+        # Original conversation should be preserved + new response added
+        assert len(session.conversation) == 3  # 2 from archive + 1 new response
+
+    @pytest.mark.asyncio
+    async def test_resume_archived_session_active_session_error(self, brainstorm_manager, tmp_path):
+        """resume_archived_session() yields error when session already active."""
+        from src.telegram_bot.tasks import BrainstormSession
+        brainstorm_manager.sessions[42] = BrainstormSession(
+            chat_id=42, project="proj", project_path=tmp_path / "proj",
+            session_id="s", tmux_session="t", output_file=tmp_path / "f",
+            initial_prompt="p",
+        )
+
+        results = []
+        async for item in brainstorm_manager.resume_archived_session(
+            42, "proj", tmp_path / "proj", {"session_id": "s"},
+        ):
+            results.append(item)
+
+        assert len(results) == 1
+        assert results[0][0] == ERR_SESSION_ACTIVE
+
+    @pytest.mark.asyncio
+    async def test_resume_archived_session_no_session_id(self, brainstorm_manager, tmp_path):
+        """resume_archived_session() yields error when history has no session_id."""
+        results = []
+        async for item in brainstorm_manager.resume_archived_session(
+            42, "proj", tmp_path / "proj", {"conversation": []},
+        ):
+            results.append(item)
+
+        assert len(results) == 1
+        assert results[0][0] == ERR_NOT_READY
+
+    @pytest.mark.asyncio
+    async def test_resume_archived_session_tmux_failure(self, brainstorm_manager, tmp_path):
+        """resume_archived_session() cleans up and yields error on tmux failure."""
+        history_entry = {
+            "conversation": [{"role": "user", "text": "q"}],
+            "session_id": "sess-1",
+            "topic": "topic",
+        }
+
+        with patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=False):
+            results = []
+            async for item in brainstorm_manager.resume_archived_session(
+                42, "proj", tmp_path / "proj", history_entry,
+            ):
+                results.append(item)
+
+        assert results[-1][0] == ERR_START_FAILED
+        assert 42 not in brainstorm_manager.sessions  # cleaned up
+
+    @pytest.mark.asyncio
+    async def test_resume_archived_session_timeout(self, brainstorm_manager, tmp_path):
+        """resume_archived_session() cleans up on timeout."""
+        history_entry = {
+            "conversation": [{"role": "user", "text": "q"}],
+            "session_id": "sess-1",
+            "topic": "topic",
+        }
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(ERR_TIMEOUT, "Timeout", None),
+            ),
+        ):
+            results = []
+            async for item in brainstorm_manager.resume_archived_session(
+                42, "proj", tmp_path / "proj", history_entry,
+            ):
+                results.append(item)
+
+        assert results[-1][0] == ERR_TIMEOUT
+        assert 42 not in brainstorm_manager.sessions
+
+
+class TestBrainstormConversationAccumulation:
+    """Tests for conversation accumulation during start() and respond()."""
+
+    @pytest.mark.asyncio
+    async def test_start_accumulates_conversation(self, brainstorm_manager, tmp_path):
+        """start() adds user prompt and assistant response to conversation list."""
+        project_path = tmp_path / "proj"
+        project_path.mkdir()
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "Claude's response", "sess-1"),
+            ),
+        ):
+            async for _ in brainstorm_manager.start(42, "proj", project_path, "My prompt"):
+                pass
+
+        session = brainstorm_manager.sessions[42]
+        assert len(session.conversation) == 2
+        assert session.conversation[0] == {"role": "user", "text": "My prompt"}
+        assert session.conversation[1] == {"role": "assistant", "text": "Claude's response"}
+
+    @pytest.mark.asyncio
+    async def test_respond_accumulates_conversation(self, brainstorm_manager, tmp_path):
+        """respond() adds user message and assistant response to conversation."""
+        from src.telegram_bot.tasks import BrainstormSession
+        session = BrainstormSession(
+            chat_id=42, project="proj", project_path=tmp_path / "proj",
+            session_id="sess-1", tmux_session="brainstorm-42",
+            output_file=tmp_path / ".brainstorm" / "out.jsonl",
+            initial_prompt="original", status="ready",
+            conversation=[
+                {"role": "user", "text": "original"},
+                {"role": "assistant", "text": "first response"},
+            ],
+        )
+        brainstorm_manager.sessions[42] = session
+
+        with (
+            patch.object(brainstorm_manager, "_start_claude_in_tmux", return_value=True),
+            patch.object(
+                brainstorm_manager,
+                "_wait_for_response",
+                return_value=(None, "Second response", "sess-2"),
+            ),
+        ):
+            async for _ in brainstorm_manager.respond(42, "Follow-up question"):
+                pass
+
+        assert len(session.conversation) == 4
+        assert session.conversation[2] == {"role": "user", "text": "Follow-up question"}
+        assert session.conversation[3] == {"role": "assistant", "text": "Second response"}
+
 
 class TestTaskHistory:
     """Tests for TaskManager task history archival and retrieval."""
