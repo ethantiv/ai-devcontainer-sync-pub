@@ -1,7 +1,7 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 11/37 (30%)
+**Progress:** 15/37 (41%)
 
 ## Goal
 
@@ -9,7 +9,7 @@ Implement all features from the project ROADMAP: 4 P2 (Important) features and 2
 
 ## Current Phase
 
-Phase 2
+Phase 3
 
 ## Phases
 
@@ -31,12 +31,12 @@ Add a "History" button to the project menu that lists recent completed tasks wit
 ### Phase 2: Loop — idea seeding from file and URL sources
 Extend `loop plan -I` to accept `@file.md` (read idea from file) and `https://...` (fetch issue/PR body as idea seed) in addition to inline text.
 
-- [ ] Extend `write_idea()` in `src/scripts/loop.sh` (lines 165-175) — detect `@`-prefixed file paths (read file content with `cat`) and `http(s)://` URLs before writing to `docs/ROADMAP.md`; use quoted heredoc (`<< 'EOF'`) to prevent shell expansion of special chars in fetched content
-- [ ] Add URL fetching logic in `write_idea()` — for GitHub issue/PR URLs, use `gh issue view --json body -q .body` or `gh pr view --json body -q .body`; for generic URLs, use `curl -sL` with content extraction; emit warning and skip on failure
+- [x] Extend `write_idea()` in `src/scripts/loop.sh` — added `resolve_idea()` helper that detects `@`-prefixed file paths (reads with `cat`) and `http(s)://` URLs; `write_idea()` uses quoted heredoc (`<< 'IDEA_EOF'`) to prevent shell expansion
+- [x] Add URL fetching logic in `resolve_idea()` — GitHub issue URLs use `gh issue view --json body -q .body`, PR URLs use `gh pr view --json body -q .body`, generic URLs use `curl -sL` with HTML tag stripping; all emit warnings and return 1 on failure
 - [x] Verify `-I` option passthrough in `src/bin/cli.js` (line 12) and `src/lib/run.js` (line 34) — confirmed `@file` and URL values pass through unmodified to `loop.sh` via Commander.js parsing and `args.push('-I', opts.idea)`
-- [ ] Add shell tests for file-based idea seeding — create temp file, invoke `write_idea()` with `@path`, verify ROADMAP.md content
-- [ ] Add shell tests for URL-based idea seeding — mock `gh`/`curl` commands, verify ROADMAP.md content
-- **Status:** pending
+- [x] Add shell tests for file-based idea seeding — 18 tests in `src/scripts/tests/test_write_idea.sh` covering @file, inline text, special chars
+- [x] Add shell tests for URL-based idea seeding — mock `gh`/`curl` commands in same test file, verify ROADMAP.md content for GitHub issues, PRs, and generic URLs
+- **Status:** complete
 
 ### Phase 3: Brainstorm session export and continuation
 Add export command to save the full brainstorm conversation as Markdown, and allow resuming the last archived session after bot restart.
@@ -85,10 +85,10 @@ Add a Mermaid state diagram to `src/telegram_bot/COMMANDS.md` showing the full c
 | Question | Answer |
 |----------|--------|
 | Is there existing task history? | **Yes (Phase 1 complete).** `TaskManager` now archives completed tasks to `.task_history.json` with atomic writes. History is viewable in Telegram via "History" button. |
-| Does `-I` already support files/URLs? | No. `write_idea()` in `loop.sh` (lines 165-175) writes `$IDEA` directly to `docs/ROADMAP.md` using an unquoted heredoc. No detection for `@` prefix or `http(s)://` URLs. However, `-I` passthrough from cli.js → run.js → loop.sh works correctly and requires no changes. |
+| Does `-I` already support files/URLs? | **Yes (Phase 2 complete).** `resolve_idea()` in `loop.sh` handles `@file` paths, GitHub issue/PR URLs (via `gh`), and generic URLs (via `curl`). Quoted heredoc prevents shell expansion. 18 shell tests in `src/scripts/tests/test_write_idea.sh`. |
 | Is brainstorm export implemented? | No. `_archive_session()` stores only truncated data (topic: 100 chars, last_response: 500 chars). Full JSONL output is deleted in `_cleanup_session()`. No Markdown export or post-restart continuation. |
 | Is Playwright lazily installed? | No. Builder stage runs `npx playwright install chromium --with-deps` (Dockerfile:25). Runtime copies browsers from builder and installs 16 system deps (lines 48-50). |
-| Are there integration tests? | No. Only unit tests: 456 Python + 20 JS. `init.js`, `run.js`, `cleanup.js`, `cli.js` have zero tests. `generateSummary()` is not tested end-to-end. |
+| Are there integration tests? | Partial. 456 Python + 20 JS + 18 shell tests. Shell tests cover `resolve_idea()`/`write_idea()`. `init.js`, `run.js`, `cleanup.js`, `cli.js` have zero tests. `generateSummary()` is not tested end-to-end. |
 | Is there a state diagram? | No. COMMANDS.md documents commands and buttons but has no Mermaid diagram. |
 | How many bot states exist? | 10 states in `State` enum (SELECT_PROJECT through GITHUB_CHOICE), 5 entry points, 40+ transitions across 5 handler modules. ROADMAP.md says "9 states" which is outdated — GITHUB_CHOICE was added later. |
 
@@ -115,7 +115,7 @@ Add a Mermaid state diagram to `src/telegram_bot/COMMANDS.md` showing the full c
 | No `docs/specs/` directory exists | ROADMAP.md is sufficiently detailed for all 6 proposals; no separate specs needed |
 | Brainstorm "resume" already exists for active sessions | Phase 3 is specifically about resuming ARCHIVED sessions after restart — different from existing in-session resume at brainstorm.py:409-437 |
 | `_archive_session()` truncates data (500 chars) | Phase 3 must preserve full conversation before `_cleanup_session()` deletes output file |
-| `write_idea()` uses unquoted heredoc | Phase 2 must switch to quoted heredoc (`<< 'EOF'`) to safely handle fetched content with `$` or backticks |
+| `write_idea()` uses unquoted heredoc | Resolved: switched to `<< 'IDEA_EOF'` quoted heredoc in Phase 2 |
 | `.devcontainer/Dockerfile` also has Playwright | Phase 4 only targets `docker/Dockerfile` (production); devcontainer can retain build-time install for development speed |
 
 ### Resources
@@ -127,4 +127,4 @@ Add a Mermaid state diagram to `src/telegram_bot/COMMANDS.md` showing the full c
 - Bot wiring: `src/telegram_bot/bot.py`
 - Messages: `src/telegram_bot/messages.py`
 - Dockerfile: `docker/Dockerfile`
-- Test files: `src/telegram_bot/tests/` (456 tests), `lib/__tests__/summary.test.js` (20 tests)
+- Test files: `src/telegram_bot/tests/` (456 tests), `lib/__tests__/summary.test.js` (20 tests), `src/scripts/tests/test_write_idea.sh` (18 tests)

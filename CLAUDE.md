@@ -16,6 +16,7 @@ claude mcp list                    # Verify MCP servers
 claude plugin marketplace list     # List installed plugins
 python3 -m pytest src/telegram_bot/tests/ -v  # Run Telegram bot tests (456 tests)
 npm install --prefix src && npm test --prefix src  # Run JS tests (20 tests, requires install)
+bash src/scripts/tests/test_write_idea.sh          # Run shell tests (18 tests)
 ```
 
 Single test: `python3 -m pytest src/telegram_bot/tests/test_tasks.py::TestTaskManager::test_start_task -v`
@@ -68,6 +69,8 @@ loop summary / cleanup  # Show run stats / clean artifacts
 **Structure**: `src/scripts/` (shell), `src/prompts/`, `src/templates/`, `src/telegram_bot/` (Python bot + `handlers/`), `src/bin/` + `src/lib/` (Node.js CLI).
 
 **Telegram bot**: Starts in Docker if `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` set. Commands: `src/telegram_bot/COMMANDS.md`.
+
+**Idea seeding**: `loop plan -I` accepts inline text, `@file.md` (read from file), or `https://...` URLs (GitHub issues/PRs via `gh`, generic via `curl`). Resolved by `resolve_idea()` in `loop.sh`.
 
 **Auto-commit**: `ensure_committed()` in `loop.sh` auto-commits after each iteration (prefix `chore(loop):`).
 

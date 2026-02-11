@@ -161,16 +161,91 @@ format_stream() {
     done
 }
 
+# Resolve idea content from @file path, URL, or inline text
+resolve_idea() {
+    local idea="$1"
+
+    # @file — read content from file
+    if [[ "$idea" == @* ]]; then
+        local file="${idea#@}"
+        if [[ ! -f "$file" ]]; then
+            echo "[WARN] Idea file not found: $file" >&2
+            return 1
+        fi
+        cat "$file"
+        return 0
+    fi
+
+    # GitHub issue URL — use gh issue view
+    if [[ "$idea" =~ ^https?://github\.com/[^/]+/[^/]+/issues/[0-9]+ ]]; then
+        if ! command -v gh &>/dev/null; then
+            echo "[WARN] gh CLI not found, cannot fetch GitHub issue" >&2
+            return 1
+        fi
+        local body
+        body=$(gh issue view "$idea" --json body -q .body 2>/dev/null)
+        if [[ $? -ne 0 || -z "$body" ]]; then
+            echo "[WARN] Failed to fetch GitHub issue: $idea" >&2
+            return 1
+        fi
+        echo "$body"
+        return 0
+    fi
+
+    # GitHub PR URL — use gh pr view
+    if [[ "$idea" =~ ^https?://github\.com/[^/]+/[^/]+/pull/[0-9]+ ]]; then
+        if ! command -v gh &>/dev/null; then
+            echo "[WARN] gh CLI not found, cannot fetch GitHub PR" >&2
+            return 1
+        fi
+        local body
+        body=$(gh pr view "$idea" --json body -q .body 2>/dev/null)
+        if [[ $? -ne 0 || -z "$body" ]]; then
+            echo "[WARN] Failed to fetch GitHub PR: $idea" >&2
+            return 1
+        fi
+        echo "$body"
+        return 0
+    fi
+
+    # Generic URL — use curl
+    if [[ "$idea" =~ ^https?:// ]]; then
+        if ! command -v curl &>/dev/null; then
+            echo "[WARN] curl not found, cannot fetch URL" >&2
+            return 1
+        fi
+        local content
+        content=$(curl -sL --max-time 10 "$idea" 2>/dev/null)
+        if [[ $? -ne 0 || -z "$content" ]]; then
+            echo "[WARN] Failed to fetch URL: $idea" >&2
+            return 1
+        fi
+        # Strip HTML tags for basic content extraction
+        echo "$content" | sed 's/<[^>]*>//g' | sed '/^[[:space:]]*$/d' | head -200
+        return 0
+    fi
+
+    # Inline text — return as-is
+    echo "$idea"
+}
+
 # Write idea to docs/ROADMAP.md if provided
 write_idea() {
     [[ -z "$IDEA" ]] && return
 
+    local content
+    content=$(resolve_idea "$IDEA")
+    if [[ $? -ne 0 ]]; then
+        echo "[WARN] Could not resolve idea, skipping ROADMAP write" >&2
+        return 1
+    fi
+
     mkdir -p docs
-    cat > docs/ROADMAP.md << EOF
+    cat > docs/ROADMAP.md << 'IDEA_EOF'
 # Roadmap
 
-$IDEA
-EOF
+IDEA_EOF
+    echo "$content" >> docs/ROADMAP.md
     echo "Idea written to: docs/ROADMAP.md"
 }
 
