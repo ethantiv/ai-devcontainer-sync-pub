@@ -1,7 +1,7 @@
 # Implementation Plan
 
 **Status:** IN_PROGRESS
-**Progress:** 23/37 (62%)
+**Progress:** 29/37 (78%)
 
 ## Goal
 
@@ -9,7 +9,7 @@ Implement all features from the project ROADMAP: 4 P2 (Important) features and 2
 
 ## Current Phase
 
-Phase 4
+Phase 5
 
 ## Phases
 
@@ -35,13 +35,13 @@ Add export command to save the full brainstorm conversation as Markdown, and all
 ### Phase 4: Docker ARM build optimization
 Move Playwright browser installation from Dockerfile build time to lazy first-use pattern triggered by `agent-browser` skill invocation.
 
-- [ ] Remove `npx playwright install chromium --with-deps` from builder stage in `docker/Dockerfile` (line 25) — keep only the `PLAYWRIGHT_BROWSERS_PATH` env var (line 113)
-- [ ] Create `src/scripts/ensure-playwright.sh` — idempotent script that: checks if Chromium exists at `$PLAYWRIGHT_BROWSERS_PATH`, installs system deps via `apt-get` if needed (libnss3, libnspr4, libatk1.0-0, libatk-bridge2.0-0, libcups2, libdrm2, libxkbcommon0, libxcomposite1, libxdamage1, libxfixes3, libxrandr2, libgbm1, libasound2, libpango-1.0-0, libcairo2, libatspi2.0-0), runs `npx playwright install chromium`, exits 0 if already present
-- [ ] Remove Playwright system deps from runtime stage apt-get in `docker/Dockerfile` (lines 48-50) — these will be installed lazily by `ensure-playwright.sh`
-- [ ] Remove Playwright browser copy chain from Dockerfile — remove builder COPY at line 74 (`/root/.cache/ms-playwright` → `/opt/playwright`) and user copy at lines 89-91 (`mkdir`, `cp -r`, `chown`)
-- [ ] Integrate `ensure-playwright.sh` into `agent-browser` skill — add as PreToolUse hook or wrapper that runs the script before first browser launch
-- [ ] Add verification test — build Docker image, confirm Chromium is NOT present, run `ensure-playwright.sh`, confirm Chromium IS present and `agent-browser` works
-- **Status:** pending
+- [x] Remove `npx playwright install chromium --with-deps` from builder stage in `docker/Dockerfile` — kept `PLAYWRIGHT_BROWSERS_PATH` env var
+- [x] Create `src/scripts/ensure-playwright.sh` — idempotent script: checks `$PLAYWRIGHT_BROWSERS_PATH` for chromium binary (chrome or headless_shell), installs system deps via apt-get if missing, runs `npx playwright install chromium`, exits 0 if already present
+- [x] Remove Playwright system deps from runtime stage apt-get in `docker/Dockerfile` — added `sudo` package instead for lazy install; added non-root user to sudoers with NOPASSWD
+- [x] Remove Playwright browser copy chain from Dockerfile — removed builder COPY `/root/.cache/ms-playwright` → `/opt/playwright` and user copy `mkdir`/`cp -r`/`chown`
+- [x] Integrate via PreToolUse hook — created `src/scripts/pre-tool-check-playwright.sh` (reads Bash tool input from stdin, filters for `agent-browser` commands, delegates to `ensure-playwright.sh`); registered in `.claude/settings.json` as PreToolUse hook on Bash tool
+- [x] Add verification tests — 14 shell tests in `src/scripts/tests/test_ensure_playwright.sh`: chromium_ready detection (2), install trigger with mocked npx (3), system dep checking with mocked dpkg/apt-get (2), pre-tool routing (4), malformed input handling (3)
+- **Status:** complete
 
 ### Phase 5: Loop workflow integration tests
 Add end-to-end test suite exercising the full loop workflow: init, plan iteration, output artifact verification.
@@ -66,7 +66,7 @@ Add a Mermaid state diagram to `src/telegram_bot/COMMANDS.md` showing the full c
 | Question | Answer |
 |----------|--------|
 | Is brainstorm export implemented? | **Yes (Phase 3 complete).** `BrainstormSession` now has a `conversation` field that accumulates turns. `_archive_session()` stores full conversation + session_id. `export_session()` writes Markdown to `docs/brainstorms/`. `resume_archived_session()` uses `--resume` with archived session_id. |
-| Is Playwright lazily installed? | No. Builder stage runs `npx playwright install chromium --with-deps` (Dockerfile:25). Runtime copies browsers from builder and installs 16 system deps (lines 48-50). |
+| Is Playwright lazily installed? | **Yes (Phase 4 complete).** `ensure-playwright.sh` checks for Chromium at `$PLAYWRIGHT_BROWSERS_PATH`, installs system deps and browser on first use. Triggered via PreToolUse hook on Bash tool (filters for `agent-browser` commands). Dockerfile no longer contains Playwright build/copy steps. |
 | Are there integration tests? | Partial. 476 Python + 20 JS + 18 shell tests. Shell tests cover `resolve_idea()`/`write_idea()`. `init.js`, `run.js`, `cleanup.js`, `cli.js` have zero tests. `generateSummary()` is not tested end-to-end. |
 | Is there a state diagram? | No. COMMANDS.md documents commands and buttons but has no Mermaid diagram. |
 
@@ -82,6 +82,8 @@ Add a Mermaid state diagram to `src/telegram_bot/COMMANDS.md` showing the full c
 | Resume via `--resume` with archived session_id | Claude CLI supports resuming by session_id; no need to re-inject conversation as prompt |
 | Lazy Playwright via idempotent `ensure-playwright.sh` | Simple to integrate as pre-hook; can be run manually or automatically; exits 0 if already present |
 | Integration tests in Jest (not pytest) | Tests `loop init`/`update`/`summary` which are Node.js modules; keeps test tooling consistent with existing `summary.test.js` |
+| PreToolUse hook on Bash with stdin filter | Matcher `Bash` catches all Bash calls; `pre-tool-check-playwright.sh` reads stdin JSON, exits 0 immediately for non-browser commands (no overhead), delegates to `ensure-playwright.sh` only for `agent-browser` commands |
+| Added `sudo` package to Dockerfile runtime | Needed for lazy `apt-get install` of Playwright system deps by non-root user; configured NOPASSWD in sudoers |
 | Scope limited to ROADMAP.md proposals only | No new features beyond the 6 documented proposals |
 
 ### Issues Encountered
@@ -102,4 +104,4 @@ Add a Mermaid state diagram to `src/telegram_bot/COMMANDS.md` showing the full c
 - Bot wiring: `src/telegram_bot/bot.py`
 - Messages: `src/telegram_bot/messages.py`
 - Dockerfile: `docker/Dockerfile`
-- Test files: `src/telegram_bot/tests/` (476 tests), `lib/__tests__/summary.test.js` (20 tests), `src/scripts/tests/test_write_idea.sh` (18 tests)
+- Test files: `src/telegram_bot/tests/` (476 tests), `lib/__tests__/summary.test.js` (20 tests), `src/scripts/tests/test_write_idea.sh` (18 tests), `src/scripts/tests/test_ensure_playwright.sh` (14 tests)

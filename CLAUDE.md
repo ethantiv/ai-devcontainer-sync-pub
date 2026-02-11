@@ -17,6 +17,7 @@ claude plugin marketplace list     # List installed plugins
 python3 -m pytest src/telegram_bot/tests/ -v  # Run Telegram bot tests (476 tests)
 npm install --prefix src && npm test --prefix src  # Run JS tests (20 tests, requires install)
 bash src/scripts/tests/test_write_idea.sh          # Run shell tests (18 tests)
+bash src/scripts/tests/test_ensure_playwright.sh   # Run Playwright lazy-install tests (14 tests)
 ```
 
 Single test: `python3 -m pytest src/telegram_bot/tests/test_tasks.py::TestTaskManager::test_start_task -v`
@@ -128,3 +129,4 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 - **MCP server JSON type**: Remote HTTP MCP servers require `"type": "http"` in `add-json` config, not `"type": "url"` (which silently fails).
 - **Docker Compose volumes**: Env var interpolation works only in YAML values (not keys). Volume `name:` uses `${APP_NAME:-claude-code}-<vol>` for dev/prod isolation.
 - **Dual deployment**: Prod uses `docker-compose.yml` (main branch), dev uses `docker-compose.dev.yml` (develop branch). Separate compose files = separate Coolify container names.
+- **Lazy Playwright**: Docker image ships without Chromium. `ensure-playwright.sh` installs system deps + browser on first `agent-browser` use via PreToolUse hook in `.claude/settings.json`. DevContainer retains build-time install.

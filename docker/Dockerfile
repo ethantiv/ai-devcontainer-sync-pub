@@ -22,8 +22,6 @@ RUN npm install -g @google/gemini-cli agent-browser
 
 RUN pip3 install --break-system-packages uv
 
-RUN npx -y playwright install chromium --with-deps
-
 # =============================================================================
 # RUNTIME STAGE
 # =============================================================================
@@ -41,13 +39,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH="/home/${USERNAME}/.claude/bin:/home/${USERNAME}/.local/bin:/home/${USERNAME}/.uv/bin:/usr/local/bin:${PATH}" \
     NODE_OPTIONS="--max-old-space-size=512"
 
-# Core packages and Playwright Chromium dependencies
+# Core packages (Playwright deps installed lazily by ensure-playwright.sh)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl ca-certificates gnupg git jq unzip openssh-client python3 python3-pip \
-    tmux locales \
-    libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
-    libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 \
-    libasound2 libpango-1.0-0 libcairo2 libatspi2.0-0 \
+    tmux locales sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # Python packages for Telegram bot (job-queue extra includes APScheduler)
@@ -68,10 +63,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y nodejs gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy from builder: npm packages, uv tools, Playwright browsers
+# Copy from builder: npm packages, uv tools
 COPY --from=builder /usr/lib/node_modules /usr/lib/node_modules
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uvx /usr/local/bin/
-COPY --from=builder /root/.cache/ms-playwright /opt/playwright
 
 # Create symlinks for npm global packages (Claude Code installed via curl at runtime)
 RUN ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini \
@@ -86,10 +80,10 @@ RUN cd /opt/loop && npm install --omit=dev \
 # Create non-root user with required directories
 RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME} \
+    && usermod -aG sudo ${USERNAME} \
+    && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/${USERNAME} \
     && mkdir -p ${HOME}/.claude/scripts ${HOME}/.claude/skills ${HOME}/.agents ${HOME}/.gemini ${HOME}/projects \
-    && mkdir -p ${HOME}/.cache/ms-playwright /tmp/playwright-output \
-    && cp -r /opt/playwright/* ${HOME}/.cache/ms-playwright/ \
-    && chown -R ${USERNAME}:${USERNAME} ${HOME} /tmp/playwright-output \
+    && chown -R ${USERNAME}:${USERNAME} ${HOME} \
     && echo 'export PATH="$HOME/.claude/bin:$HOME/.local/bin:$HOME/.uv/bin:$PATH"' >> ${HOME}/.bashrc \
     && echo "alias cc='clear && claude'" >> ${HOME}/.bashrc \
     && echo "set-option -g default-shell /bin/bash" >> ${HOME}/.tmux.conf
