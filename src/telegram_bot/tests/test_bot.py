@@ -314,10 +314,10 @@ class TestHandleIdeaButton:
         assert result == State.SELECT_PROJECT
 
     @pytest.mark.asyncio
-    async def test_cancel_includes_nav_buttons(self):
-        """idea:cancel includes navigation buttons with project context."""
+    async def test_cancel_navigates_to_project_menu(self):
+        """idea:cancel navigates back to project menu when project is set."""
         from src.telegram_bot.bot import handle_idea_button
-        from src.telegram_bot.messages import MSG_PROJECT_BTN, MSG_PROJECTS_LIST_BTN
+        from src.telegram_bot.handlers.common import State
 
         update = make_callback_update(self.CHAT_ID, "idea:cancel")
         context = make_context()
@@ -325,14 +325,12 @@ class TestHandleIdeaButton:
         mock_project.name = "test-proj"
 
         with patch("src.telegram_bot.handlers.common.TELEGRAM_CHAT_ID", self.CHAT_ID), \
-             patch("src.telegram_bot.handlers.tasks.get_user_data", return_value={"project": mock_project}):
-            await handle_idea_button(update, context)
+             patch("src.telegram_bot.handlers.tasks.get_user_data", return_value={"project": mock_project}), \
+             patch("src.telegram_bot.handlers.projects.show_project_menu", new_callable=AsyncMock, return_value=State.PROJECT_MENU) as mock_menu:
+            result = await handle_idea_button(update, context)
 
-        call_kwargs = update.callback_query.edit_message_text.call_args[1]
-        markup = call_kwargs["reply_markup"]
-        button_texts = [b.text for row in markup.inline_keyboard for b in row]
-        assert MSG_PROJECT_BTN in button_texts
-        assert MSG_PROJECTS_LIST_BTN in button_texts
+        mock_menu.assert_called_once_with(update, context, mock_project)
+        assert result == State.PROJECT_MENU
 
 
 # --- Tests for brainstorm hint keyboards ---

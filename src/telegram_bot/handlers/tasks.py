@@ -86,14 +86,17 @@ async def handle_idea_button(update: Update, context: ContextTypes.DEFAULT_TYPE)
         user_data["idea"] = None
         return await show_iterations_menu(update, context)
 
-    # idea:cancel -- project is available since we're in ENTER_IDEA state
+    # idea:cancel -- navigate back to project menu
     assert update.effective_chat is not None
     user_data = get_user_data(update.effective_chat.id)
     project = user_data.get("project")
-    project_name = project.name if project else None
+    if project:
+        from .projects import show_project_menu
+
+        return await show_project_menu(update, context, project)
     await query.edit_message_text(
         MSG_CANCELLED,
-        reply_markup=_nav_keyboard(project_name),
+        reply_markup=_nav_keyboard(None),
     )
     return State.SELECT_PROJECT
 
@@ -105,9 +108,11 @@ async def show_iterations_menu(update: Update, context: ContextTypes.DEFAULT_TYP
         [
             InlineKeyboardButton("3", callback_data="iter:3"),
             InlineKeyboardButton("5", callback_data="iter:5"),
-            InlineKeyboardButton("10", callback_data="iter:10"),
         ],
-        [InlineKeyboardButton(MSG_CUSTOM_AMOUNT_BTN, callback_data="iter:custom")],
+        [
+            InlineKeyboardButton("10", callback_data="iter:10"),
+            InlineKeyboardButton(MSG_CUSTOM_AMOUNT_BTN, callback_data="iter:custom"),
+        ],
         [InlineKeyboardButton(MSG_CANCEL_BTN, callback_data="iter:cancel")],
     ]
     reply_markup = InlineKeyboardMarkup(buttons)
@@ -134,7 +139,13 @@ async def handle_iterations(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     value = query.data.replace("iter:", "")
 
     if value == "cancel":
-        # Import here to avoid circular dependency
+        assert update.effective_chat is not None
+        user_data = get_user_data(update.effective_chat.id)
+        project = user_data.get("project")
+        if project:
+            from .projects import show_project_menu
+
+            return await show_project_menu(update, context, project)
         from .projects import show_projects
 
         return await show_projects(update, context)
@@ -248,7 +259,7 @@ async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
             text += f"   {task.mode.title()} \u2022 {MSG_ITERATION_LABEL}: {current}/{task.iterations} \u2022 {duration}\n\n"
 
     reply_markup = InlineKeyboardMarkup(
-        [[InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")]]
+        [[InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back_to_project")]]
     )
     await reply_text(update, text, reply_markup=reply_markup)
     return State.PROJECT_MENU

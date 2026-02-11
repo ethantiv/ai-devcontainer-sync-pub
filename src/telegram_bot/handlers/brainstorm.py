@@ -157,10 +157,10 @@ async def show_brainstorm_history(update: Update, context: ContextTypes.DEFAULT_
     if len(history) > PAGE_SIZE:
         text += f"_...and {len(history) - PAGE_SIZE} more_\n"
 
-    # Build keyboard: export buttons in rows of 3, plus nav buttons
+    # Build keyboard: export buttons in rows of 2, plus nav buttons
     buttons = []
-    for j in range(0, len(export_buttons), 3):
-        buttons.append(export_buttons[j:j + 3])
+    for j in range(0, len(export_buttons), 2):
+        buttons.append(export_buttons[j:j + 2])
 
     nav = _nav_keyboard(project_name)
     buttons.extend(nav.inline_keyboard)

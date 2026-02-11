@@ -253,18 +253,19 @@ async def show_project_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
             InlineKeyboardButton(MSG_ATTACH_BTN, callback_data="action:attach"),
             InlineKeyboardButton(MSG_STATUS_BTN, callback_data="action:status"),
         ]
+        buttons = [row1]
         if queue_count > 0:
-            row1.append(
+            buttons.append([
                 InlineKeyboardButton(MSG_QUEUE_BTN.format(count=queue_count), callback_data="action:queue")
-            )
-        buttons = [
-            row1,
+            ])
+        buttons += [
             [
                 InlineKeyboardButton(MSG_PLAN_BTN, callback_data="action:plan"),
                 InlineKeyboardButton(MSG_BUILD_BTN, callback_data="action:build"),
             ],
             brainstorm_row,
-            [history_btn, sync_btn, InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")],
+            [history_btn, sync_btn],
+            [InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")],
         ]
     elif project.has_loop:
         buttons = [
@@ -276,9 +277,9 @@ async def show_project_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
             [
                 InlineKeyboardButton(MSG_NEW_WORKTREE_BTN, callback_data="action:worktree"),
                 InlineKeyboardButton(MSG_STATUS_BTN, callback_data="action:status"),
-                history_btn,
             ],
-            [sync_btn, InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")],
+            [history_btn, sync_btn],
+            [InlineKeyboardButton(MSG_BACK_BTN, callback_data="action:back")],
         ]
     else:
         text += MSG_LOOP_NOT_INITIALIZED
