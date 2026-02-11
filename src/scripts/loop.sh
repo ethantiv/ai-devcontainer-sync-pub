@@ -127,7 +127,7 @@ format_tool_use() {
     local color
     color=$(get_tool_color "$name")
 
-    echo -e "\n${C_BOLD}${color}Tool Use: ${name}${C_RESET}"
+    echo -e "\n${C_BOLD}${color}[${SCRIPT_NAME^}-${i}] Tool Use: ${name}${C_RESET}"
     echo -e "${C_DIM}Tool ID: ${id}${C_RESET}"
     echo "$params" | jq -C . 2>/dev/null || echo -e "${C_YELLOW}${params}${C_RESET}"
 }
