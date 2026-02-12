@@ -12,7 +12,7 @@
 
 1. Use up to 10 parallel **Haiku** subagents to compare @src/ against @docs/. Look for: TODO, placeholders, minimal implementations, missing tests, skipped/flaky tests, inconsistent patterns. Use **Opus** to analyze findings and update @docs/plans/IMPLEMENTATION_PLAN.md:
    - Fill **Goal** with project objective from @docs/ROADMAP.md
-   - Populate tasks in **Phases** (number of phases depends on task scope)
+   - Populate tasks in **Phases** — each phase MUST have 2-3 tasks maximum (one phase = one build iteration). Split large features into multiple sequential phases. Name each phase by its concrete deliverable, not by category.
    - Document findings in **Findings & Decisions** section
    - Update phase **Status**: pending → in_progress → complete
 

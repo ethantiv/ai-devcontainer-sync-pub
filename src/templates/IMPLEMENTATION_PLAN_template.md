@@ -14,10 +14,12 @@
 ## Phases
 
 <!--
-Define phases appropriate to task scope. Examples:
-- Small task (1-2 phases): "Fix bug", "Verify & test"
-- Medium task (3-5 phases): "Discovery", "Implementation", "Testing"
-- Large task (5+ phases): Break into logical milestones
+Each phase = one build iteration. Keep phases small:
+- 2-3 tasks per phase (MAX). If a phase has more, split it.
+- Each task = one concrete, verifiable change (file/function/test).
+- Small project: 2-5 phases. Medium: 5-15. Large: 15+.
+- Name phases by deliverable, not category
+  (e.g., "Add user model + migration" not "Backend").
 
 Phase format:
 ### Phase N: Name
