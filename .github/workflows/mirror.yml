@@ -2,6 +2,7 @@ name: Mirror to public repo
 
 on:
   workflow_dispatch:
+    branches: [main]
 
 jobs:
   mirror:
