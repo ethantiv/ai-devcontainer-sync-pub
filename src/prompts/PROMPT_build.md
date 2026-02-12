@@ -6,17 +6,21 @@
 
 0d. For reference: source code is in @src/.
 
-1. **Pick ONE PHASE and implement it.** Open @docs/plans/IMPLEMENTATION_PLAN.md and find the **first phase** with status `pending` or `in_progress` (not `complete`). Implement **all unchecked tasks** within that single phase. Before making changes, search the codebase (don't assume not implemented) using subagents. You may use up to 10 parallel **Haiku** subagents for searches/reads. Use **Opus** subagents when complex reasoning is needed (debugging, architectural decisions). Complete implementation - no placeholders or stubs. **ONE PHASE PER ITERATION.** After completing the current phase, proceed to steps 2-6 (test, update plan, validate, commit) and stop. Do NOT start the next phase — it will be handled in a fresh iteration with clean context.
+1. **Pick ONE PHASE and implement it.** Open @docs/plans/IMPLEMENTATION_PLAN.md and find the **first phase** with status `pending` or `in_progress` (not `complete`). Implement **all unchecked tasks** within that single phase. Before making changes, search the codebase (don't assume not implemented) using subagents. You may use up to 10 parallel **Haiku** subagents for searches/reads. Use **Opus** subagents when complex reasoning is needed (debugging, architectural decisions). Complete implementation - no placeholders or stubs. **ONE PHASE PER ITERATION.** After completing the current phase, proceed to steps 2-8 (test, update plan, simplify, review, validate, commit) and stop. Do NOT start the next phase — it will be handled in a fresh iteration with clean context.
 
 2. **Test-Driven Development.** Follow the Red-Green-Refactor cycle: write a failing test first, implement until it passes, then refactor. You MUST have a passing test run before proceeding to step 3. If the project has no test framework set up, set one up first.
 
 3. **Update the plan.** Update @docs/plans/IMPLEMENTATION_PLAN.md IMMEDIATELY — mark completed tasks `[x]`, update **Current Phase**, change phase **Status**. If the file exceeds 800 lines, trim completed content: remove `[x]` tasks, phases with status `complete`, resolved Issues rows. Keep pending tasks, active phases, Technical Decisions. Git history = full audit trail.
 
-4. **Run validation.** Run the project's validation commands (typecheck, lint, tests) as defined in @CLAUDE.md. You MUST NOT skip this step. If validation fails, fix all errors before proceeding to step 5.
+4. **Simplify code.** Use the **Task** tool to launch the `code-simplifier:code-simplifier` agent to simplify and improve readability of code produced in this phase.
 
-5. **Update CLAUDE.md.** Invoke **Skill** tool: `Skill(skill="auto-revise-claude-md")` to update `Operational Notes`.
+5. **Code review.** Invoke **Skill** tool: `Skill(skill="code-review:code-review")` to review the changes. Fix any critical issues found.
 
-6. **Commit and push.** Run `git add -A && git commit` with a descriptive message, then `git push`. Every iteration MUST end with a git push. Do NOT skip this step or defer it to a later iteration.
+6. **Run validation.** Run the project's validation commands (typecheck, lint, tests) as defined in @CLAUDE.md. You MUST NOT skip this step. If validation fails, fix all errors before proceeding to step 7.
+
+7. **Update CLAUDE.md.** Invoke **Skill** tool: `Skill(skill="auto-revise-claude-md")` to update `Operational Notes`.
+
+8. **Commit and push.** Run `git add -A && git commit` with a descriptive message, then `git push`. Every iteration MUST end with a git push. Do NOT skip this step or defer it to a later iteration.
 
 ## Important Rules
 
