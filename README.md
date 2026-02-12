@@ -8,7 +8,7 @@ Ready-to-use development environment with Claude Code, Gemini CLI, autonomous de
 - **dev-loop** — autonomous plan/build cycles powered by Claude CLI (`loop` command)
 - **Telegram Bot** — remote control for loop tasks and brainstorming sessions
 - **MCP Servers** — AWS docs, Terraform, Context7, Coolify, Stitch
-- **Custom Slash Commands** — code review, design system, roadmap, git worktrees
+- **Slash Commands** — `/code-review`, `/roadmap`, `/git-worktree`, `/loop-analyzer`
 - **Skills & Plugins** — auto-installed from `skills-plugins.txt`
 
 ## Getting Started
@@ -38,174 +38,75 @@ docker compose -f docker/docker-compose.yml up -d
 docker exec -it claude-code bash
 ```
 
-The container auto-restarts after reboot.
+### Option 3: Coolify
 
-### Option 3: Coolify (Self-hosted PaaS)
+Deploy as a Docker Compose app on a [Coolify](https://coolify.io/)-managed server.
 
-Deploy as a Docker Compose application on a server managed by [Coolify](https://coolify.io/).
-
-1. In Coolify, create a new **Docker Compose** resource pointing to this repository
+1. Create a new **Docker Compose** resource pointing to this repository
 2. Set **Base Directory** to `/docker` and **Docker Compose Location** to `/docker-compose.yml`
-3. Add environment variables (same as `.devcontainer/.env`) in the Coolify app settings
-4. Deploy — Coolify builds the image from `docker/Dockerfile` with `context: ..` resolving to the repo root
+3. Add environment variables (same as `.devcontainer/.env`) in app settings
+4. Deploy
 
-The container runs headless with auto-restart. Manage it through Coolify UI or API.
+For dual dev+prod setup, create a second app on `develop` branch with compose location `/docker-compose.dev.yml` and env vars `DEV_MODE=true`, `APP_NAME=dev-claude-code`.
 
-**Dual deployment (dev + prod):** To run both environments on the same server, create a second Coolify app pointing to the `develop` branch with **Docker Compose Location** set to `/docker-compose.dev.yml`. Set env vars `DEV_MODE=true` and `APP_NAME=dev-claude-code`. The dev compose uses service name `dev-claude-code` so containers are named `dev-claude-code-{uuid}-{ts}` (vs `claude-code-{uuid}-{ts}` for prod).
+### Option 4: macOS (Local)
 
-**SSH aliases** for quick access from the host (`docker/rpi-aliases.sh`):
-- `cc` — exec into prod container
-- `dev-cc` — exec into dev container
-
-Install: `scp docker/rpi-aliases.sh user@host:~/.bash_aliases`
-
-### Option 4: macOS (Local Setup)
-
-No Docker required. Installs plugins, skills, and the loop CLI directly on your Mac.
+No Docker required. Installs plugins, skills, and the loop CLI directly.
 
 ```bash
 ./setup-local.sh
 ```
 
-MCP servers are not configured (requires `uvx` — install manually if needed).
-
 ## Using the Loop System
 
-The `loop` command (package: `dev-loop`) runs Claude CLI in autonomous plan/build cycles against any project.
+The `loop` command runs Claude CLI in autonomous plan/build cycles against any project.
 
 ```bash
-# Initialize loop in your project (creates symlinks + templates)
 cd ~/projects/my-project
-loop init
+loop init                          # Set up loop in your project
 
-# Run planning (analyzes code, creates IMPLEMENTATION_PLAN.md)
-loop plan
+loop plan                          # Planning phase (5 iterations)
+loop build                         # Build phase (10 iterations)
+loop run                           # Plan + build combined
 
-# Run build (implements tasks from the plan)
-loop build
+loop plan -I "Add authentication"  # Seed an idea before planning
+loop build -i 20                   # Custom iteration count
+loop run -i 20                     # -i applies to build phase only
+loop build --interactive           # Manual Claude session
+loop build --no-early-exit         # Run all iterations
 
-# Plan then build in one command (3 plan + 5 build iterations)
-loop run
-
-# Seed an idea before planning
-loop plan -I "Add user authentication"
-
-# Custom iteration count
-loop build -i 10
-
-# Combined with custom build iterations (plan stays at 3)
-loop run -i 10
-
-# Interactive mode (manual Claude session instead of autonomous)
-loop build --interactive
-
-# Disable early exit (run all iterations even if plan is complete)
-loop build --no-early-exit
-
-# Re-create symlinks after updating the package
-loop update
-
-# Clean up dev server ports (3000, 5173, 8080, etc.)
-loop cleanup
+loop update                        # Refresh symlinks after package update
+loop summary                       # Show stats from last run
+loop cleanup                       # Kill dev server ports
 ```
 
-### What `loop init` Creates
+## Telegram Bot
 
-```
-your-project/
-├── loop/
-│   ├── loop.sh              (symlink → scripts)
-│   ├── PROMPT_plan.md       (symlink → prompts)
-│   ├── PROMPT_build.md      (symlink → prompts)
-│   ├── PROMPT_skills.md     (symlink → prompts)
-│   ├── cleanup.sh           (symlink → scripts)
-│   ├── notify-telegram.sh   (symlink → scripts)
-│   └── logs/                (gitignored)
-├── docs/
-│   ├── plans/
-│   │   └── IMPLEMENTATION_PLAN_template.md
-│   └── IDEA_template.md
-├── .claude/
-│   ├── settings.json        (cleanup hook on session end)
-│   └── skills/auto-revise-claude-md/SKILL.md
-└── CLAUDE_template.md
-```
-
-Core files are **symlinked** (stay up-to-date with the package). Templates are **copied** (customizable per project).
-
-### Developer / Test Installation
-
-To test changes to the loop system from this repository:
-
-```bash
-# Install globally from local source (recommended for development)
-npm install -g ./src
-
-# Or link for live development (changes take effect immediately)
-cd src && npm link
-
-# Verify
-loop --version
-```
-
-In Docker, the loop system is pre-installed at `/opt/loop/` (copied during image build). In DevContainer, it's installed from the workspace `src/` directory during setup.
-
-### Telegram Bot
-
-Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in your `.devcontainer/.env` to enable remote control. The bot starts automatically in Docker and provides:
+Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.devcontainer/.env` to enable. Starts automatically in Docker.
 
 - Project list with status (standalone, worktree, running task)
 - Plan/Build mode selection with iteration count
 - Multi-turn brainstorming sessions with Claude
-- Repository cloning with auto `loop init`
-- Worktree creation
-- Task queue management (up to 10 queued tasks)
+- Repository cloning, worktree creation, project creation
+- Task queue (up to 10 queued tasks)
 
-Commands: `/projects`, `/status`, `/brainstorming <prompt>`, `/help`
+Commands: `/projects`, `/status`, `/brainstorming <prompt>`, `/history`, `/help`
 
 ## Environment Variables
 
-Set these in `.devcontainer/.env`. See `.devcontainer/.env.example` for a template.
+Set in `.devcontainer/.env` (copy from `.devcontainer/.env.example`).
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GH_TOKEN` | Yes | GitHub token for authentication and repo access |
+| `GH_TOKEN` | Yes | GitHub token (`repo`, `workflow` permissions) |
 | `SSH_PRIVATE_KEY` | No | Base64-encoded SSH key for Git |
-| `CONTEXT7_API_KEY` | No | API key for Context7 MCP server |
-| `COOLIFY_BASE_URL` | No | URL of Coolify instance for deployment management |
-| `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |
-| `STITCH_API_KEY` | No | Google Stitch API key for Stitch MCP server |
-| `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for remote loop control |
+| `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for remote control |
 | `TELEGRAM_CHAT_ID` | No | Authorized Telegram chat ID |
-| `DEV_MODE` | No | Disable Telegram bot in dev containers (true/1/yes) |
-| `LOOP_STALE_THRESHOLD` | No | Stale progress detection in seconds (default: 300) |
-| `LOOP_BRAINSTORM_POLL_INTERVAL` | No | Brainstorm polling interval in seconds (default: 0.5) |
-| `LOOP_BRAINSTORM_TIMEOUT` | No | Brainstorm max wait in seconds (default: 300) |
-| `LOOP_MAX_QUEUE_SIZE` | No | Max queued tasks per project (default: 10) |
-| `LOOP_GIT_DIFF_RANGE` | No | Git diff range for completion summary (default: HEAD~5..HEAD) |
-| `GIT_USER_NAME` | No | Git global user.name |
-| `GIT_USER_EMAIL` | No | Git global user.email |
-| `RESET_CLAUDE_CONFIG` | No | Set to `true` to clear Claude config on startup |
-| `RESET_GEMINI_CONFIG` | No | Set to `true` to clear Gemini config on startup |
+| `GIT_USER_NAME` / `GIT_USER_EMAIL` | No | Git identity |
+| `CONTEXT7_API_KEY` | No | Context7 MCP server |
+| `COOLIFY_BASE_URL` / `COOLIFY_ACCESS_TOKEN` | No | Coolify deployment management |
+| `STITCH_API_KEY` | No | Google Stitch MCP server |
+| `DEV_MODE` | No | Disable Telegram bot (`true`/`1`/`yes`) |
+| `APP_NAME` | No | Volume prefix (default: `claude-code`) |
 
-## Customization
-
-Edit files in `.devcontainer/`, then run `./.devcontainer/setup-env.sh` to apply:
-
-- **Plugins & skills** — `configuration/skills-plugins.txt`
-- **Local slash commands** — `plugins/dev-marketplace/`
-- **Scripts** — `scripts/` (synced to `~/.claude/scripts/`)
-- **Claude memory** — `configuration/CLAUDE.md.memory` (synced to `~/.claude/CLAUDE.md`)
-
-## Docker Volumes
-
-Data persists across container rebuilds:
-
-| Volume | Mount Point | Purpose |
-|--------|-------------|---------|
-| `{APP_NAME}-claude-config` | `~/.claude` | Claude binary, settings, credentials, plugins |
-| `{APP_NAME}-agents-skills` | `~/.agents` | Globally installed skills |
-| `{APP_NAME}-gemini-config` | `~/.gemini` | Gemini CLI configuration |
-| `{APP_NAME}-projects` | `~/projects` | Your working projects |
-
-Volume names are prefixed with `APP_NAME` (default: `claude-code`). Set `APP_NAME=dev-claude-code` for dev instances to isolate volumes.
+`LOOP_*` env vars (timeouts, queue limits) have sensible defaults — see `.env.example` for details.
