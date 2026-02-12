@@ -29,10 +29,10 @@ All phases complete.
 - **Status:** complete
 
 ### Phase 6: Telegram bot handler state machine diagram
-Add a Mermaid state diagram to `src/telegram_bot/COMMANDS.md` showing the full conversation flow.
+Add a Mermaid state diagram to `TELEGRAM_COMMANDS.md` showing the full conversation flow.
 
 - [x] Analyze all 10 states and 40+ transitions in `src/telegram_bot/bot.py` and `handlers/common.py` — map State enum values (SELECT_PROJECT=1 through GITHUB_CHOICE=10) to handler transitions across all 5 handler modules
-- [x] Create Mermaid stateDiagram-v2 in `src/telegram_bot/COMMANDS.md` — show entry points (/start, /projects, /status, /brainstorming, /history), SELECT_PROJECT -> PROJECT_MENU -> each sub-flow (task with ENTER_IDEA->SELECT_ITERATIONS, brainstorm with ENTER_BRAINSTORM_PROMPT->BRAINSTORMING, clone ENTER_URL, create ENTER_PROJECT_NAME->GITHUB_CHOICE, worktree ENTER_NAME), self-loops, and fallback transitions
+- [x] Create Mermaid stateDiagram-v2 in `TELEGRAM_COMMANDS.md` — show entry points (/start, /projects, /status, /brainstorming, /history), SELECT_PROJECT -> PROJECT_MENU -> each sub-flow (task with ENTER_IDEA->SELECT_ITERATIONS, brainstorm with ENTER_BRAINSTORM_PROMPT->BRAINSTORMING, clone ENTER_URL, create ENTER_PROJECT_NAME->GITHUB_CHOICE, worktree ENTER_NAME), self-loops, and fallback transitions
 - [x] Verify diagram renders correctly using `beautiful-mermaid` skill
 - **Status:** complete
 
@@ -41,7 +41,7 @@ Add a Mermaid state diagram to `src/telegram_bot/COMMANDS.md` showing the full c
 | Question | Answer |
 |----------|--------|
 | Are there integration tests? | **Yes (Phase 5 complete).** 14 integration tests in `src/lib/__tests__/integration.test.js` cover `init()`, `init({ force: true })`, and `generateSummary()` end-to-end. Total: 476 Python + 34 JS + 32 shell = 542 tests. |
-| Is there a state diagram? | **Yes (Phase 6 complete).** Mermaid stateDiagram-v2 in `src/telegram_bot/COMMANDS.md` covers all 10 states, entry points, transitions, self-loops, and global fallbacks. |
+| Is there a state diagram? | **Yes (Phase 6 complete).** Mermaid stateDiagram-v2 in `TELEGRAM_COMMANDS.md` covers all 10 states, entry points, transitions, self-loops, and global fallbacks. |
 
 ## Findings & Decisions
 
@@ -59,4 +59,4 @@ Add a Mermaid state diagram to `src/telegram_bot/COMMANDS.md` showing the full c
 
 - ROADMAP: `docs/ROADMAP.md`
 - Test files: `src/telegram_bot/tests/` (476 tests), `lib/__tests__/summary.test.js` (20 unit), `lib/__tests__/integration.test.js` (14 integration), `src/scripts/tests/test_write_idea.sh` (18 tests), `src/scripts/tests/test_ensure_playwright.sh` (14 tests)
-- State diagram: `src/telegram_bot/COMMANDS.md` (Mermaid stateDiagram-v2)
+- State diagram: `TELEGRAM_COMMANDS.md` (Mermaid stateDiagram-v2)
