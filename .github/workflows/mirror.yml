@@ -12,12 +12,18 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Remove mirror workflow from history
+      - name: Remove private files from mirror
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/mirror.yml
-          git commit -m "chore: exclude mirror workflow from public repo"
+          git rm -f .github/workflows/mirror.yml
+          git rm -rf --ignore-unmatch \
+            .claude/settings.json \
+            .claude/skills/ \
+            CLAUDE_template.md \
+            docs/plans/IMPLEMENTATION_PLAN_template.md \
+            loop/
+          git commit -m "chore: exclude private files from public repo"
 
       - name: Push mirror
         run: |
