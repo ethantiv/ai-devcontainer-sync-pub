@@ -1,17 +1,5 @@
 {
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash /opt/loop/scripts/pre-tool-check-playwright.sh 2>/dev/null || bash \"$CLAUDE_PROJECT_DIR\"/src/scripts/pre-tool-check-playwright.sh 2>/dev/null || true",
-            "timeout": 120
-          }
-        ]
-      }
-    ],
     "SessionEnd": [
       {
         "hooks": [
