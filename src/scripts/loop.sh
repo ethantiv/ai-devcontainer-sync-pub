@@ -151,7 +151,13 @@ format_stream() {
             assistant)
                 if [[ -n "$CTX_FILE" ]]; then
                     local atokens
-                    atokens=$(echo "$line" | jq -r '.message.usage.input_tokens // empty' 2>/dev/null)
+                    atokens=$(echo "$line" | jq -r '
+                        if .message.usage then
+                            (.message.usage.input_tokens // 0) +
+                            (.message.usage.cache_read_input_tokens // 0) +
+                            (.message.usage.cache_creation_input_tokens // 0)
+                        else empty end | select(. > 0)
+                    ' 2>/dev/null)
                     [[ -n "$atokens" ]] && echo "$atokens" > "$CTX_FILE"
                 fi
                 echo "$line" | jq -r '
@@ -169,7 +175,13 @@ format_stream() {
             result)
                 if [[ -n "$CTX_FILE" ]]; then
                     local rtokens
-                    rtokens=$(echo "$line" | jq -r '.usage.input_tokens // empty' 2>/dev/null)
+                    rtokens=$(echo "$line" | jq -r '
+                        if .usage then
+                            (.usage.input_tokens // 0) +
+                            (.usage.cache_read_input_tokens // 0) +
+                            (.usage.cache_creation_input_tokens // 0)
+                        else empty end | select(. > 0)
+                    ' 2>/dev/null)
                     [[ -n "$rtokens" ]] && echo "$rtokens" > "$CTX_FILE"
                 fi
                 local result
