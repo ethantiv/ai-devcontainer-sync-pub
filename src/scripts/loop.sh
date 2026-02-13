@@ -41,6 +41,8 @@ LOG_DIR="loop/logs"
 SCRIPT_NAME="build"
 EARLY_EXIT=true
 IDEA=""
+CONTEXT_WINDOW=200000
+CTX_FILE=""
 
 # Help function
 usage() {
@@ -127,7 +129,14 @@ format_tool_use() {
     local color
     color=$(get_tool_color "$name")
 
-    echo -e "\n${C_BOLD}${color}[${SCRIPT_NAME^}-${i}] Tool Use: ${name}${C_RESET}"
+    local ctx=""
+    if [[ -n "$CTX_FILE" && -f "$CTX_FILE" ]]; then
+        local tokens
+        tokens=$(cat "$CTX_FILE" 2>/dev/null || echo 0)
+        [[ "$tokens" -gt 0 ]] && ctx="${C_DIM} | Ctx: $((tokens * 100 / CONTEXT_WINDOW))%"
+    fi
+
+    echo -e "\n${C_BOLD}${color}[${SCRIPT_NAME^}-${i}] Tool Use: ${name}${ctx}${C_RESET}"
     echo -e "${C_DIM}Tool ID: ${id}${C_RESET}"
     echo "$params" | jq -C . 2>/dev/null || echo -e "${C_YELLOW}${params}${C_RESET}"
 }
@@ -140,6 +149,11 @@ format_stream() {
 
         case "$msg_type" in
             assistant)
+                if [[ -n "$CTX_FILE" ]]; then
+                    local atokens
+                    atokens=$(echo "$line" | jq -r '.message.usage.input_tokens // empty' 2>/dev/null)
+                    [[ -n "$atokens" ]] && echo "$atokens" > "$CTX_FILE"
+                fi
                 echo "$line" | jq -r '
                     .message.content[]? |
                     if .type == "text" then "TEXT|\(.text | select(. != "" and . != null))"
@@ -153,6 +167,11 @@ format_stream() {
                 done
                 ;;
             result)
+                if [[ -n "$CTX_FILE" ]]; then
+                    local rtokens
+                    rtokens=$(echo "$line" | jq -r '.usage.input_tokens // empty' 2>/dev/null)
+                    [[ -n "$rtokens" ]] && echo "$rtokens" > "$CTX_FILE"
+                fi
                 local result
                 result=$(echo "$line" | jq -r '.result // empty' 2>/dev/null)
                 [[ -n "$result" ]] && echo -e "\n${C_GREEN}✓ Done: ${result:0:80}${C_RESET}"
@@ -308,6 +327,8 @@ print_config() {
 if [[ "$AUTONOMOUS" == true ]]; then
     mkdir -p "$LOG_DIR"
     LOG_FILE="$LOG_DIR/${SCRIPT_NAME}_$(date +%Y%m%d_%H%M%S).jsonl"
+    CTX_FILE="$LOG_DIR/.ctx_tokens"
+    echo "0" > "$CTX_FILE"
 
     print_config
     echo "Log file: $LOG_FILE"
