@@ -21,4 +21,4 @@ Follow these steps precisely:
 5. After successful creation, output a summary:
    - Worktree path
    - Branch name
-   - Hint: `cd {path}` to switch to the new worktree
+   - Open: `code {path}` to open the new worktree
