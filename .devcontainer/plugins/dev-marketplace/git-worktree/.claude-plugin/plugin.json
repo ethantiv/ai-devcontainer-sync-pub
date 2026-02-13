@@ -1,6 +1,6 @@
 {
   "name": "git-worktree",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Create and delete Git worktrees with conventional naming: {project}-{name} on branch {name}",
   "author": {
     "name": "Mirek Zaniewicz"
