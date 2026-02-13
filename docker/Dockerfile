@@ -41,7 +41,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # Core packages (Playwright deps installed lazily by ensure-playwright.sh)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl ca-certificates gnupg git jq unzip openssh-client python3 python3-pip \
+    curl ca-certificates gnupg git jq unzip openssh-client procps python3 python3-pip \
     tmux locales sudo \
     && rm -rf /var/lib/apt/lists/*
 
