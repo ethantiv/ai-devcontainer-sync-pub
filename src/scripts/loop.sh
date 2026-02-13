@@ -150,18 +150,19 @@ format_stream() {
         case "$msg_type" in
             assistant)
                 if [[ -n "$CTX_FILE" ]]; then
-                    local atokens
-                    atokens=$(echo "$line" | jq -r '
-                        if .message.usage then
-                            (.message.usage.input_tokens // 0) +
-                            (.message.usage.cache_read_input_tokens // 0) +
-                            (.message.usage.cache_creation_input_tokens // 0)
-                        else empty end | select(. > 0)
-                    ' 2>/dev/null)
-                    if [[ -n "$atokens" ]]; then
-                        local prev
-                        prev=$(cat "$CTX_FILE" 2>/dev/null || echo 0)
-                        [[ "$atokens" -gt "$prev" ]] && echo "$atokens" > "$CTX_FILE"
+                    # Skip subagent/sidechain messages (they have parent_tool_use_id set)
+                    local is_subagent
+                    is_subagent=$(echo "$line" | jq -r '.parent_tool_use_id // empty' 2>/dev/null)
+                    if [[ -z "$is_subagent" ]]; then
+                        local atokens
+                        atokens=$(echo "$line" | jq -r '
+                            if .message.usage then
+                                (.message.usage.input_tokens // 0) +
+                                (.message.usage.cache_read_input_tokens // 0) +
+                                (.message.usage.cache_creation_input_tokens // 0)
+                            else empty end | select(. > 0)
+                        ' 2>/dev/null)
+                        [[ -n "$atokens" ]] && echo "$atokens" > "$CTX_FILE"
                     fi
                 fi
                 echo "$line" | jq -r '
@@ -186,11 +187,7 @@ format_stream() {
                             (.usage.cache_creation_input_tokens // 0)
                         else empty end | select(. > 0)
                     ' 2>/dev/null)
-                    if [[ -n "$rtokens" ]]; then
-                        local prev
-                        prev=$(cat "$CTX_FILE" 2>/dev/null || echo 0)
-                        [[ "$rtokens" -gt "$prev" ]] && echo "$rtokens" > "$CTX_FILE"
-                    fi
+                    [[ -n "$rtokens" ]] && echo "$rtokens" > "$CTX_FILE"
                 fi
                 local result
                 result=$(echo "$line" | jq -r '.result // empty' 2>/dev/null)
