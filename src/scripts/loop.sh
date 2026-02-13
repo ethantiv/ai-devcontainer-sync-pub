@@ -158,7 +158,11 @@ format_stream() {
                             (.message.usage.cache_creation_input_tokens // 0)
                         else empty end | select(. > 0)
                     ' 2>/dev/null)
-                    [[ -n "$atokens" ]] && echo "$atokens" > "$CTX_FILE"
+                    if [[ -n "$atokens" ]]; then
+                        local prev
+                        prev=$(cat "$CTX_FILE" 2>/dev/null || echo 0)
+                        [[ "$atokens" -gt "$prev" ]] && echo "$atokens" > "$CTX_FILE"
+                    fi
                 fi
                 echo "$line" | jq -r '
                     .message.content[]? |
@@ -182,7 +186,11 @@ format_stream() {
                             (.usage.cache_creation_input_tokens // 0)
                         else empty end | select(. > 0)
                     ' 2>/dev/null)
-                    [[ -n "$rtokens" ]] && echo "$rtokens" > "$CTX_FILE"
+                    if [[ -n "$rtokens" ]]; then
+                        local prev
+                        prev=$(cat "$CTX_FILE" 2>/dev/null || echo 0)
+                        [[ "$rtokens" -gt "$prev" ]] && echo "$rtokens" > "$CTX_FILE"
+                    fi
                 fi
                 local result
                 result=$(echo "$line" | jq -r '.result // empty' 2>/dev/null)
