@@ -39,7 +39,9 @@ function spawnLoop(opts, isPlan) {
       stdio: 'inherit',
       cwd: process.cwd(),
     });
-    child.on('close', (code) => resolve(code ?? 0));
+    child.on('close', (code, signal) => {
+      resolve(signal ? 1 : (code ?? 0));
+    });
   });
 }
 
