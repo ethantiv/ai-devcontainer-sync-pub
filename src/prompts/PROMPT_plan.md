@@ -2,15 +2,11 @@
 
 0b. If @docs/plans/IMPLEMENTATION_PLAN.md doesn't exist, copy @docs/plans/IMPLEMENTATION_PLAN_template.md to @docs/plans/IMPLEMENTATION_PLAN.md.
 
-0c. Read @docs/plans/IMPLEMENTATION_PLAN.md.
+0c. Read @docs/ROADMAP.md — this defines the scope for planning.
 
-0d. Study @docs/ with up to 10 parallel **Haiku** subagents to learn specifications.
+0d. Read @docs/plans/IMPLEMENTATION_PLAN.md.
 
-0e. Study @src/ with up to 10 parallel **Haiku** subagents to understand application source code and shared utilities in @src/lib/.
-
-0f. For reference: source code is in @src/.
-
-1. Use up to 10 parallel **Haiku** subagents to compare @src/ against @docs/. Look for: TODO, placeholders, minimal implementations, missing tests, skipped/flaky tests, inconsistent patterns. Use **Opus** to analyze findings and update @docs/plans/IMPLEMENTATION_PLAN.md:
+1. Launch up to 10 `feature-dev:code-explorer` subagents via **Task** tool to map @src/ architecture and compare against @docs/. Look for: TODO, placeholders, minimal implementations, missing tests, skipped/flaky tests, inconsistent patterns. Analyze findings and update @docs/plans/IMPLEMENTATION_PLAN.md:
    - Fill **Goal** with project objective from @docs/ROADMAP.md
    - Populate tasks in **Phases** — each phase MUST have 2-3 tasks maximum (one phase = one build iteration). Split large features into multiple sequential phases. Name each phase by its concrete deliverable, not by category.
    - Document findings in **Findings & Decisions** section

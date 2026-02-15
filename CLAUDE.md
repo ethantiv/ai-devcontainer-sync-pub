@@ -28,7 +28,6 @@ Single test: `python3 -m pytest src/telegram_bot/tests/test_tasks.py::TestTaskMa
 ## Custom Slash Commands
 
 Available as local marketplace plugins (`dev-marketplace`):
-- `/code-review` - parallel code review with multiple agents
 - `/roadmap` - manage ROADMAP.md with features and proposals
 - `/git-worktree:create <name>` / `/git-worktree:delete <name>` - manage worktrees
 - `/loop-analyzer` - analyze autonomous loop logs with 5 parallel subagents
