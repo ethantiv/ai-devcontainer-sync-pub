@@ -10,6 +10,7 @@ function addLoopOptions(cmd) {
   return cmd
     .option('-i, --iterations <n>', 'Number of iterations')
     .option('-I, --idea <text>', 'Seed idea written to docs/ROADMAP.md before start')
+    .option('-n, --new', 'Archive completed plan and start fresh')
     .option('--interactive', 'Run interactively instead of autonomous');
 }
 

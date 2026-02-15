@@ -41,6 +41,7 @@ LOG_DIR="loop/logs"
 SCRIPT_NAME="build"
 EARLY_EXIT=true
 IDEA=""
+NEW_CYCLE=false
 CONTEXT_WINDOW=200000
 CTX_FILE=""
 
@@ -53,6 +54,7 @@ usage() {
     echo "  -a              Autonomous mode (default: interactive)"
     echo "  -i iterations   Number of iterations (default: 10 build, 5 plan)"
     echo "  -e              Disable early exit (run all iterations)"
+    echo "  -n              Archive completed plan and start fresh"
     echo "  -I text         Seed idea written to docs/ROADMAP.md"
     echo "  -h              Show this help"
     echo ""
@@ -76,6 +78,25 @@ check_completion() {
     complete_marker=$(grep -cE '\*{0,2}Status\*{0,2}:\*{0,2}\s*(COMPLETE|DONE)|BUILD COMPLETE|PLAN COMPLETE' "$plan" 2>/dev/null) || complete_marker=0
 
     [[ "$incomplete" -eq 0 && "$complete_marker" -gt 0 ]]
+}
+
+# Archive a completed plan to docs/plans/archive/
+archive_completed_plan() {
+    local plan="docs/plans/IMPLEMENTATION_PLAN.md"
+    [[ ! -f "$plan" ]] && { echo "[NEW] No plan to archive."; return 0; }
+
+    if ! check_completion; then
+        echo "[NEW] Plan is not complete — cannot archive. Continue with current plan."
+        return 1
+    fi
+
+    local archive_dir="docs/plans/archive"
+    mkdir -p "$archive_dir"
+    local timestamp
+    timestamp=$(date +%Y-%m-%d_%H%M%S)
+    mv "$plan" "$archive_dir/IMPLEMENTATION_PLAN_${timestamp}.md"
+    echo "[NEW] Archived completed plan to $archive_dir/IMPLEMENTATION_PLAN_${timestamp}.md"
+    return 0
 }
 
 # Post-iteration git safety net — auto-commit if agent skipped git
@@ -297,12 +318,13 @@ done
 set -- "${ARGS[@]}"
 
 # Parse arguments
-while getopts "pai:ehI:" opt; do
+while getopts "pai:enhI:" opt; do
     case $opt in
         p) SCRIPT_NAME="plan" ;;
         a) AUTONOMOUS=true ;;
         i) ITERATIONS=$OPTARG ;;
         e) EARLY_EXIT=false ;;
+        n) NEW_CYCLE=true ;;
         I) IDEA=$OPTARG ;;
         h) usage ;;
         *) usage ;;
@@ -323,6 +345,11 @@ if [[ -f "loop/PROMPT_${SCRIPT_NAME}.md" ]]; then
     PROMPT_FILE="loop/PROMPT_${SCRIPT_NAME}.md"
 else
     PROMPT_FILE="$LOOP_ROOT/prompts/PROMPT_${SCRIPT_NAME}.md"
+fi
+
+# Archive completed plan if --new flag set
+if [[ "$NEW_CYCLE" == true ]]; then
+    archive_completed_plan
 fi
 
 # Write idea file if provided

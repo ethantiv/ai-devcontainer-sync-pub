@@ -32,6 +32,7 @@ function spawnLoop(opts, isPlan) {
   args.push('-i', iterations);
 
   if (opts.idea) args.push('-I', opts.idea);
+  if (opts.new) args.push('-n');
   if (opts.earlyExit === false) args.push('-e');
 
   return new Promise((resolve) => {
@@ -58,6 +59,7 @@ function runCombined(opts) {
   const planOpts = {
     interactive: opts.interactive,
     idea: opts.idea,
+    new: opts.new,
   };
 
   // Build phase: uses -i if given, no --idea (plan already wrote it to ROADMAP)
