@@ -14,7 +14,7 @@
 
 4. **Simplify code.** Use the **Task** tool to launch the `code-simplifier:code-simplifier` agent to simplify and improve readability of code produced in this phase.
 
-5. **Code review.** Invoke **Skill** tool: `Skill(skill="code-review:code-review")` to review the changes. Fix any critical issues found.
+5. **Code review.** Use the **Task** tool to launch the `feature-dev:code-reviewer` agent to review the changes. Fix any critical issues found.
 
 6. **Run validation.** Run the project's validation commands (typecheck, lint, tests) as defined in @CLAUDE.md. You MUST NOT skip this step. If validation fails, fix all errors before proceeding to step 7.
 
