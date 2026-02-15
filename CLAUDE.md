@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 DevContainer for multi-AI agent development with Claude Code and Gemini CLI. Configuration-only repository.
 
 ## Build & Run
@@ -70,7 +72,7 @@ loop summary / cleanup  # Show run stats / clean artifacts
 
 **Structure**: `src/scripts/` (shell), `src/prompts/`, `src/templates/`, `src/telegram_bot/` (Python bot + `handlers/`), `src/bin/` + `src/lib/` (Node.js CLI).
 
-**Telegram bot**: Starts in Docker if `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` set. Commands: `TELEGRAM_COMMANDS.md`.
+**Telegram bot**: Starts in Docker if `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` set. Commands: `docs/specs/TELEGRAM_COMMANDS.md`.
 
 **Idea seeding**: `loop plan -I` accepts inline text, `@file.md` (read from file), or `https://...` URLs (GitHub issues/PRs via `gh`, generic via `curl`). Resolved by `resolve_idea()` in `loop.sh`.
 
