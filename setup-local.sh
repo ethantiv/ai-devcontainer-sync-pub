@@ -16,6 +16,7 @@ readonly CLAUDE_SCRIPTS_DIR="$CLAUDE_DIR/scripts"
 readonly CLAUDE_PLUGINS_FILE="configuration/skills-plugins.txt"
 readonly OFFICIAL_MARKETPLACE_NAME="claude-plugins-official"
 readonly OFFICIAL_MARKETPLACE_REPO="anthropics/claude-plugins-official"
+readonly LOCAL_MARKETPLACE_NAME="dev-marketplace"
 
 # Get script directory (supports symlinks)
 get_script_dir() {
@@ -238,6 +239,11 @@ sync_claude_scripts() {
     fi
 }
 
+copy_claude_memory() {
+    local source_file="$DEVCONTAINER_DIR/configuration/CLAUDE.md.memory"
+    [[ -f "$source_file" ]] && cp "$source_file" "$CLAUDE_DIR/CLAUDE.md" && ok "CLAUDE.md synced"
+}
+
 setup_claude_configuration() {
     print_header "Claude configuration"
 
@@ -247,6 +253,7 @@ setup_claude_configuration() {
     ensure_directory "$CLAUDE_DIR/skills"
 
     apply_claude_settings
+    copy_claude_memory
     sync_claude_scripts
 }
 
@@ -411,6 +418,133 @@ install_all_plugins_and_skills() {
 }
 
 # =============================================================================
+# LOCAL MARKETPLACE PLUGINS
+# =============================================================================
+
+install_local_marketplace_plugins() {
+    print_header "Installing local plugins"
+
+    local marketplace_dir="$DEVCONTAINER_DIR/plugins/$LOCAL_MARKETPLACE_NAME"
+    local manifest="$marketplace_dir/.claude-plugin/marketplace.json"
+
+    has_command claude || return 0
+    has_command jq || return 0
+    [[ -f "$manifest" ]] || { warn "Local marketplace not found"; return 0; }
+
+    if ! ensure_marketplace "$LOCAL_MARKETPLACE_NAME" "$marketplace_dir"; then
+        warn "Skipping local marketplace plugins"
+        return 0
+    fi
+
+    local installed=0 skipped=0 failed=0
+
+    while IFS= read -r plugin; do
+        [[ -z "$plugin" ]] && continue
+        local rc=0; install_plugin "${plugin}@${LOCAL_MARKETPLACE_NAME}" "$plugin" || rc=$?
+        case $rc in
+            0) installed=$((installed + 1)) ;;
+            1) skipped=$((skipped + 1)) ;;
+            2) failed=$((failed + 1)) ;;
+        esac
+    done < <(jq -r '.plugins[].name' "$manifest" 2>/dev/null)
+
+    echo ""
+    echo "  📊 Local: $installed installed, $skipped present, $failed failed"
+}
+
+# =============================================================================
+# PLUGIN SYNCHRONIZATION
+# =============================================================================
+
+# Build newline-separated list of expected plugin IDs from configuration
+# Sets global: _expected_plugins
+build_expected_plugins_list() {
+    local plugins_file="$DEVCONTAINER_DIR/$CLAUDE_PLUGINS_FILE"
+    local local_manifest="$DEVCONTAINER_DIR/plugins/$LOCAL_MARKETPLACE_NAME/.claude-plugin/marketplace.json"
+
+    _expected_plugins=""
+
+    # Parse skills-plugins.txt (only plugins, skip skills/github)
+    if [[ -f "$plugins_file" ]]; then
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+            line=$(echo "$line" | xargs)
+            [[ -z "$line" ]] && continue
+
+            # Skip new-format skill entries (- https://... --skill ...)
+            [[ "$line" =~ ^-[[:space:]] ]] && continue
+
+            if [[ "$line" =~ @ ]]; then
+                local name="${line%%@*}"
+                local rest="${line#*@}"
+                local type="${rest%%=*}"
+                case "$type" in
+                    skills|github) ;; # not in settings.json
+                    *) _expected_plugins="${_expected_plugins}${name}@${type}"$'\n' ;;
+                esac
+            else
+                _expected_plugins="${_expected_plugins}${line}@${OFFICIAL_MARKETPLACE_NAME}"$'\n'
+            fi
+        done < "$plugins_file"
+    fi
+
+    # Parse local marketplace
+    if [[ -f "$local_manifest" ]]; then
+        while IFS= read -r plugin; do
+            [[ -n "$plugin" ]] && _expected_plugins="${_expected_plugins}${plugin}@${LOCAL_MARKETPLACE_NAME}"$'\n'
+        done < <(jq -r '.plugins[].name // empty' "$local_manifest" 2>/dev/null)
+    fi
+}
+
+# Get installed plugins from settings.json
+# Sets global: _installed_plugins
+get_installed_plugins() {
+    _installed_plugins=""
+    [[ -f "$CLAUDE_SETTINGS_FILE" ]] || return 0
+    while IFS= read -r plugin; do
+        [[ -n "$plugin" ]] && _installed_plugins="${_installed_plugins}${plugin}"$'\n'
+    done < <(jq -r '.enabledPlugins | keys[]' "$CLAUDE_SETTINGS_FILE" 2>/dev/null)
+}
+
+# Uninstall a plugin by its full ID
+uninstall_plugin() {
+    local plugin="$1"
+    local display_name="${plugin%%@*}"
+    if claude plugin uninstall "$plugin" --scope user < /dev/null 2>/dev/null; then
+        echo "  🗑️  Uninstalled: $display_name"
+        return 0
+    fi
+    warn "Failed to uninstall: $display_name"
+    return 1
+}
+
+# Sync: remove plugins not in expected list
+sync_plugins() {
+    print_header "Synchronizing plugins"
+
+    has_command claude || { warn "Claude CLI not found"; return 0; }
+    has_command jq || { warn "jq not found"; return 0; }
+
+    build_expected_plugins_list
+    get_installed_plugins
+
+    local removed=0 failed=0
+    while IFS= read -r plugin; do
+        [[ -z "$plugin" ]] && continue
+        if [[ $'\n'"$_expected_plugins" != *$'\n'"$plugin"$'\n'* ]]; then
+            uninstall_plugin "$plugin" && removed=$((removed + 1)) || failed=$((failed + 1))
+        fi
+    done <<< "$_installed_plugins"
+
+    if ((removed > 0 || failed > 0)); then
+        echo ""
+        echo "  📊 Sync: $removed removed, $failed failed"
+    else
+        ok "All plugins in sync"
+    fi
+}
+
+# =============================================================================
 # MAIN
 # =============================================================================
 
@@ -424,7 +558,9 @@ main() {
     install_agent_browser
     install_loop
     setup_claude_configuration
+    sync_plugins
     install_all_plugins_and_skills
+    install_local_marketplace_plugins
 }
 
 main "$@"
