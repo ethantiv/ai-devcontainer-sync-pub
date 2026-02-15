@@ -16,9 +16,9 @@
 
 3. **Update the plan.** Update @docs/plans/IMPLEMENTATION_PLAN.md IMMEDIATELY — mark completed tasks `[x]`, update **Current Phase**, change phase **Status**. If the file exceeds 800 lines, trim completed content: remove `[x]` tasks, phases with status `complete`, resolved Issues rows. Keep pending tasks, active phases, Technical Decisions. Git history = full audit trail.
 
-4. **Simplify code.** Use the **Task** tool to launch the `code-simplifier:code-simplifier` subagent to simplify and improve readability of code produced in this phase.
+4. **Simplify code.** Use the **Task** tool to launch the `code-simplifier:code-simplifier` subagent to simplify and improve readability of code produced in this phase. **Wait for completion before proceeding to step 5.**
 
-5. **Code review.** Launch up to 5 `feature-dev:code-reviewer` subagents via **Task** tool, each with a different focus: simplicity/DRY/elegance, bugs/functional correctness, project conventions/abstractionsm, security. Fix issues with confidence ≥ 75.
+5. **Code review.** **Do NOT run this step in parallel with step 4 — wait until simplification is fully complete.** Launch up to 6 `feature-dev:code-reviewer` subagents via **Task** tool, each with a different focus: simplicity/DRY/elegance, bugs/functional correctness, project conventions/abstractions, security. Fix issues with confidence ≥ 75.
 
 6. **Run validation.** Run the project's validation commands (typecheck, lint, tests) as defined in @CLAUDE.md. You MUST NOT skip this step. If validation fails, fix all errors before proceeding to step 7.
 

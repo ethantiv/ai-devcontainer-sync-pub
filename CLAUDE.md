@@ -65,7 +65,7 @@ Source at `src/`. Docker: `COPY src /opt/loop` + `npm install`, symlinked as `/u
 
 ```bash
 loop init / update      # Initialize/refresh symlinks in project
-loop plan / build / run # Run planning (3 iter), build (5 iter), or both
+loop plan / build / run # Run planning (5 iter), build (99 iter), or both
 loop summary / cleanup  # Show run stats / clean artifacts
 ```
 

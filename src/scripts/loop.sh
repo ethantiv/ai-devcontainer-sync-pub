@@ -52,7 +52,7 @@ usage() {
     echo "Options:"
     echo "  -p              Plan mode (default: build)"
     echo "  -a              Autonomous mode (default: interactive)"
-    echo "  -i iterations   Number of iterations (default: 10 build, 5 plan)"
+    echo "  -i iterations   Number of iterations (default: 99 build, 5 plan)"
     echo "  -e              Disable early exit (run all iterations)"
     echo "  -n              Archive completed plan and start fresh"
     echo "  -I text         Seed idea written to docs/ROADMAP.md"
@@ -61,7 +61,7 @@ usage() {
     echo "Note: When called via 'loop run', autonomous mode (-a) is the default."
     echo ""
     echo "Examples:"
-    echo "  $0 -a              Build, 10 autonomous iterations"
+    echo "  $0 -a              Build, 99 autonomous iterations"
     echo "  $0 -p -a           Plan, 5 autonomous iterations"
     echo "  $0 -p -a -i 1     Single planning iteration"
     echo "  $0 -a -e           Build, all iterations (no early exit)"
@@ -331,12 +331,12 @@ while getopts "pai:enhI:" opt; do
     esac
 done
 
-# Default iterations: 5 for plan, 10 for build
+# Default iterations: 5 for plan, 99 for build
 if [[ -z "$ITERATIONS" ]]; then
     if [[ "$SCRIPT_NAME" == "plan" ]]; then
         ITERATIONS=5
     else
-        ITERATIONS=10
+        ITERATIONS=99
     fi
 fi
 

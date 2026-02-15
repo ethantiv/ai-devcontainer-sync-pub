@@ -66,7 +66,7 @@ cd ~/projects/my-project
 loop init                          # Set up loop in your project
 
 loop plan                          # Planning phase (5 iterations)
-loop build                         # Build phase (10 iterations)
+loop build                         # Build phase (99 iterations)
 loop run                           # Plan + build combined
 
 loop plan -I "Add authentication"  # Seed an idea before planning

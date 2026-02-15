@@ -110,7 +110,7 @@ async def show_iterations_menu(update: Update, context: ContextTypes.DEFAULT_TYP
             InlineKeyboardButton("5", callback_data="iter:5"),
         ],
         [
-            InlineKeyboardButton("10", callback_data="iter:10"),
+            InlineKeyboardButton("99", callback_data="iter:99"),
             InlineKeyboardButton(MSG_CUSTOM_AMOUNT_BTN, callback_data="iter:custom"),
         ],
         [InlineKeyboardButton(MSG_CANCEL_BTN, callback_data="iter:cancel")],
