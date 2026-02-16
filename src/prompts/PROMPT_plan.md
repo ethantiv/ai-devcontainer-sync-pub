@@ -6,13 +6,13 @@
 
 0d. Read @docs/plans/IMPLEMENTATION_PLAN.md.
 
-1. Launch up to 10 `feature-dev:code-explorer` subagents via **Task** tool to map @src/ architecture and compare against @docs/. Look for: TODO, placeholders, minimal implementations, missing tests, skipped/flaky tests, inconsistent patterns. Analyze findings and update @docs/plans/IMPLEMENTATION_PLAN.md:
+1. **Explore**: Launch up to 4 `feature-dev:code-explorer` subagents via **Task** tool to map @src/ architecture and compare against @docs/. Look for: TODO, placeholders, minimal implementations, missing tests, skipped/flaky tests, inconsistent patterns. Analyze findings and update @docs/plans/IMPLEMENTATION_PLAN.md:
    - Fill **Goal** with project objective from @docs/ROADMAP.md
    - Populate tasks in **Phases** — each phase MUST have 2-3 tasks maximum (one phase = one build iteration). Split large features into multiple sequential phases. Name each phase by its concrete deliverable, not by category.
    - Document findings in **Findings & Decisions** section
    - Update phase **Status**: pending → in_progress → complete
 
-2. **Commit and push.** After updating the plan: `git add -A && git commit` then `git push`. You MUST commit your plan updates before the session ends.
+2. **Commit and push**: After updating the plan: `git add -A && git commit` then `git push`. You MUST commit your plan updates before the session ends.
 
 ## Important Rules
 

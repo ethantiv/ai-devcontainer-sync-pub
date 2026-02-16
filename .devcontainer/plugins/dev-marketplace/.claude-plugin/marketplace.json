@@ -19,6 +19,11 @@
       "name": "loop-analyzer",
       "description": "Analyze autonomous agent loop logs with 5 parallel subagents for performance, code quality, process efficiency, and tool usage insights",
       "source": "./loop-analyzer"
+    },
+    {
+      "name": "security-check",
+      "description": "Security vulnerability review with 3-phase sub-agent pipeline and false-positive filtering",
+      "source": "./security-check"
     }
   ]
 }

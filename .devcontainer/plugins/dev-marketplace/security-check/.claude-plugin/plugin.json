@@ -1,0 +1,6 @@
+{
+  "name": "security-check",
+  "version": "0.1.0",
+  "description": "Security vulnerability review of code changes with 3-phase sub-agent pipeline and false-positive filtering",
+  "author": { "name": "Mirek Zaniewicz" }
+}
