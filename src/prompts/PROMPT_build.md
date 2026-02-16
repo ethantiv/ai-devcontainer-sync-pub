@@ -18,7 +18,7 @@
 
 4. **Simplify code**: Use the **Task** tool to launch the `code-simplifier:code-simplifier` subagent to simplify and improve readability of code produced in this phase. **Wait for completion before proceeding to step 5.**
 
-5. **Code review**: **Do NOT run this step in parallel with step 4 — wait until simplification is fully complete.** Invoke **Skill** tool: `Skill(skill="security-check:security-check")` and fix all critical and high security vulnerabilities.
+5. **Code review**: **Do NOT run this step in parallel with step 4 — wait until simplification is fully complete.** Use the **Task** tool to launch the `feature-dev:code-reviewer` subagent and fix all critical and high security vulnerabilities.
 
 6. **Validation**: Run the project's validation commands (typecheck, lint, tests) as defined in @CLAUDE.md. You MUST NOT skip this step. If validation fails, fix all errors before proceeding to step 7.
 

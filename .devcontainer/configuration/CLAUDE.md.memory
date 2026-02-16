@@ -30,6 +30,10 @@ Run them after implementation to get immediate feedback:
 
 Always load the correct skills at the beginning of the relevant tasks.
 
+## Documentation Lookup
+
+Prefer `context7` MCP tools (`resolve-library-id` then `query-docs`) over `WebFetch` for library and SDK documentation. WebFetch parses raw HTML and wastes tokens; context7 returns structured, up-to-date docs directly.
+
 ## Subagents
 
 When using the Task tool, always use fully qualified agent names in the format `plugin-name:agent-name` (e.g., `code-simplifier:code-simplifier`, `feature-dev:code-reviewer`). Never shorten to just the plugin name.
