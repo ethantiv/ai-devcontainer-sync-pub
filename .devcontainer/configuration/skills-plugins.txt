@@ -31,20 +31,24 @@ typescript-lsp
 # =============================================================================
 
 # Skills (format: - <url> --skill <name>)
-- https://github.com/vercel-labs/agent-browser --skill agent-browser
+- https://github.com/anthropics/skills --skill docx
+- https://github.com/anthropics/skills --skill pdf
+- https://github.com/anthropics/skills --skill xlsx
 - https://github.com/intellectronica/agent-skills --skill beautiful-mermaid
 - https://github.com/obra/superpowers --skill brainstorming
-- https://github.com/vercel-labs/skills --skill find-skills
+- https://github.com/remotion-dev/skills --skill remotion-best-practices
 - https://github.com/softaworks/agent-toolkit --skill humanizer
 - https://github.com/softaworks/agent-toolkit --skill mermaid-diagrams
-- https://github.com/remotion-dev/skills --skill remotion-best-practices
+- https://github.com/vercel-labs/agent-browser --skill agent-browser
 - https://github.com/vercel-labs/agent-skills --skill vercel-react-best-practices
 - https://github.com/vercel-labs/agent-skills --skill web-design-guidelines
+- https://github.com/vercel-labs/skills --skill find-skills
+
 
 # Google Stitch (https://github.com/google-labs-code/stitch-skills)
-- https://github.com/google-labs-code/stitch-skills --skill design-md
-- https://github.com/google-labs-code/stitch-skills --skill react:components
-- https://github.com/google-labs-code/stitch-skills --skill stitch-loop
-- https://github.com/google-labs-code/stitch-skills --skill enhance-prompt
-- https://github.com/google-labs-code/stitch-skills --skill remotion
-- https://github.com/google-labs-code/stitch-skills --skill shadcn-ui
+# - https://github.com/google-labs-code/stitch-skills --skill design-md
+# - https://github.com/google-labs-code/stitch-skills --skill react:components
+# - https://github.com/google-labs-code/stitch-skills --skill stitch-loop
+# - https://github.com/google-labs-code/stitch-skills --skill enhance-prompt
+# - https://github.com/google-labs-code/stitch-skills --skill remotion
+# - https://github.com/google-labs-code/stitch-skills --skill shadcn-ui
