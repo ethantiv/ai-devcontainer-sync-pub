@@ -23,6 +23,7 @@ readonly CLAUDE_SETTINGS_FILE="$CLAUDE_DIR/settings.json"
 readonly CLAUDE_SCRIPTS_DIR="$CLAUDE_DIR/scripts"
 readonly GEMINI_DIR="$HOME/.gemini"
 
+readonly ENVIRONMENT_TAG="devcontainer"
 readonly CLAUDE_PLUGINS_FILE="configuration/skills-plugins.txt"
 readonly OFFICIAL_MARKETPLACE_NAME="claude-plugins-official"
 readonly OFFICIAL_MARKETPLACE_REPO="anthropics/claude-plugins-official"
@@ -309,6 +310,8 @@ install_all_plugins_and_skills() {
     declare -A external_marketplaces
 
     while IFS= read -r line || [[ -n "$line" ]]; do
+        # Stop at MCP SERVERS section (handled by sync_mcp_servers)
+        [[ "$line" =~ "MCP SERVERS" ]] && break
         [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
         line=$(echo "$line" | xargs)
         [[ -z "$line" ]] && continue
@@ -399,58 +402,186 @@ add_mcp_server() {
     fi
 }
 
-setup_mcp_servers() {
+# Build JSON config for a stdio MCP server from parsed tokens
+# Args: command arg1 arg2... env:KEY env:KEY=val
+build_stdio_json() {
+    local tokens=("$@")
+    local command="${tokens[0]}"
+    local args=()
+    local env_pairs=()
+
+    for token in "${tokens[@]:1}"; do
+        if [[ "$token" =~ ^env:(.+)=(.+)$ ]]; then
+            env_pairs+=("${BASH_REMATCH[1]}|${BASH_REMATCH[2]}")
+        elif [[ "$token" =~ ^env:(.+)$ ]]; then
+            local var="${BASH_REMATCH[1]}"
+            env_pairs+=("${var}|${!var:-}")
+        elif [[ "$token" =~ ^(requires:|header:) ]]; then
+            continue
+        else
+            args+=("$token")
+        fi
+    done
+
+    local json
+    json=$(jq -n --arg cmd "$command" \
+        --argjson args "$(printf '%s\n' "${args[@]}" | jq -R . | jq -s .)" \
+        '{type: "stdio", command: $cmd, args: $args}')
+
+    if [[ ${#env_pairs[@]} -gt 0 ]]; then
+        local env_obj="{}"
+        for pair in "${env_pairs[@]}"; do
+            local key="${pair%%|*}"
+            local val="${pair#*|}"
+            env_obj=$(echo "$env_obj" | jq --arg k "$key" --arg v "$val" '. + {($k): $v}')
+        done
+        json=$(echo "$json" | jq --argjson env "$env_obj" '. + {env: $env}')
+    fi
+
+    echo "$json"
+}
+
+# Build JSON config for an HTTP MCP server from parsed tokens
+# Args: url header:KEY=VAR
+build_http_json() {
+    local tokens=("$@")
+    local url="${tokens[0]}"
+    local header_pairs=()
+
+    for token in "${tokens[@]:1}"; do
+        if [[ "$token" =~ ^header:(.+)=(.+)$ ]]; then
+            local key="${BASH_REMATCH[1]}"
+            local var="${BASH_REMATCH[2]}"
+            header_pairs+=("${key}|${!var:-}")
+        fi
+    done
+
+    local json
+    json=$(jq -n --arg url "$url" '{type: "http", url: $url}')
+
+    if [[ ${#header_pairs[@]} -gt 0 ]]; then
+        local headers="{}"
+        for pair in "${header_pairs[@]}"; do
+            local key="${pair%%|*}"
+            local val="${pair#*|}"
+            headers=$(echo "$headers" | jq --arg k "$key" --arg v "$val" '. + {($k): $v}')
+        done
+        json=$(echo "$json" | jq --argjson h "$headers" '. + {headers: $h}')
+    fi
+
+    echo "$json"
+}
+
+# Parse MCP server declarations from skills-plugins.txt
+# Populates mcp_expected array and calls add_mcp_server for each
+parse_mcp_servers() {
+    local file="$1"
+    local in_mcp_section=0
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # Detect MCP section header
+        if [[ "$line" =~ "MCP SERVERS" ]]; then
+            in_mcp_section=1
+            continue
+        fi
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ $in_mcp_section -eq 0 ]] && continue
+
+        line=$(echo "$line" | xargs)
+        [[ -z "$line" ]] && continue
+
+        # Skip non-MCP lines (skills, plugins)
+        [[ "$line" =~ ^- ]] && continue
+        [[ ! "$line" =~ (stdio|http) ]] && continue
+
+        # Extract [tags] from end
+        local tags_str="all"
+        if [[ "$line" =~ \[([a-z,]+)\]$ ]]; then
+            tags_str="${BASH_REMATCH[1]}"
+            line="${line% \[*}"
+        fi
+
+        # Check tag match
+        if [[ "$tags_str" != "all" ]] && [[ ! ",$tags_str," =~ ,"$ENVIRONMENT_TAG", ]]; then
+            continue
+        fi
+
+        # Parse: name type rest...
+        local name type
+        name="${line%% *}"; line="${line#* }"
+        type="${line%% *}"; line="${line#* }"
+
+        # Read remaining tokens
+        local tokens=()
+        read -ra tokens <<< "$line"
+
+        # Check requires:
+        local skip=0
+        for token in "${tokens[@]}"; do
+            if [[ "$token" =~ ^requires:(.+)$ ]]; then
+                local var="${BASH_REMATCH[1]}"
+                if [[ -z "${!var:-}" ]]; then
+                    warn "Skipping $name: $var not set"
+                    skip=1
+                    break
+                fi
+            fi
+        done
+        [[ $skip -eq 1 ]] && continue
+
+        # Build JSON config
+        local json
+        if [[ "$type" == "stdio" ]]; then
+            json=$(build_stdio_json "${tokens[@]}")
+        elif [[ "$type" == "http" ]]; then
+            json=$(build_http_json "${tokens[@]}")
+        else
+            warn "Unknown MCP type: $type for $name"
+            continue
+        fi
+
+        mcp_expected+=("$name")
+        add_mcp_server "$name" "$json"
+    done < "$file"
+}
+
+# Sync MCP servers: add from config, remove stale ones
+sync_mcp_servers() {
     echo "🔧 Setting up MCP servers..."
     has_command claude || return 0
+    has_command jq || return 0
 
-    add_mcp_server "aws-documentation" '{
-        "type": "stdio",
-        "command": "uvx",
-        "args": ["awslabs.aws-documentation-mcp-server@latest"],
-        "env": {
-            "FASTMCP_LOG_LEVEL": "ERROR",
-            "AWS_DOCUMENTATION_PARTITION": "aws"
-        }
-    }'
+    local plugins_file="$WORKSPACE_FOLDER/.devcontainer/$CLAUDE_PLUGINS_FILE"
+    [[ -f "$plugins_file" ]] || { warn "$plugins_file not found"; return 0; }
 
-    add_mcp_server "terraform" '{
-        "type": "stdio",
-        "command": "uvx",
-        "args": ["awslabs.terraform-mcp-server@latest"],
-        "env": {
-            "FASTMCP_LOG_LEVEL": "ERROR"
-        }
-    }'
+    local mcp_expected=()
+    parse_mcp_servers "$plugins_file"
 
-    add_mcp_server "context7" '{
-        "type": "stdio",
-        "command": "npx",
-        "args": ["-y", "@upstash/context7-mcp"],
-        "env": {
-            "CONTEXT7_API_KEY": "'"${CONTEXT7_API_KEY:-}"'"
-        }
-    }'
-
-    add_mcp_server "coolify" '{
-        "type": "stdio",
-        "command": "npx",
-        "args": ["-y", "@masonator/coolify-mcp@latest"],
-        "env": {
-            "COOLIFY_BASE_URL": "'"${COOLIFY_BASE_URL:-}"'",
-            "COOLIFY_ACCESS_TOKEN": "'"${COOLIFY_ACCESS_TOKEN:-}"'"
-        }
-    }'
-
-    # Stitch: remote HTTP MCP — only add when API key is available
-    if [[ -n "${STITCH_API_KEY:-}" ]]; then
-        add_mcp_server "stitch" '{
-            "type": "http",
-            "url": "https://stitch.googleapis.com/mcp",
-            "headers": {
-                "X-Goog-Api-Key": "'"${STITCH_API_KEY}"'"
-            }
-        }'
+    # Get installed MCP servers from .claude.json
+    local settings_file="$HOME/.claude/.claude.json"
+    local installed=()
+    if [[ -f "$settings_file" ]]; then
+        while IFS= read -r name; do
+            [[ -n "$name" ]] && installed+=("$name")
+        done < <(jq -r '.mcpServers // {} | keys[]' "$settings_file" 2>/dev/null)
     fi
+
+    # Remove servers not in expected list
+    local removed=0
+    for name in "${installed[@]}"; do
+        local found=0
+        for expected in "${mcp_expected[@]}"; do
+            [[ "$name" == "$expected" ]] && { found=1; break; }
+        done
+        if [[ $found -eq 0 ]]; then
+            if claude mcp remove "$name" --scope user < /dev/null 2>/dev/null; then
+                echo "  🗑️  Removed MCP: $name"
+                removed=$((removed + 1))
+            fi
+        fi
+    done
+
+    echo "  📊 MCP: ${#mcp_expected[@]} configured, $removed removed"
 }
 
 # =============================================================================
@@ -512,9 +643,10 @@ build_expected_plugins_list() {
     declare -gA expected_plugins
     expected_plugins=()
 
-    # Parse skills-plugins.txt (only plugins, skip skills)
+    # Parse skills-plugins.txt (only plugins, skip skills and MCP)
     if [[ -f "$plugins_file" ]]; then
         while IFS= read -r line || [[ -n "$line" ]]; do
+            [[ "$line" =~ "MCP SERVERS" ]] && break
             [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
             line=$(echo "$line" | xargs)
             [[ -z "$line" ]] && continue
@@ -606,7 +738,7 @@ main() {
     sync_plugins
     install_all_plugins_and_skills
     install_local_marketplace_plugins
-    setup_mcp_servers
+    sync_mcp_servers
 
     ok "Setup complete!"
 }

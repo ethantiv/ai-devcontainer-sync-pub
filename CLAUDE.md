@@ -57,7 +57,7 @@ Codespaces: add as repository secrets. Local: create `.devcontainer/.env` (copy 
 
 ### MCP Servers
 
-`aws-documentation`, `terraform`, `context7` (needs `CONTEXT7_API_KEY`), `coolify` (needs `COOLIFY_BASE_URL` + `COOLIFY_ACCESS_TOKEN`), `stitch` (needs `STITCH_API_KEY`, remote HTTP). First four require `uvx` (from `uv`).
+Declared in `skills-plugins.txt` (MCP SERVERS section) — single source of truth for all environments. Setup scripts parse the DSL and sync (add/remove) servers automatically. Tags filter by environment: `[all]`, `[devcontainer]`, `[docker]`, `[local]`.
 
 ### Loop System
 
@@ -89,7 +89,7 @@ loop summary / cleanup  # Show run stats / clean artifacts
 
 Setup/sync — apply across all:
 - `.devcontainer/setup-env.sh` — DevContainer/Codespaces
-- `setup-local.sh` — macOS local (plugins and skills only, no MCP)
+- `setup-local.sh` — macOS local (plugins, skills, and MCP)
 - `docker/Dockerfile` + `docker/entrypoint.sh` + `docker/setup-claude.sh` — Docker
 - `README.md` — docs for all deployment options
 
@@ -121,7 +121,7 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 - **Setup scripts must be non-fatal**: Writes to dotfiles use `|| warn` / `|| true`. Don't block plugin/MCP setup on non-essential ops.
 - **UTF-8 locale**: Dockerfile must generate `en_US.UTF-8` locale. Without it, Polish chars in tmux show as `_`.
 - **Shell helpers**: `ok()`, `warn()`, `fail()` for colored status output in setup scripts.
-- **skills-plugins.txt formats**: `- https://github.com/owner/repo --skill name` (new), `name@skills=owner/repo` (legacy), `name@github=owner/repo/path`, `name@type=owner/repo` (external). Gotcha: `setup-local.sh` requires type to match `*-marketplace` glob.
+- **skills-plugins.txt formats**: Plugins: `plugin-name` (official), `name@type=owner/repo` (external). Skills: `- https://github.com/owner/repo --skill name` (new), `name@skills=repo` (legacy). MCP: `name stdio cmd args... [env:KEY] [tags]` or `name http url [header:K=V] [requires:VAR] [tags]`. Gotcha: `setup-local.sh` requires external plugin type to match `*-marketplace` glob.
 - **Skills install**: `npx -y skills add "$url" --skill "$name" --agent claude-code gemini-cli -g -y`
 - **Python deps**: Add to `src/telegram_bot/requirements.txt` — Dockerfile auto-installs.
 - **Test patterns**: pytest + pytest-asyncio. Patch `PROJECTS_ROOT` in module namespace, not via env vars. Fixtures with `with patch(...)` must `yield` not `return`. Bot tests patch `TELEGRAM_CHAT_ID` in the module where the decorated function is defined.
