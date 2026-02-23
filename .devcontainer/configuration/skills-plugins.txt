@@ -40,6 +40,7 @@ typescript-lsp
 - https://github.com/softaworks/agent-toolkit --skill humanizer
 - https://github.com/softaworks/agent-toolkit --skill mermaid-diagrams
 - https://github.com/vercel-labs/agent-browser --skill agent-browser
+- https://github.com/vercel-labs/agent-skills --skill vercel-composition-patterns
 - https://github.com/vercel-labs/agent-skills --skill vercel-react-best-practices
 - https://github.com/vercel-labs/agent-skills --skill web-design-guidelines
 - https://github.com/vercel-labs/skills --skill find-skills
@@ -64,8 +65,8 @@ typescript-lsp
 # header:KEY=VAR — use $VAR as header value
 # requires:VAR — skip server if $VAR is empty/unset
 
-context7 stdio npx -y @upstash/context7-mcp env:CONTEXT7_API_KEY [all]
-coolify stdio npx -y @masonator/coolify-mcp@latest env:COOLIFY_BASE_URL env:COOLIFY_ACCESS_TOKEN [all]
-aws-documentation stdio uvx awslabs.aws-documentation-mcp-server@latest env:FASTMCP_LOG_LEVEL=ERROR env:AWS_DOCUMENTATION_PARTITION=aws [devcontainer,local]
-terraform stdio uvx awslabs.terraform-mcp-server@latest env:FASTMCP_LOG_LEVEL=ERROR [devcontainer,local]
-# stitch http https://stitch.googleapis.com/mcp header:X-Goog-Api-Key=STITCH_API_KEY requires:STITCH_API_KEY [all]
+context7 stdio npx -y @upstash/context7-mcp env:CONTEXT7_API_KEY [devcontainer, docker]
+coolify stdio npx -y @masonator/coolify-mcp@latest env:COOLIFY_BASE_URL env:COOLIFY_ACCESS_TOKEN [devcontainer, docker]
+aws-documentation stdio uvx awslabs.aws-documentation-mcp-server@latest env:FASTMCP_LOG_LEVEL=ERROR env:AWS_DOCUMENTATION_PARTITION=aws [devcontainer]
+terraform stdio uvx awslabs.terraform-mcp-server@latest env:FASTMCP_LOG_LEVEL=ERROR [devcontainer]
+# stitch http https://stitch.googleapis.com/mcp header:X-Goog-Api-Key=STITCH_API_KEY requires:STITCH_API_KEY [devcontainer, docker]

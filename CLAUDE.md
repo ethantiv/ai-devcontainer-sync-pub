@@ -31,6 +31,7 @@ Available as local marketplace plugins (`dev-marketplace`):
 - `/roadmap` - manage ROADMAP.md with features and proposals
 - `/git-worktree:create <name>` / `/git-worktree:delete <name>` - manage worktrees
 - `/loop-analyzer` - analyze autonomous loop logs with 5 parallel subagents
+- `/security-check` - security vulnerability review of pending code changes
 
 ## Operational Notes
 
@@ -69,7 +70,7 @@ loop plan / build / run # Run planning (5 iter), build (99 iter), or both
 loop summary / cleanup  # Show run stats / clean artifacts
 ```
 
-**Structure**: `src/scripts/` (shell), `src/prompts/`, `src/templates/`, `src/telegram_bot/` (Python bot + `handlers/`), `src/bin/` + `src/lib/` (Node.js CLI).
+**Structure**: `src/scripts/` (shell), `src/prompts/`, `src/templates/`, `src/telegram_bot/` (Python bot + `handlers/`), `src/bin/` + `src/lib/` (Node.js CLI), `src/web/` (web app + Playwright e2e).
 
 **Telegram bot**: Starts in Docker if `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` set. Commands: `docs/specs/TELEGRAM_COMMANDS.md`.
 
