@@ -314,6 +314,11 @@ install_all_plugins_and_skills() {
     fi
     claude plugin marketplace update "$OFFICIAL_MARKETPLACE_NAME" 2>/dev/null || true
 
+    # Clean stale gemini skill symlinks (gemini-cli scans ~/.agents/skills/ directly)
+    if [ -d "$HOME/.gemini/skills" ]; then
+        find "$HOME/.gemini/skills" -maxdepth 1 -type l -delete 2>/dev/null || true
+    fi
+
     local plugins_installed=0 plugins_skipped=0 plugins_failed=0
     local skills_installed=0 skills_failed=0
     declare -A external_marketplaces
@@ -607,7 +612,7 @@ install_skill() {
     ensure_directory "$CLAUDE_DIR/skills"
 
     # Note: < /dev/null prevents npx from consuming stdin (which would break the while-read loop)
-    if npx -y skills add "$url" --skill "$name" --agent claude-code gemini-cli -g -y < /dev/null 2>/dev/null; then
+    if npx -y skills add "$url" --skill "$name" --agent claude-code -g -y < /dev/null 2>/dev/null; then
         ok "Installed skill: $name"
         return 0
     fi

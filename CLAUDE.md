@@ -123,7 +123,7 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 - **UTF-8 locale**: Dockerfile must generate `en_US.UTF-8` locale. Without it, Polish chars in tmux show as `_`.
 - **Shell helpers**: `ok()`, `warn()`, `fail()` for colored status output in setup scripts.
 - **skills-plugins.txt formats**: Plugins: `plugin-name` (official), `name@type=owner/repo` (external). Skills: `- https://github.com/owner/repo --skill name` (new), `name@skills=repo` (legacy). MCP: `name stdio cmd args... [env:KEY] [tags]` or `name http url [header:K=V] [requires:VAR] [tags]`. Gotcha: `setup-local.sh` requires external plugin type to match `*-marketplace` glob.
-- **Skills install**: `npx -y skills add "$url" --skill "$name" --agent claude-code gemini-cli -g -y`
+- **Skills install**: `npx -y skills add "$url" --skill "$name" --agent claude-code -g -y`
 - **Python deps**: Add to `src/telegram_bot/requirements.txt` — Dockerfile auto-installs.
 - **Test patterns**: pytest + pytest-asyncio. Patch `PROJECTS_ROOT` in module namespace, not via env vars. Fixtures with `with patch(...)` must `yield` not `return`. Bot tests patch `TELEGRAM_CHAT_ID` in the module where the decorated function is defined.
 - **Deadlock prevention**: `_save_tasks()` acquires `_queue_lock` internally — never call while holding the lock.
