@@ -223,15 +223,6 @@ sync_claude_scripts() {
     ok "Synced scripts to ~/.claude/scripts/"
 }
 
-setup_git_config() {
-    local source_file="$WORKSPACE_FOLDER/.devcontainer/configuration/gitignore_global"
-    if [[ -f "$source_file" ]]; then
-        cp "$source_file" "$HOME/.gitignore_global"
-        git config --global core.excludesFile "$HOME/.gitignore_global"
-        ok "Global gitignore configured"
-    fi
-}
-
 setup_claude_configuration() {
     echo "📄 Setting up Claude configuration..."
 
@@ -749,7 +740,6 @@ main() {
     reset_config_if_requested "RESET_GEMINI_CONFIG" "$GEMINI_DIR"
 
     setup_claude_configuration
-    setup_git_config
     sync_plugins
     install_all_plugins_and_skills
     install_local_marketplace_plugins

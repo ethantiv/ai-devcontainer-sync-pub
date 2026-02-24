@@ -162,11 +162,6 @@ setup_git_config() {
     if [[ -n "${GIT_USER_NAME}" ]] || [[ -n "${GIT_USER_EMAIL}" ]]; then
         echo "  ✔︎ Git user configured"
     fi
-
-    # Global gitignore (inline — Docker has no access to .devcontainer/configuration/)
-    printf '%s\n' "CLAUDE.md" ".brainstorm/" > "$HOME/.gitignore_global"
-    git config --global core.excludesFile "$HOME/.gitignore_global"
-    echo "  ✔︎ Global gitignore configured"
 }
 
 # Configure git user
