@@ -21,14 +21,16 @@ function checkLoopScript() {
   return loopScript;
 }
 
-function spawnLoop(opts, isPlan) {
+function spawnLoop(opts, mode) {
   const loopScript = checkLoopScript();
   const args = [];
 
-  if (isPlan) args.push('-p');
+  if (mode === 'plan') args.push('-p');
+  if (mode === 'design') args.push('-d');
   if (!opts.interactive) args.push('-a');
 
-  const iterations = opts.iterations || (isPlan ? '5' : '99');
+  const defaultIter = mode === 'build' ? '99' : '5';
+  const iterations = opts.iterations || defaultIter;
   args.push('-i', iterations);
 
   if (opts.idea) args.push('-I', opts.idea);
@@ -47,11 +49,15 @@ function spawnLoop(opts, isPlan) {
 }
 
 function runPlan(opts) {
-  spawnLoop(opts, true).then((code) => process.exit(code));
+  spawnLoop(opts, 'plan').then((code) => process.exit(code));
 }
 
 function runBuild(opts) {
-  spawnLoop(opts, false).then((code) => process.exit(code));
+  spawnLoop(opts, 'build').then((code) => process.exit(code));
+}
+
+function runDesign(opts) {
+  spawnLoop({ ...opts, interactive: true }, 'design').then((code) => process.exit(code));
 }
 
 function runCombined(opts) {
@@ -69,13 +75,13 @@ function runCombined(opts) {
     iterations: opts.iterations,
   };
 
-  spawnLoop(planOpts, true).then((planCode) => {
+  spawnLoop(planOpts, 'plan').then((planCode) => {
     if (planCode !== 0) {
       console.error(`Plan phase exited with code ${planCode}, skipping build.`);
       process.exit(planCode);
     }
-    spawnLoop(buildOpts, false).then((buildCode) => process.exit(buildCode));
+    spawnLoop(buildOpts, 'build').then((buildCode) => process.exit(buildCode));
   });
 }
 
-module.exports = { runPlan, runBuild, runCombined };
+module.exports = { runPlan, runBuild, runCombined, runDesign };

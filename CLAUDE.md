@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-DevContainer for multi-AI agent development with Claude Code and Gemini CLI. Configuration-only repository.
+DevContainer for multi-AI agent development with Claude Code and Gemini CLI. Includes configuration, loop system (Node.js CLI + shell scripts), Telegram bot (Python), prompts, and templates.
 
 ## Build & Run
 
@@ -30,7 +30,6 @@ Single test: `python3 -m pytest src/telegram_bot/tests/test_tasks.py::TestTaskMa
 Available as local marketplace plugins (`dev-marketplace`):
 - `/roadmap` - manage ROADMAP.md with features and proposals
 - `/git-worktree:create <name>` / `/git-worktree:delete <name>` - manage worktrees
-- `/loop-analyzer` - analyze autonomous loop logs with 5 parallel subagents
 - `/security-check` - security vulnerability review of pending code changes
 
 ## Operational Notes
@@ -66,11 +65,12 @@ Source at `src/`. Docker: `COPY src /opt/loop` + `npm install`, symlinked as `/u
 
 ```bash
 loop init / update      # Initialize/refresh symlinks in project
+loop design             # Interactive brainstorming / design session
 loop plan / build / run # Run planning (5 iter), build (99 iter), or both
 loop summary / cleanup  # Show run stats / clean artifacts
 ```
 
-**Structure**: `src/scripts/` (shell), `src/prompts/`, `src/templates/`, `src/telegram_bot/` (Python bot + `handlers/`), `src/bin/` + `src/lib/` (Node.js CLI), `src/web/` (web app + Playwright e2e).
+**Structure**: `src/scripts/` (shell), `src/prompts/`, `src/templates/`, `src/telegram_bot/` (Python bot + `handlers/`), `src/bin/` + `src/lib/` (Node.js CLI).
 
 **Telegram bot**: Starts in Docker if `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` set. Commands: `docs/specs/TELEGRAM_COMMANDS.md`.
 
@@ -111,7 +111,6 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 | Source | Destination |
 |--------|-------------|
 | `configuration/CLAUDE.md.memory` | `~/.claude/CLAUDE.md` |
-| `scripts/*.sh` | `~/.claude/scripts/` |
 | `plugins/dev-marketplace/` | local plugin marketplace |
 
 ### Codebase Patterns

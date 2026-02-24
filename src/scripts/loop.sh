@@ -47,10 +47,11 @@ CTX_FILE=""
 
 # Help function
 usage() {
-    echo "Usage: $0 [-p] [-a] [-i iterations] [-e] [-I idea]"
+    echo "Usage: $0 [-p] [-d] [-a] [-i iterations] [-e] [-I idea]"
     echo ""
     echo "Options:"
     echo "  -p              Plan mode (default: build)"
+    echo "  -d              Design mode (interactive brainstorming)"
     echo "  -a              Autonomous mode (default: interactive)"
     echo "  -i iterations   Number of iterations (default: 99 build, 5 plan)"
     echo "  -e              Disable early exit (run all iterations)"
@@ -318,9 +319,10 @@ done
 set -- "${ARGS[@]}"
 
 # Parse arguments
-while getopts "pai:enhI:" opt; do
+while getopts "pdai:enhI:" opt; do
     case $opt in
         p) SCRIPT_NAME="plan" ;;
+        d) SCRIPT_NAME="design" ;;
         a) AUTONOMOUS=true ;;
         i) ITERATIONS=$OPTARG ;;
         e) EARLY_EXIT=false ;;
@@ -330,6 +332,11 @@ while getopts "pai:enhI:" opt; do
         *) usage ;;
     esac
 done
+
+# Design mode is always interactive
+if [[ "$SCRIPT_NAME" == "design" ]]; then
+    AUTONOMOUS=false
+fi
 
 # Default iterations: 5 for plan, 99 for build
 if [[ -z "$ITERATIONS" ]]; then
@@ -389,7 +396,7 @@ if [[ "$AUTONOMOUS" == true ]]; then
 
         claude -p --verbose --output-format stream-json < "$PROMPT_FILE" | tee -a "$LOG_FILE" | format_stream
         ((COMPLETED_ITERATIONS++))
-        ensure_committed
+        [[ "$SCRIPT_NAME" != "build" ]] && ensure_committed
 
         [[ $i -lt $ITERATIONS ]] && sleep 10
     done
@@ -411,7 +418,7 @@ else
         clear
         claude < "$PROMPT_FILE"
         ((COMPLETED_ITERATIONS++))
-        ensure_committed
+        [[ "$SCRIPT_NAME" != "build" ]] && ensure_committed
         sleep 10
     done
 fi

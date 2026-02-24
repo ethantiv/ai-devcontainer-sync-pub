@@ -1,4 +1,4 @@
-0a. For each skill listed in @loop/PROMPT_skills.md, invoke the **Skill** tool (e.g., `Skill(skill="agent-browser")`). Load all skills in parallel in a single message.
+0a. For each skill listed in @loop/PROMPT_skills_plan.md, invoke the **Skill** tool. Load all skills in parallel in a single message.
 
 0b. If @docs/plans/IMPLEMENTATION_PLAN.md doesn't exist, copy @docs/plans/IMPLEMENTATION_PLAN_template.md to @docs/plans/IMPLEMENTATION_PLAN.md.
 
@@ -6,18 +6,25 @@
 
 0d. Read @docs/plans/IMPLEMENTATION_PLAN.md.
 
-1. **Explore**: Launch up to 4 `feature-dev:code-explorer` subagents via **Task** tool to map @src/ architecture and compare against @docs/. Look for: TODO, placeholders, minimal implementations, missing tests, skipped/flaky tests, inconsistent patterns. Analyze findings and update @docs/plans/IMPLEMENTATION_PLAN.md:
-   - Fill **Goal** with project objective from @docs/ROADMAP.md
-   - Populate tasks in **Phases** — each phase MUST have 2-3 tasks maximum (one phase = one build iteration). Split large features into multiple sequential phases. Name each phase by its concrete deliverable, not by category.
-   - Document findings in **Findings & Decisions** section
-   - Update phase **Status**: pending → in_progress → complete
+0e. Search @docs/plans/ for any design docs (YYYY-MM-DD-*-design.md). If found, read the most recent one — it provides architecture decisions and constraints.
 
-2. **Commit and push**: After updating the plan: `git add -A && git commit` then `git push`. You MUST commit your plan updates before the session ends.
+1. **Explore**: Launch up to 4 `feature-dev:code-explorer` subagents via **Task** tool to map @src/ architecture and compare against @docs/. Look for: TODO, placeholders, minimal implementations, missing tests, skipped/flaky tests, inconsistent patterns.
+
+2. **Create plan**: Invoke **Skill** tool: `Skill(skill="superpowers:writing-plans")`. Follow the writing-plans skill workflow to populate @docs/plans/IMPLEMENTATION_PLAN.md:
+   - Fill **Header** (Goal, Architecture, Tech Stack) from ROADMAP and design doc
+   - Create bite-sized tasks (2-5 min each) with exact file paths, code snippets, test commands, and expected output
+   - Each task follows atomic steps: write failing test → verify fails → implement → verify passes → commit
+   - Group tasks into phases — each phase has max 2-3 tasks (one phase = one build iteration)
+   - Name phases by concrete deliverable, not category
+   - Update phase **Status**: pending → in_progress → complete
+   - Document findings in **Findings & Decisions** section
+
+3. **Commit and push**: After updating the plan: `git add -A && git commit` then `git push`. You MUST commit your plan updates before the session ends.
 
 ## Important Rules
 
-- PLAN ONLY - do NOT implement anything.
-- Before adding task: search code to confirm it doesn't exist.
-- Scope is defined by @docs/ROADMAP.md and @docs/specs/. Do NOT invent features beyond what ROADMAP.md describes. When essential ROADMAP.md requirements are planned don't add new tasks.
-- Consider missing essential elements and plan accordingly. If an essential element is missing, search first to confirm it doesn't exist, then only if needed author the specification at docs/specs/FILENAME.md. If you create a new element then document the plan to implement it in @IMPLEMENTATION_PLAN.md using a subagent.
-- @src/lib = project's standard library, prefer consolidated, idiomatic implementations there over ad-hoc copies.
+- PLAN ONLY — do NOT implement anything.
+- Before adding a task: search code to confirm it doesn't already exist.
+- Scope is defined by @docs/ROADMAP.md and @docs/specs/. Do NOT invent features beyond what ROADMAP describes.
+- Tasks must be granular enough to complete in 2-5 minutes each, with explicit test commands and expected output.
+- @src/lib = project's standard library, prefer consolidated implementations there over ad-hoc copies.

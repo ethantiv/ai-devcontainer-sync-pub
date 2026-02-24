@@ -6,6 +6,7 @@ const PACKAGE_ROOT = path.resolve(__dirname, '..');
 // Core files: symlinked from package to project's ./loop/
 const CORE_FILES = [
   { src: 'scripts/loop.sh', dest: 'loop/loop.sh' },
+  { src: 'prompts/PROMPT_design.md', dest: 'loop/PROMPT_design.md' },
   { src: 'prompts/PROMPT_plan.md', dest: 'loop/PROMPT_plan.md' },
   { src: 'prompts/PROMPT_build.md', dest: 'loop/PROMPT_build.md' },
   { src: 'scripts/cleanup.sh', dest: 'loop/cleanup.sh' },
@@ -19,7 +20,8 @@ const TEMPLATES = [
   { src: 'templates/IMPLEMENTATION_PLAN_template.md', dest: 'docs/plans/IMPLEMENTATION_PLAN_template.md' },
   { src: '.claude/settings.json', dest: '.claude/settings.json' },
   { src: '.claude/skills/auto-revise-claude-md/SKILL.md', dest: '.claude/skills/auto-revise-claude-md/SKILL.md' },
-  { src: 'prompts/PROMPT_skills.md', dest: 'loop/PROMPT_skills.md' },
+  { src: 'prompts/PROMPT_skills_plan.md', dest: 'loop/PROMPT_skills_plan.md' },
+  { src: 'prompts/PROMPT_skills_build.md', dest: 'loop/PROMPT_skills_build.md' },
 ];
 
 const DIRS = ['docs/plans', 'loop/logs', '.claude/skills/auto-revise-claude-md'];

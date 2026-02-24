@@ -2,7 +2,7 @@
 
 const { program } = require('commander');
 const { init } = require('../lib/init');
-const { runPlan, runBuild, runCombined } = require('../lib/run');
+const { runPlan, runBuild, runCombined, runDesign } = require('../lib/run');
 const { cleanup } = require('../lib/cleanup');
 const { generateSummary } = require('../lib/summary');
 
@@ -28,6 +28,12 @@ program
   .command('init')
   .description('Symlink scripts/prompts and copy templates into current project')
   .action(() => init());
+
+addLoopOptions(
+  program
+    .command('design')
+    .description('Run interactive design/brainstorming phase (always interactive)')
+).action((opts) => runDesign(opts));
 
 addLoopOptions(
   program
@@ -78,6 +84,7 @@ program
 program.addHelpText('after', `
 Examples:
   $ loop init               Set up loop in current project
+  $ loop design             Interactive design/brainstorming session
   $ loop plan               Plan mode (5 autonomous iterations)
   $ loop build              Build mode (99 autonomous iterations)
   $ loop build -i 20        Build mode with 20 iterations

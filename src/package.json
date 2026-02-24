@@ -1,6 +1,6 @@
 {
   "name": "dev-loop",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Autonomous development loop system powered by Claude Code",
   "bin": {
     "loop": "./bin/cli.js"
@@ -21,7 +21,7 @@
     "commander": "^14.0.0"
   },
   "devDependencies": {
-    "jest": "^30.0.0"
+    "jest": "^30.2.0"
   },
   "engines": {
     "node": ">=18"

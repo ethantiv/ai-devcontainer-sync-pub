@@ -65,6 +65,7 @@ The `loop` command runs Claude CLI in autonomous plan/build cycles against any p
 cd ~/projects/my-project
 loop init                          # Set up loop in your project
 
+loop design                        # Interactive brainstorming / design session
 loop plan                          # Planning phase (5 iterations)
 loop build                         # Build phase (99 iterations)
 loop run                           # Plan + build combined

@@ -32,6 +32,7 @@ function useTempProject() {
 // Expected symlinks created by init() (src → dest relative to project root)
 const EXPECTED_SYMLINKS = [
   'loop/loop.sh',
+  'loop/PROMPT_design.md',
   'loop/PROMPT_plan.md',
   'loop/PROMPT_build.md',
   'loop/cleanup.sh',
@@ -52,7 +53,8 @@ const EXPECTED_TEMPLATES = [
   'docs/plans/IMPLEMENTATION_PLAN_template.md',
   '.claude/settings.json',
   '.claude/skills/auto-revise-claude-md/SKILL.md',
-  'loop/PROMPT_skills.md',
+  'loop/PROMPT_skills_plan.md',
+  'loop/PROMPT_skills_build.md',
 ];
 
 describe('loop init', () => {
@@ -189,7 +191,7 @@ describe('loop update (force init)', () => {
     init();
 
     // Modify a template file
-    const templatePath = path.join(project.dir, 'loop/PROMPT_skills.md');
+    const templatePath = path.join(project.dir, 'loop/PROMPT_skills_plan.md');
     if (fs.existsSync(templatePath)) {
       fs.writeFileSync(templatePath, 'modified content');
 
@@ -357,7 +359,8 @@ function templateSrcPath(destRel) {
     'docs/plans/IMPLEMENTATION_PLAN_template.md': 'templates/IMPLEMENTATION_PLAN_template.md',
     '.claude/settings.json': '.claude/settings.json',
     '.claude/skills/auto-revise-claude-md/SKILL.md': '.claude/skills/auto-revise-claude-md/SKILL.md',
-    'loop/PROMPT_skills.md': 'prompts/PROMPT_skills.md',
+    'loop/PROMPT_skills_plan.md': 'prompts/PROMPT_skills_plan.md',
+    'loop/PROMPT_skills_build.md': 'prompts/PROMPT_skills_build.md',
   };
   return mapping[destRel] || destRel;
 }
