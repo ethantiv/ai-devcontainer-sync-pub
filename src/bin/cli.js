@@ -29,11 +29,12 @@ program
   .description('Symlink scripts/prompts and copy templates into current project')
   .action(() => init());
 
-addLoopOptions(
-  program
-    .command('design')
-    .description('Run interactive design/brainstorming phase (always interactive)')
-).action((opts) => runDesign(opts));
+program
+  .command('design')
+  .description('Run interactive design/brainstorming phase')
+  .option('-I, --idea <text>', 'Seed idea written to docs/ROADMAP.md before start')
+  .option('-n, --new', 'Archive completed plan and start fresh')
+  .action((opts) => runDesign(opts));
 
 addLoopOptions(
   program

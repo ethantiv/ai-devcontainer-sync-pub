@@ -29,9 +29,11 @@ function spawnLoop(opts, mode) {
   if (mode === 'design') args.push('-d');
   if (!opts.interactive) args.push('-a');
 
-  const defaultIter = mode === 'build' ? '99' : '5';
-  const iterations = opts.iterations || defaultIter;
-  args.push('-i', iterations);
+  if (mode !== 'design') {
+    const defaultIter = mode === 'build' ? '99' : '5';
+    const iterations = opts.iterations || defaultIter;
+    args.push('-i', iterations);
+  }
 
   if (opts.idea) args.push('-I', opts.idea);
   if (opts.new) args.push('-n');
