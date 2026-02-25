@@ -17,7 +17,6 @@ const CORE_FILES = [
 // Templates: copied (not symlinked) so they can be customized per project
 const TEMPLATES = [
   { src: 'templates/CLAUDE_template.md', dest: 'CLAUDE_template.md' },
-  { src: 'templates/IMPLEMENTATION_PLAN_template.md', dest: 'docs/plans/IMPLEMENTATION_PLAN_template.md' },
   { src: '.claude/settings.json', dest: '.claude/settings.json' },
   { src: '.claude/skills/auto-revise-claude-md/SKILL.md', dest: '.claude/skills/auto-revise-claude-md/SKILL.md' },
   { src: 'prompts/PROMPT_skills_plan.md', dest: 'loop/PROMPT_skills_plan.md' },

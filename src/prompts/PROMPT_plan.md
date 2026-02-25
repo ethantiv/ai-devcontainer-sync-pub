@@ -1,12 +1,10 @@
 0a. For each skill listed in @loop/PROMPT_skills_plan.md, invoke the **Skill** tool. Load all skills in parallel in a single message.
 
-0b. If @docs/plans/IMPLEMENTATION_PLAN.md doesn't exist, copy @docs/plans/IMPLEMENTATION_PLAN_template.md to @docs/plans/IMPLEMENTATION_PLAN.md.
+0b. Read @docs/ROADMAP.md — this defines the scope for planning.
 
-0c. Read @docs/ROADMAP.md — this defines the scope for planning.
+0c. Read @docs/plans/IMPLEMENTATION_PLAN.md (if it exists).
 
-0d. Read @docs/plans/IMPLEMENTATION_PLAN.md.
-
-0e. Search @docs/plans/ for any design docs (YYYY-MM-DD-*-design.md). If found, read the most recent one — it provides architecture decisions and constraints.
+0d. Search @docs/plans/ for any design docs (YYYY-MM-DD-*-design.md). If found, read the most recent one — it provides architecture decisions and constraints.
 
 1. **Explore**: Launch up to 4 `feature-dev:code-explorer` subagents via **Task** tool to map @src/ architecture and compare against @docs/. Look for: TODO, placeholders, minimal implementations, missing tests, skipped/flaky tests, inconsistent patterns.
 

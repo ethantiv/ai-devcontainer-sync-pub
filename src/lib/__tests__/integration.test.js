@@ -50,7 +50,6 @@ const EXPECTED_DIRS = [
 // Expected copied templates
 const EXPECTED_TEMPLATES = [
   'CLAUDE_template.md',
-  'docs/plans/IMPLEMENTATION_PLAN_template.md',
   '.claude/settings.json',
   '.claude/skills/auto-revise-claude-md/SKILL.md',
   'loop/PROMPT_skills_plan.md',
@@ -356,7 +355,6 @@ describe('loop summary (generateSummary end-to-end)', () => {
 function templateSrcPath(destRel) {
   const mapping = {
     'CLAUDE_template.md': 'templates/CLAUDE_template.md',
-    'docs/plans/IMPLEMENTATION_PLAN_template.md': 'templates/IMPLEMENTATION_PLAN_template.md',
     '.claude/settings.json': '.claude/settings.json',
     '.claude/skills/auto-revise-claude-md/SKILL.md': '.claude/skills/auto-revise-claude-md/SKILL.md',
     'loop/PROMPT_skills_plan.md': 'prompts/PROMPT_skills_plan.md',

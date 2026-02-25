@@ -408,17 +408,24 @@ if [[ "$AUTONOMOUS" == true ]]; then
 else
     print_config "interactive"
 
-    while :; do
-        if should_exit_early; then
-            echo "[EARLY EXIT] Plan 100% complete."
-            EXIT_STATUS="success"
-            break
-        fi
-
-        clear
+    if [[ "$SCRIPT_NAME" == "design" ]]; then
+        # Design mode: single interactive session
         claude < "$PROMPT_FILE"
-        ((COMPLETED_ITERATIONS++))
-        [[ "$SCRIPT_NAME" != "build" ]] && ensure_committed
-        sleep 10
-    done
+        COMPLETED_ITERATIONS=1
+        ensure_committed
+    else
+        while :; do
+            if should_exit_early; then
+                echo "[EARLY EXIT] Plan 100% complete."
+                EXIT_STATUS="success"
+                break
+            fi
+
+            clear
+            claude < "$PROMPT_FILE"
+            ((COMPLETED_ITERATIONS++))
+            [[ "$SCRIPT_NAME" != "build" ]] && ensure_committed
+            sleep 10
+        done
+    fi
 fi
