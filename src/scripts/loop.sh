@@ -69,16 +69,30 @@ usage() {
     exit 0
 }
 
-# Check if plan is complete (no unchecked tasks and has completion marker)
+# Check if plan is complete (dual-signal: checkboxes + phase statuses)
+#
+# Signals tracked:
+#   1. Unchecked checkboxes:  - [ ]  (must be zero)
+#   2. Pending/active phases: **Status:** pending|in_progress  (must be zero)
+#   3. Completion marker:     **Status:** COMPLETE (uppercase) or BUILD/PLAN COMPLETE  (must exist)
+#
+# Complete when: no unchecked items AND no pending phases AND has completion marker.
 check_completion() {
     local plan="docs/plans/IMPLEMENTATION_PLAN.md"
     [[ ! -f "$plan" ]] && return 1
 
-    local incomplete complete_marker
-    incomplete=$(grep -cE '^[[:space:]]*-[[:space:]]*\[[[:space:]]\]' "$plan" 2>/dev/null) || incomplete=0
+    local unchecked pending_phases complete_marker
+
+    # Unchecked task checkboxes: - [ ]
+    unchecked=$(grep -cE '^[[:space:]]*-[[:space:]]*\[[[:space:]]\]' "$plan" 2>/dev/null) || unchecked=0
+
+    # Phases still pending or in_progress (case-insensitive)
+    pending_phases=$(grep -ciE '\*{0,2}Status\*{0,2}:\*{0,2}\s*(pending|in.progress)' "$plan" 2>/dev/null) || pending_phases=0
+
+    # Completion markers — uppercase COMPLETE/DONE only (phase-level "complete" lowercase won't match)
     complete_marker=$(grep -cE '\*{0,2}Status\*{0,2}:\*{0,2}\s*(COMPLETE|DONE)|BUILD COMPLETE|PLAN COMPLETE' "$plan" 2>/dev/null) || complete_marker=0
 
-    [[ "$incomplete" -eq 0 && "$complete_marker" -gt 0 ]]
+    [[ "$unchecked" -eq 0 && "$pending_phases" -eq 0 && "$complete_marker" -gt 0 ]]
 }
 
 # Archive a completed plan to docs/plans/archive/

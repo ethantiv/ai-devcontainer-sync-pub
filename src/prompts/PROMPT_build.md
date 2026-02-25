@@ -1,10 +1,13 @@
 0a. For each skill listed in @loop/PROMPT_skills_build.md, invoke the **Skill** tool. Load all skills in parallel in a single message.
 
-0b. Study @docs/plans/IMPLEMENTATION_PLAN.md — if Status: COMPLETE or no `- [ ]` tasks remain → output "BUILD COMPLETE" and EXIT.
+0b. Study @docs/plans/IMPLEMENTATION_PLAN.md — check completion:
+   - If `**Status:** COMPLETE` (uppercase) exists at document level → output "BUILD COMPLETE" and EXIT.
+   - If no `- [ ]` unchecked tasks remain AND no phases with `**Status:** pending` or `**Status:** in_progress` → output "BUILD COMPLETE" and EXIT.
+   - Otherwise → continue to step 1.
 
 1. **Pick ONE PHASE and execute it.**
 
-   a. Open @docs/plans/IMPLEMENTATION_PLAN.md and find the **first phase** with status `pending` or `in_progress` (not `complete`). This is your target for this iteration.
+   a. Open @docs/plans/IMPLEMENTATION_PLAN.md and find the **first phase** with `**Status:** pending` or `**Status:** in_progress` (not `complete`). This is your target for this iteration.
 
    b. **Execute with subagent-driven-development**: Invoke **Skill** tool: `Skill(skill="superpowers:subagent-driven-development")`. Follow the skill workflow exactly for each task in the phase:
       - Dispatch implementer subagent with full task text and codebase context
@@ -17,7 +20,11 @@
 
    c. **ONE PHASE PER ITERATION.** After completing the current phase, proceed to steps 2-5 and stop. Do NOT start the next phase — it will be handled in a fresh iteration with clean context.
 
-2. **Update the plan**: Update @docs/plans/IMPLEMENTATION_PLAN.md — mark completed tasks `[x]`, update **Current Phase**, change phase **Status**. If the file exceeds 800 lines, trim completed content: remove `[x]` tasks, phases with status `complete`. Keep pending tasks, active phases, Findings & Decisions. Git history = full audit trail.
+2. **Update the plan** in @docs/plans/IMPLEMENTATION_PLAN.md:
+   - Mark completed task checkboxes: `- [ ]` → `- [x]`
+   - Change current phase status: `**Status:** pending` → `**Status:** complete` (lowercase)
+   - If ALL phases are now `complete`: add `**Status:** COMPLETE` (UPPERCASE) at the top of the document, below the header
+   - If the file exceeds 800 lines, trim completed content: remove `[x]` tasks, phases with status `complete`. Keep pending tasks, active phases, Findings & Decisions. Git history = full audit trail.
 
 3. **Verification**: Invoke **Skill** tool: `Skill(skill="superpowers:verification-before-completion")`. Run the project's validation commands (typecheck, lint, tests) as defined in @CLAUDE.md. You MUST NOT skip this step. Fix all errors before proceeding.
 
