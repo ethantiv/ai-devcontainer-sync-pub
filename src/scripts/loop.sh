@@ -439,6 +439,7 @@ else
             claude < "$PROMPT_FILE"
             ((COMPLETED_ITERATIONS++))
             [[ "$SCRIPT_NAME" != "build" ]] && ensure_committed
+            [[ $COMPLETED_ITERATIONS -ge $ITERATIONS ]] && break
             sleep 10
         done
     fi
