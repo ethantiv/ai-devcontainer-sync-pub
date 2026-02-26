@@ -41,6 +41,7 @@ typescript-lsp
 - https://github.com/vercel-labs/agent-browser --skill agent-browser
 - https://github.com/vercel-labs/agent-skills --skill vercel-composition-patterns
 - https://github.com/vercel-labs/agent-skills --skill vercel-react-best-practices
+- https://github.com/nicobailon/visual-explainer --skill visual-explainer
 - https://github.com/vercel-labs/agent-skills --skill web-design-guidelines
 - https://github.com/vercel-labs/skills --skill find-skills
 
