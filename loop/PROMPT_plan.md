@@ -1,1 +1,0 @@
-../src/prompts/PROMPT_plan.md
