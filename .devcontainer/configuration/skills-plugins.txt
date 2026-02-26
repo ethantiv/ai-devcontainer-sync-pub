@@ -21,6 +21,7 @@ feature-dev
 frontend-design
 playground
 plugin-dev
+superpowers
 
 # Language Server Protocol (LSP) plugins
 pyright-lsp
@@ -29,9 +30,6 @@ typescript-lsp
 # =============================================================================
 # EXTERNAL SOURCES
 # =============================================================================
-
-# External marketplace plugins
-superpowers@superpowers-marketplace=obra/superpowers-marketplace
 
 # Skills (format: - <url> --skill <name>)
 - https://github.com/anthropics/skills --skill docx
