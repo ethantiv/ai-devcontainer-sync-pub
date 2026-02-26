@@ -53,7 +53,7 @@ usage() {
     echo "  -p              Plan mode (default: build)"
     echo "  -d              Design mode (interactive brainstorming)"
     echo "  -a              Autonomous mode (default: interactive)"
-    echo "  -i iterations   Number of iterations (default: 99 build, 5 plan)"
+    echo "  -i iterations   Number of iterations (default: 99 build, 3 plan)"
     echo "  -e              Disable early exit (run all iterations)"
     echo "  -n              Archive completed plan and start fresh"
     echo "  -I text         Seed idea written to docs/ROADMAP.md"
@@ -63,7 +63,7 @@ usage() {
     echo ""
     echo "Examples:"
     echo "  $0 -a              Build, 99 autonomous iterations"
-    echo "  $0 -p -a           Plan, 5 autonomous iterations"
+    echo "  $0 -p -a           Plan, 3 autonomous iterations"
     echo "  $0 -p -a -i 1     Single planning iteration"
     echo "  $0 -a -e           Build, all iterations (no early exit)"
     exit 0

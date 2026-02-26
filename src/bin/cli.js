@@ -39,7 +39,7 @@ program
 addLoopOptions(
   program
     .command('plan')
-    .description('Run planning phase (default: 5 iterations)')
+    .description('Run planning phase (default: 3 iterations)')
 ).action((opts) => runPlan(opts));
 
 addBuildOptions(
@@ -51,14 +51,14 @@ addBuildOptions(
 addBuildOptions(
   program
     .command('run')
-    .description('Plan then build sequentially (5 plan + 99 build iterations)')
+    .description('Plan then build sequentially (3 plan + 99 build iterations)')
     .addHelpText('after', `
 In combined mode, -i applies only to the build phase.
-Plan always uses default 5 iterations.
+Plan always uses default 3 iterations.
 
 Examples:
-  $ loop run                        Plan (5 iter) then build (99 iter)
-  $ loop run -i 20                  Plan (5 iter) then build (20 iter)
+  $ loop run                        Plan (3 iter) then build (99 iter)
+  $ loop run -i 20                  Plan (3 iter) then build (20 iter)
   $ loop run -I "Add auth"          Seed idea for plan, then build`)
 ).action((opts) => runCombined(opts));
 
@@ -86,10 +86,10 @@ program.addHelpText('after', `
 Examples:
   $ loop init               Set up loop in current project
   $ loop design             Interactive design/brainstorming session
-  $ loop plan               Plan mode (5 autonomous iterations)
+  $ loop plan               Plan mode (3 autonomous iterations)
   $ loop build              Build mode (99 autonomous iterations)
   $ loop build -i 20        Build mode with 20 iterations
-  $ loop run                Plan then build (5+99 iterations)
+  $ loop run                Plan then build (3+99 iterations)
   $ loop run -I "Add auth"  Plan with seed idea, then build
   $ loop summary            Show summary of last loop run
   $ loop cleanup            Kill dev server processes

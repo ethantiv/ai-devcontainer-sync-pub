@@ -30,7 +30,7 @@ function spawnLoop(opts, mode) {
   if (!opts.interactive) args.push('-a');
 
   if (mode !== 'design') {
-    const defaultIter = mode === 'build' ? '99' : '5';
+    const defaultIter = mode === 'build' ? '99' : '3';
     const iterations = opts.iterations || defaultIter;
     args.push('-i', iterations);
   }
