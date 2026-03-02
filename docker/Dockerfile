@@ -45,10 +45,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tmux locales sudo \
     && rm -rf /var/lib/apt/lists/*
 
-# Python packages for Telegram bot (job-queue extra includes APScheduler)
-COPY src/telegram_bot/requirements.txt /tmp/requirements.txt
-RUN pip3 install --break-system-packages -r /tmp/requirements.txt
-
 # Generate UTF-8 locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 
@@ -71,7 +67,7 @@ COPY --from=builder /usr/local/bin/uv /usr/local/bin/uvx /usr/local/bin/
 RUN ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini \
     && ln -sf ../lib/node_modules/agent-browser/bin/agent-browser.js /usr/bin/agent-browser
 
-# Install loop system (autonomous dev loop + Telegram bot + CLI)
+# Install loop system (autonomous dev loop + CLI)
 COPY src /opt/loop
 RUN cd /opt/loop && npm install --omit=dev \
     && chmod +x /opt/loop/scripts/*.sh /opt/loop/bin/cli.js \

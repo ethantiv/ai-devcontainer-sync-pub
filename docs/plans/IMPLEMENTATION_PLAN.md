@@ -179,11 +179,11 @@ git commit -m "chore: remove notify-telegram.sh from loop init symlinks"
 
 ## Phase 3: Docker Cleanup
 
-**Status:** pending
+**Status:** complete
 
 ### Task 3: Remove telegram-related lines from Dockerfile
 
-- [ ] Remove telegram requirements.txt install and update comment in Dockerfile
+- [x] Remove telegram requirements.txt install and update comment in Dockerfile
 
 **Files:**
 - Modify: `docker/Dockerfile:48-50,74`
@@ -217,7 +217,7 @@ git commit -m "chore: remove telegram bot dependencies from Dockerfile"
 
 ### Task 4: Remove telegram bot from entrypoint.sh
 
-- [ ] Remove start_telegram_bot function and status line from entrypoint.sh
+- [x] Remove start_telegram_bot function and status line from entrypoint.sh
 
 **Files:**
 - Modify: `docker/entrypoint.sh:121-149,191`

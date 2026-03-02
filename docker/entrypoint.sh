@@ -119,36 +119,6 @@ else
 fi
 
 # =============================================================================
-# TELEGRAM BOT (optional, runs in background)
-# =============================================================================
-
-start_telegram_bot() {
-    # Skip bot in dev mode — prevents dev container from stealing production commands
-    if [[ "${DEV_MODE,,}" =~ ^(true|1|yes)$ ]]; then
-        echo "  ✔︎ DEV_MODE active — skipping Telegram bot"
-        return 0
-    fi
-
-    if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]]; then
-        return 0
-    fi
-
-    local BOT_MODULE="/opt/loop/telegram_bot"
-
-    if [[ ! -d "$BOT_MODULE" ]]; then
-        echo "  ⚠️  Telegram bot module not found"
-        return 0
-    fi
-
-    # Start bot in background (PYTHONPATH so imports resolve from /opt/loop parent)
-    PYTHONPATH="/opt" PROJECTS_ROOT="$HOME/projects" python3 -m loop.telegram_bot.run &
-    echo "  ✔︎ Telegram bot started (PID: $!)"
-}
-
-# Start Telegram bot if configured
-start_telegram_bot
-
-# =============================================================================
 # GIT CONFIGURATION
 # =============================================================================
 
@@ -188,7 +158,6 @@ echo "  gemini --version    : $(NO_COLOR=1 gemini --version 2>/dev/null || echo 
 echo "  loop --version      : $(loop --version 2>/dev/null || echo 'not available')"
 echo ""
 echo "  Working directory   : $(pwd)"
-echo "  Telegram bot        : $(if [[ "${DEV_MODE,,}" =~ ^(true|1|yes)$ ]]; then echo 'disabled (DEV_MODE)'; elif [ -n "$TELEGRAM_BOT_TOKEN" ]; then echo 'running'; else echo 'not configured'; fi)"
 echo ""
 
 # Execute command (default: bash)
