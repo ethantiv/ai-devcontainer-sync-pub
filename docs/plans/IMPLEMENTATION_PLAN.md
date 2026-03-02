@@ -24,6 +24,8 @@
 | `kill-loop.sh` kills `loop-*` tmux sessions — used by bot AND standalone | Keep the logic, update comments only |
 | CLAUDE.md codebase patterns `Deadlock prevention` and `State persistence` reference `TaskManager`/`BrainstormManager` from bot | Remove — these classes exist only in `src/telegram_bot/` |
 | README.md `## Telegram Bot` section spans lines 84-94 (not just 84-86 as design doc implied) | Remove entire section including feature list and commands line |
+| `devcontainer.json` DEV_MODE is in `containerEnv` (line 47), not `remoteEnv` as design doc says | Plan targets line 47 correctly — section name irrelevant |
+| Current `src/package.json` version is `0.7.2` | Bump to `0.7.3` in final validation phase |
 
 ---
 
@@ -535,7 +537,7 @@ If any test failures required fixes, commit those fixes.
 
 **Step 6: Bump package version**
 
-In `src/package.json`, bump the patch version (e.g., 0.x.Y → 0.x.Y+1) to reflect the removal.
+In `src/package.json`, bump the version from `0.7.2` to `0.7.3`.
 
 ```bash
 git add src/package.json
