@@ -22,6 +22,8 @@
 | `python3` and `python3-pip` in Dockerfile runtime | Keep — useful for dev, only remove telegram requirements.txt install |
 | `LOOP_*` env vars defined in `src/telegram_bot/config.py` | Removed with the bot — update CLAUDE.md reference |
 | `kill-loop.sh` kills `loop-*` tmux sessions — used by bot AND standalone | Keep the logic, update comments only |
+| CLAUDE.md codebase patterns `Deadlock prevention` and `State persistence` reference `TaskManager`/`BrainstormManager` from bot | Remove — these classes exist only in `src/telegram_bot/` |
+| README.md `## Telegram Bot` section spans lines 84-94 (not just 84-86 as design doc implied) | Remove entire section including feature list and commands line |
 
 ---
 
@@ -386,7 +388,7 @@ Delete:
 - Line 74: Change `**Structure**: src/scripts/ (shell), src/prompts/, src/templates/, src/telegram_bot/ (Python bot + handlers/), src/bin/ + src/lib/ (Node.js CLI).` to `**Structure**: `src/scripts/` (shell), `src/prompts/`, `src/templates/`, `src/bin/` + `src/lib/` (Node.js CLI).`
 - Delete line 76: `**Telegram bot**: Starts in Docker if TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID set.`
 
-**Step 7: Remove codebase pattern references (lines 127-128)**
+**Step 7: Remove codebase pattern references (lines 127-130)**
 
 Delete:
 ```
@@ -395,6 +397,14 @@ Delete:
 Delete:
 ```
 - **Test patterns**: pytest + pytest-asyncio. Patch `PROJECTS_ROOT` in module namespace, not via env vars. Fixtures with `with patch(...)` must `yield` not `return`. Bot tests patch `TELEGRAM_CHAT_ID` in the module where the decorated function is defined.
+```
+Delete:
+```
+- **Deadlock prevention**: `_save_tasks()` acquires `_queue_lock` internally — never call while holding the lock.
+```
+Delete:
+```
+- **State persistence**: `TaskManager` and `BrainstormManager` use atomic `os.replace()` to JSON files in `PROJECTS_ROOT`. Validate tmux sessions on load, remove stale entries.
 ```
 
 **Step 8: Verify CLAUDE.md is valid and well-formatted**
@@ -422,35 +432,58 @@ Delete:
 **Telegram Bot** — remote control for loop tasks and brainstorming sessions
 ```
 
-**Step 2: Remove DEV_MODE from Coolify section (line 50)**
+**Step 2: Edit DEV_MODE from Coolify section (line 50)**
 
-Remove `DEV_MODE=true` from the env vars mention, if present.
+Change:
+```
+For dual dev+prod setup, create a second app on `develop` branch with compose location `/docker-compose.dev.yml` and env vars `DEV_MODE=true`, `APP_NAME=dev-claude-code`.
+```
+To:
+```
+For dual dev+prod setup, create a second app on `develop` branch with compose location `/docker-compose.dev.yml` and env var `APP_NAME=dev-claude-code`.
+```
 
-**Step 3: Remove entire Telegram Bot section (lines 84-86)**
+**Step 3: Remove entire Telegram Bot section (lines 84-94)**
 
-Delete:
+Delete everything from `## Telegram Bot` heading through the commands line:
 ```
 ## Telegram Bot
 
-Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .devcontainer/.env to enable. Starts automatically in Docker.
+Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.devcontainer/.env` to enable. Starts automatically in Docker.
+
+- Project list with status (standalone, worktree, running task)
+- Plan/Build mode selection with iteration count
+- Multi-turn brainstorming sessions with Claude
+- Repository cloning, worktree creation, project creation
+- Task queue (up to 10 queued tasks)
+
+Commands: `/projects`, `/status`, `/brainstorming <prompt>`, `/history`, `/help`
 ```
 
 **Step 4: Remove TELEGRAM_* and DEV_MODE from env var table (lines 104-105, 110)**
 
 Delete:
 ```
-| TELEGRAM_BOT_TOKEN | No | Telegram bot token for remote control |
-| TELEGRAM_CHAT_ID | No | Authorized Telegram chat ID |
+| `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for remote control |
+| `TELEGRAM_CHAT_ID` | No | Authorized Telegram chat ID |
 ```
+Delete:
 ```
-| DEV_MODE | No | Disable Telegram bot (true/1/yes) |
+| `DEV_MODE` | No | Disable Telegram bot (`true`/`1`/`yes`) |
 ```
 
-**Step 5: Verify README.md is valid and well-formatted**
+**Step 5: Remove LOOP_* env vars reference (line 113)**
+
+Delete:
+```
+`LOOP_*` env vars (timeouts, queue limits) have sensible defaults — see `.env.example` for details.
+```
+
+**Step 6: Verify README.md is valid and well-formatted**
 
 Read the file after edits to confirm no broken formatting.
 
-**Step 6: Commit**
+**Step 7: Commit**
 
 ```bash
 git add README.md
