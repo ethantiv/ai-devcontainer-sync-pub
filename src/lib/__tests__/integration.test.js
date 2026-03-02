@@ -36,7 +36,6 @@ const EXPECTED_SYMLINKS = [
   'loop/PROMPT_plan.md',
   'loop/PROMPT_build.md',
   'loop/cleanup.sh',
-  'loop/notify-telegram.sh',
   'loop/kill-loop.sh',
 ];
 
