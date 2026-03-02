@@ -31,11 +31,11 @@
 
 ## Phase 1: Delete Telegram Bot Source Code
 
-**Status:** pending
+**Status:** complete
 
 ### Task 1: Delete bot directory, notify script, and refactor cleanup.js
 
-- [ ] Remove src/telegram_bot/, src/scripts/notify-telegram.sh, strip cleanup.js of log rotation
+- [x] Remove src/telegram_bot/, src/scripts/notify-telegram.sh, strip cleanup.js of log rotation
 
 **Files:**
 - Delete: `src/telegram_bot/` (entire directory — 17 files, 476 tests)
@@ -113,11 +113,11 @@ and strip cleanup.js of --logs/cleanupLogs (keeps port-killing)."
 
 ## Phase 2: Update Loop Init and Integration Tests
 
-**Status:** pending
+**Status:** complete (merged into Phase 1 commit to avoid broken intermediate state)
 
 ### Task 2: Remove notify-telegram.sh from init.js symlink list
 
-- [ ] Remove notify-telegram.sh entry from CORE_FILES in init.js
+- [x] Remove notify-telegram.sh entry from CORE_FILES in init.js
 
 **Files:**
 - Modify: `src/lib/init.js:13`
