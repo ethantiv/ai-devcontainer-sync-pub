@@ -1,6 +1,6 @@
 #!/bin/bash
 # Kill all running loop.sh processes, their Node.js parents (loop run), children,
-# orphaned claude -p processes, and Telegram bot tmux sessions.
+# and orphaned claude -p processes.
 
 KILLED=0
 
@@ -39,7 +39,7 @@ for pid in $(pgrep -f 'claude.*-p.*--output-format'); do
     ((KILLED++))
 done
 
-# Step 4: Kill Telegram bot tmux sessions matching loop-*
+# Step 4: Kill loop tmux sessions matching loop-*
 for session in $(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep '^loop-'); do
     echo "Killing tmux session '$session'..."
     tmux kill-session -t "$session" 2>/dev/null
