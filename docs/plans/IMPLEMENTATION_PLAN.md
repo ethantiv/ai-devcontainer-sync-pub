@@ -332,11 +332,11 @@ git commit -m "chore: remove DEV_MODE and Telegram config from devcontainer and 
 
 ## Phase 5: Documentation Updates
 
-**Status:** pending
+**Status:** complete
 
 ### Task 6: Update CLAUDE.md
 
-- [ ] Remove all telegram bot references from CLAUDE.md
+- [x] Remove all telegram bot references from CLAUDE.md
 
 **Files:**
 - Modify: `CLAUDE.md`
@@ -422,7 +422,7 @@ git commit -m "docs: remove telegram bot references from CLAUDE.md"
 
 ### Task 7: Update README.md
 
-- [ ] Remove Telegram Bot section and env vars from README.md
+- [x] Remove Telegram Bot section and env vars from README.md
 
 **Files:**
 - Modify: `README.md`

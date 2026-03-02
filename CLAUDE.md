@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-DevContainer for multi-AI agent development with Claude Code and Gemini CLI. Includes configuration, loop system (Node.js CLI + shell scripts), Telegram bot (Python), prompts, and templates.
+DevContainer for multi-AI agent development with Claude Code and Gemini CLI. Includes configuration, loop system (Node.js CLI + shell scripts), prompts, and templates.
 
 ## Build & Run
 
@@ -16,15 +16,12 @@ Re-sync configuration after changes:
 ```bash
 claude mcp list                    # Verify MCP servers
 claude plugin marketplace list     # List installed plugins
-python3 -m pytest src/telegram_bot/tests/ -v  # Run Telegram bot tests (476 tests)
 npm install --prefix src && npm test --prefix src  # Run JS tests (35 tests, requires install)
 npm run test:integration --prefix src              # Run only integration tests (14 tests)
 bash src/scripts/tests/test_write_idea.sh          # Run shell tests (18 tests)
 bash src/scripts/tests/test_check_completion.sh    # Run completion detection tests (20 tests)
 bash src/scripts/tests/test_ensure_playwright.sh   # Run Playwright lazy-install tests (14 tests)
 ```
-
-Single test: `python3 -m pytest src/telegram_bot/tests/test_tasks.py::TestTaskManager::test_start_task -v`
 
 ## Custom Slash Commands
 
@@ -48,11 +45,7 @@ Available as local marketplace plugins (`dev-marketplace`):
 | `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |
 | `STITCH_API_KEY` | No | Google Stitch API key for Stitch MCP server |
 | `GIT_USER_NAME` / `GIT_USER_EMAIL` | No | Git global identity |
-| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | No | Telegram bot auth |
 | `APP_NAME` | No | Volume name prefix (default: `claude-code`, `dev-claude-code` for dev) |
-| `DEV_MODE` | No | Disable Telegram bot in dev containers (true/1/yes) |
-
-`LOOP_*` env vars (thresholds, timeouts, queue limits) are defined with defaults in `src/telegram_bot/config.py`.
 
 Codespaces: add as repository secrets. Local: create `.devcontainer/.env` (copy from `.devcontainer/.env.example`).
 
@@ -62,18 +55,16 @@ Declared in `skills-plugins.txt` (MCP SERVERS section) — single source of trut
 
 ### Loop System
 
-Source at `src/`. Docker: `COPY src /opt/loop` + `npm install`, symlinked as `/usr/bin/loop`. Telegram bot: `/opt/loop/telegram_bot/` with `PYTHONPATH="/opt"`.
+Source at `src/`. Docker: `COPY src /opt/loop` + `npm install`, symlinked as `/usr/bin/loop`.
 
 ```bash
 loop init / update      # Initialize/refresh symlinks in project
 loop design             # Interactive brainstorming / design session
 loop plan / build / run # Run planning (3 iter), build (99 iter), or both
-loop summary / cleanup  # Show run stats / clean artifacts
+loop summary / cleanup  # Show run stats / kill dev server processes
 ```
 
-**Structure**: `src/scripts/` (shell), `src/prompts/`, `src/templates/`, `src/telegram_bot/` (Python bot + `handlers/`), `src/bin/` + `src/lib/` (Node.js CLI).
-
-**Telegram bot**: Starts in Docker if `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` set.
+**Structure**: `src/scripts/` (shell), `src/prompts/`, `src/templates/`, `src/bin/` + `src/lib/` (Node.js CLI).
 
 **Idea seeding**: `loop plan -I` accepts inline text, `@file.md` (read from file), or `https://...` URLs (GitHub issues/PRs via `gh`, generic via `curl`). Resolved by `resolve_idea()` in `loop.sh`.
 
@@ -124,10 +115,6 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 - **Shell helpers**: `ok()`, `warn()`, `fail()` for colored status output in setup scripts.
 - **skills-plugins.txt formats**: Plugins: `plugin-name` (official), `name@type=owner/repo` (external). Skills: `- https://github.com/owner/repo --skill name` (new), `name@skills=repo` (legacy). MCP: `name stdio cmd args... [env:KEY] [tags]` or `name http url [header:K=V] [requires:VAR] [tags]`. Gotcha: `setup-local.sh` requires external plugin type to match `*-marketplace` glob.
 - **Skills install**: `npx -y skills add "$url" --skill "$name" --agent claude-code -g -y`
-- **Python deps**: Add to `src/telegram_bot/requirements.txt` — Dockerfile auto-installs.
-- **Test patterns**: pytest + pytest-asyncio. Patch `PROJECTS_ROOT` in module namespace, not via env vars. Fixtures with `with patch(...)` must `yield` not `return`. Bot tests patch `TELEGRAM_CHAT_ID` in the module where the decorated function is defined.
-- **Deadlock prevention**: `_save_tasks()` acquires `_queue_lock` internally — never call while holding the lock.
-- **State persistence**: `TaskManager` and `BrainstormManager` use atomic `os.replace()` to JSON files in `PROJECTS_ROOT`. Validate tmux sessions on load, remove stale entries.
 - **Coolify MCP limitations**: `base_directory` and `docker_compose_location` not in MCP tool — use `curl -X PATCH` directly.
 - **MCP server JSON type**: Remote HTTP MCP servers require `"type": "http"` in `add-json` config, not `"type": "url"` (which silently fails).
 - **Docker Compose volumes**: Env var interpolation works only in YAML values (not keys). Volume `name:` uses `${APP_NAME:-claude-code}-<vol>` for dev/prod isolation.

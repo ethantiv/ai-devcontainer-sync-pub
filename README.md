@@ -6,7 +6,6 @@ Ready-to-use development environment with Claude Code, Gemini CLI, autonomous de
 
 - **Claude Code** and **Gemini CLI** — pre-installed and configured
 - **dev-loop** — autonomous plan/build cycles powered by Claude CLI (`loop` command)
-- **Telegram Bot** — remote control for loop tasks and brainstorming sessions
 - **MCP Servers** — AWS docs, Terraform, Context7, Coolify, Stitch
 - **Slash Commands** — `/code-review`, `/roadmap`, `/git-worktree`, `/loop-analyzer`
 - **Skills & Plugins** — auto-installed from `skills-plugins.txt`
@@ -47,7 +46,7 @@ Deploy as a Docker Compose app on a [Coolify](https://coolify.io/)-managed serve
 3. Add environment variables (same as `.devcontainer/.env`) in app settings
 4. Deploy
 
-For dual dev+prod setup, create a second app on `develop` branch with compose location `/docker-compose.dev.yml` and env vars `DEV_MODE=true`, `APP_NAME=dev-claude-code`.
+For dual dev+prod setup, create a second app on `develop` branch with compose location `/docker-compose.dev.yml` and env var `APP_NAME=dev-claude-code`.
 
 ### Option 4: macOS (Local)
 
@@ -81,18 +80,6 @@ loop summary                       # Show stats from last run
 loop cleanup                       # Kill dev server ports
 ```
 
-## Telegram Bot
-
-Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.devcontainer/.env` to enable. Starts automatically in Docker.
-
-- Project list with status (standalone, worktree, running task)
-- Plan/Build mode selection with iteration count
-- Multi-turn brainstorming sessions with Claude
-- Repository cloning, worktree creation, project creation
-- Task queue (up to 10 queued tasks)
-
-Commands: `/projects`, `/status`, `/brainstorming <prompt>`, `/history`, `/help`
-
 ## Environment Variables
 
 Set in `.devcontainer/.env` (copy from `.devcontainer/.env.example`).
@@ -101,13 +88,8 @@ Set in `.devcontainer/.env` (copy from `.devcontainer/.env.example`).
 |----------|----------|-------------|
 | `GH_TOKEN` | Yes | GitHub token (`repo`, `workflow` permissions) |
 | `SSH_PRIVATE_KEY` | No | Base64-encoded SSH key for Git |
-| `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for remote control |
-| `TELEGRAM_CHAT_ID` | No | Authorized Telegram chat ID |
 | `GIT_USER_NAME` / `GIT_USER_EMAIL` | No | Git identity |
 | `CONTEXT7_API_KEY` | No | Context7 MCP server |
 | `COOLIFY_BASE_URL` / `COOLIFY_ACCESS_TOKEN` | No | Coolify deployment management |
 | `STITCH_API_KEY` | No | Google Stitch MCP server |
-| `DEV_MODE` | No | Disable Telegram bot (`true`/`1`/`yes`) |
 | `APP_NAME` | No | Volume prefix (default: `claude-code`) |
-
-`LOOP_*` env vars (timeouts, queue limits) have sensible defaults — see `.env.example` for details.
