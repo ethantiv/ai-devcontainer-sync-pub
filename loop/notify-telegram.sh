@@ -1,0 +1,1 @@
+../src/scripts/notify-telegram.sh
