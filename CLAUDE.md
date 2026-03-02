@@ -133,3 +133,4 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 - **Docker Compose volumes**: Env var interpolation works only in YAML values (not keys). Volume `name:` uses `${APP_NAME:-claude-code}-<vol>` for dev/prod isolation.
 - **Dual deployment**: Prod uses `docker-compose.yml` (main branch), dev uses `docker-compose.dev.yml` (develop branch). Separate compose files = separate Coolify container names.
 - **Lazy Playwright**: Docker image ships without Chromium. `ensure-playwright.sh` installs system deps + browser on first `agent-browser` use via PreToolUse hook in `.claude/settings.json`. DevContainer retains build-time install.
+- **NODE_ENV gotcha**: DevContainer sets `NODE_ENV=production` which skips `devDependencies` on `npm install`. Use `NODE_ENV=development npm install --prefix src` to install jest and other dev tools.

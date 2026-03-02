@@ -275,11 +275,11 @@ git commit -m "chore: remove telegram bot startup from Docker entrypoint"
 
 ## Phase 4: Configuration and Script Cleanup
 
-**Status:** pending
+**Status:** complete
 
 ### Task 5: Remove DEV_MODE and Telegram vars from config files
 
-- [ ] Clean up devcontainer.json, .env.example, and kill-loop.sh comment
+- [x] Clean up devcontainer.json, .env.example, and kill-loop.sh comment
 
 **Files:**
 - Modify: `.devcontainer/devcontainer.json:47`
