@@ -44,7 +44,7 @@ Always maintain README.md as a simple instruction guide for new or returning use
 
 ### CLAUDE.md Size Limit
 
-CLAUDE.md files should not exceed ~200 lines. When approaching this limit, remove outdated or obvious entries, consolidate redundant notes, and refactor verbose descriptions into concise rules. Prefer deleting over relocating — if information isn't essential for day-to-day development, it doesn't belong in CLAUDE.md.
+CLAUDE.md files should not exceed ~500 lines. When approaching this limit, remove outdated or obvious entries, consolidate redundant notes, and refactor verbose descriptions into concise rules. Prefer deleting over relocating — if information isn't essential for day-to-day development, it doesn't belong in CLAUDE.md.
 
 ### CLAUDE.md Template
 
