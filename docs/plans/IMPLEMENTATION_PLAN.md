@@ -1316,11 +1316,11 @@ git commit -m "feat: add Most Edited Files section to loop summary"
 
 ## Phase 7: Enhanced Summary - Iteration Timing & Error Rates
 
-**Status:** pending
+**Status:** complete
 
 ### Task 13: Track iteration timing from JSONL timestamps
 
-- [ ] Parse result entry timestamps to calculate iteration duration and total time
+- [x] Parse result entry timestamps to calculate iteration duration and total time
 
 **Files:**
 - Modify: `src/lib/summary.js:30-92`
@@ -1421,7 +1421,7 @@ git commit -m "feat: track iteration count, timing, and errors in parseLog"
 
 ### Task 14: Display timing and error rate in formatSummary
 
-- [ ] Add Iteration Stats section showing count, duration, and error rate
+- [x] Add Iteration Stats section showing count, duration, and error rate
 
 **Files:**
 - Modify: `src/lib/summary.js:123-176`
