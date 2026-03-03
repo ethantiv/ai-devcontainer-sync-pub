@@ -5,6 +5,7 @@ const { init } = require('../lib/init');
 const { runPlan, runBuild, runCombined, runDesign } = require('../lib/run');
 const { cleanup } = require('../lib/cleanup');
 const { generateSummary } = require('../lib/summary');
+const { doctor } = require('../lib/doctor');
 
 function addLoopOptions(cmd) {
   return cmd
@@ -77,6 +78,11 @@ program
   });
 
 program
+  .command('doctor')
+  .description('Check loop installation health')
+  .action(() => doctor());
+
+program
   .command('update')
   .description('Force-refresh all symlinks and templates from package')
   .action(() => init({ force: true }));
@@ -92,6 +98,7 @@ Examples:
   $ loop run -I "Add auth"  Plan with seed idea, then build
   $ loop summary            Show summary of last loop run
   $ loop cleanup            Kill dev server processes
+  $ loop doctor             Check loop installation health
   $ loop update             Force-refresh symlinks and templates`);
 
 program.parse();
