@@ -279,6 +279,9 @@ describe('loop summary (generateSummary end-to-end)', () => {
     // Verify all sections appear in the report
     expect(report).toContain('=== Loop Run Summary ===');
 
+    // Iteration stats (2 result entries)
+    expect(report).toContain('Iterations: 2');
+
     // Tool usage
     expect(report).toContain('Tool Usage:');
     expect(report).toContain('Read: 2');
@@ -291,6 +294,9 @@ describe('loop summary (generateSummary end-to-end)', () => {
     expect(report).toContain('Files Modified (2):');
     expect(report).toContain('/src/app.js');
     expect(report).toContain('/src/new.js');
+
+    // Most Edited Files (Edit on /src/app.js, Write on /src/new.js)
+    expect(report).toContain('Most Edited Files:');
 
     // Token usage
     expect(report).toContain('Token Usage:');
@@ -372,6 +378,12 @@ describe('loop doctor (integration)', () => {
     const verCheck = results.find(r => r.name === 'Loop version');
     expect(symCheck.ok).toBe(true);
     expect(verCheck.ok).toBe(true);
+  });
+
+  test('doctor command is registered in CLI', () => {
+    const { execSync } = require('child_process');
+    const help = execSync('node ' + path.join(PACKAGE_ROOT, 'bin/cli.js') + ' --help', { encoding: 'utf-8' });
+    expect(help).toContain('doctor');
   });
 }, 30000);
 

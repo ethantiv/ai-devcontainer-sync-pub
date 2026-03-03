@@ -16,8 +16,8 @@ Re-sync configuration after changes:
 ```bash
 claude mcp list                    # Verify MCP servers
 claude plugin marketplace list     # List installed plugins
-npm install --prefix src && npm test --prefix src  # Run JS tests (80 tests, requires install)
-npm run test:integration --prefix src              # Run only integration tests (16 tests)
+npm install --prefix src && npm test --prefix src  # Run JS tests (81 tests, requires install)
+npm run test:integration --prefix src              # Run only integration tests (17 tests)
 bash src/scripts/tests/test_write_idea.sh          # Run shell tests (18 tests)
 bash src/scripts/tests/test_check_completion.sh    # Run completion detection tests (20 tests)
 bash src/scripts/tests/test_ensure_playwright.sh   # Run Playwright lazy-install tests (14 tests)
