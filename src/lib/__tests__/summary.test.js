@@ -378,4 +378,45 @@ describe('formatSummary', () => {
     expect(output).not.toContain('Token Usage:');
     expect(output).not.toContain('Test Results:');
   });
+
+  test('shows correct percentage for tool usage', () => {
+    const metrics = {
+      toolUsage: { Read: 3, Edit: 1 },
+      filesModified: [],
+      tokens: { input: 0, output: 0 },
+      testResults: [],
+      logFile: '/tmp/test.jsonl',
+    };
+    const output = formatSummary(metrics);
+    expect(output).toContain('Read: 3 (75%)');
+    expect(output).toContain('Edit: 1 (25%)');
+  });
+
+  test('shows token Total line', () => {
+    const metrics = {
+      toolUsage: {},
+      filesModified: [],
+      tokens: { input: 1000, output: 500 },
+      testResults: [],
+      logFile: '/tmp/test.jsonl',
+    };
+    const output = formatSummary(metrics);
+    expect(output).toContain('Total:  1,500');
+  });
+
+  test('shows multiple test result entries', () => {
+    const metrics = {
+      toolUsage: {},
+      filesModified: [],
+      tokens: { input: 0, output: 0 },
+      testResults: [
+        { passed: 10, failed: 0, total: 10 },
+        { passed: 5, failed: 2, total: 7 },
+      ],
+      logFile: '/tmp/test.jsonl',
+    };
+    const output = formatSummary(metrics);
+    expect(output).toContain('PASS: 10 passed, 0 failed (10 total)');
+    expect(output).toContain('FAIL: 5 passed, 2 failed (7 total)');
+  });
 });
