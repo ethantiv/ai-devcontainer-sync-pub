@@ -1,0 +1,6 @@
+- `superpowers:subagent-driven-development`
+- `superpowers:test-driven-development`
+- `superpowers:verification-before-completion`
+- `superpowers:systematic-debugging`
+- `superpowers:dispatching-parallel-agents`
+- `agent-browser`
