@@ -1106,11 +1106,11 @@ git commit -m "test: add doctor integration tests with init"
 
 ## Phase 6: Enhanced Summary - File Edit Frequency
 
-**Status:** pending
+**Status:** complete
 
 ### Task 11: Track per-file edit counts in parseLog
 
-- [ ] Add fileEditCounts tracking to parseLog and test it
+- [x] Add fileEditCounts tracking to parseLog and test it
 
 **Files:**
 - Modify: `src/lib/summary.js:30-92`
@@ -1210,7 +1210,7 @@ git commit -m "feat: track per-file edit counts in parseLog"
 
 ### Task 12: Display most-edited files in formatSummary
 
-- [ ] Add "Most Edited Files" section to formatSummary showing top 5 files
+- [x] Add "Most Edited Files" section to formatSummary showing top 5 files
 
 **Files:**
 - Modify: `src/lib/summary.js:123-176`

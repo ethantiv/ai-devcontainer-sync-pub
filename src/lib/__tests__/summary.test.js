@@ -258,6 +258,47 @@ describe('parseLog', () => {
     expect(metrics.tokens).toEqual({ input: 100, output: 50 });
   });
 
+  test('tracks per-file edit counts', async () => {
+    const logPath = writeJsonl(tmpDir, 'test.jsonl', [
+      {
+        type: 'assistant',
+        message: {
+          content: [
+            { type: 'tool_use', name: 'Edit', input: { file_path: '/src/app.js' } },
+            { type: 'tool_use', name: 'Write', input: { file_path: '/src/app.js' } },
+            { type: 'tool_use', name: 'Edit', input: { file_path: '/src/utils.js' } },
+          ],
+        },
+      },
+      {
+        type: 'assistant',
+        message: {
+          content: [
+            { type: 'tool_use', name: 'Edit', input: { file_path: '/src/app.js' } },
+          ],
+        },
+      },
+    ]);
+
+    const metrics = await parseLog(logPath);
+    expect(metrics.fileEditCounts).toEqual({
+      '/src/app.js': 3,
+      '/src/utils.js': 1,
+    });
+  });
+
+  test('fileEditCounts is empty when no Edit/Write tools used', async () => {
+    const logPath = writeJsonl(tmpDir, 'test.jsonl', [
+      {
+        type: 'assistant',
+        message: { content: [{ type: 'tool_use', name: 'Read' }] },
+      },
+    ]);
+
+    const metrics = await parseLog(logPath);
+    expect(metrics.fileEditCounts).toEqual({});
+  });
+
   test('extracts test results from multiple assistant messages', async () => {
     const logPath = writeJsonl(tmpDir, 'test.jsonl', [
       {
@@ -418,5 +459,63 @@ describe('formatSummary', () => {
     const output = formatSummary(metrics);
     expect(output).toContain('PASS: 10 passed, 0 failed (10 total)');
     expect(output).toContain('FAIL: 5 passed, 2 failed (7 total)');
+  });
+
+  test('shows Most Edited Files section sorted by count', () => {
+    const metrics = {
+      toolUsage: {},
+      filesModified: ['/a.js', '/b.js', '/c.js'],
+      fileEditCounts: { '/a.js': 5, '/b.js': 1, '/c.js': 3 },
+      tokens: { input: 0, output: 0 },
+      testResults: [],
+      logFile: '/tmp/test.jsonl',
+    };
+    const output = formatSummary(metrics);
+    expect(output).toContain('Most Edited Files:');
+    // Should be sorted by count descending — use "(N edits)" format to match
+    // only in the Most Edited Files section (not in Files Modified)
+    const aIdx = output.indexOf('/a.js (5 edits)');
+    const cIdx = output.indexOf('/c.js (3 edits)');
+    const bIdx = output.indexOf('/b.js (1 edit)');
+    expect(aIdx).toBeGreaterThan(-1);
+    expect(cIdx).toBeGreaterThan(-1);
+    expect(bIdx).toBeGreaterThan(-1);
+    expect(aIdx).toBeLessThan(cIdx);
+    expect(cIdx).toBeLessThan(bIdx);
+  });
+
+  test('limits Most Edited Files to top 5', () => {
+    const fileEditCounts = {};
+    const filesModified = [];
+    for (let i = 1; i <= 8; i++) {
+      const f = `/src/file${i}.js`;
+      fileEditCounts[f] = i;
+      filesModified.push(f);
+    }
+    const metrics = {
+      toolUsage: {},
+      filesModified,
+      fileEditCounts,
+      tokens: { input: 0, output: 0 },
+      testResults: [],
+      logFile: '/tmp/test.jsonl',
+    };
+    const output = formatSummary(metrics);
+    expect(output).toContain('/src/file8.js (8 edits)');
+    expect(output).toContain('/src/file4.js (4 edits)');
+    expect(output).not.toContain('/src/file3.js (3 edits)');
+  });
+
+  test('omits Most Edited Files when fileEditCounts is empty', () => {
+    const metrics = {
+      toolUsage: {},
+      filesModified: [],
+      fileEditCounts: {},
+      tokens: { input: 0, output: 0 },
+      testResults: [],
+      logFile: '/tmp/test.jsonl',
+    };
+    const output = formatSummary(metrics);
+    expect(output).not.toContain('Most Edited');
   });
 });

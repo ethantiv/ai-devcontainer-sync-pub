@@ -30,6 +30,7 @@ function findLatestLog(logDir) {
 async function parseLog(logPath) {
   const toolUsage = {};
   const filesModified = new Set();
+  const fileEditCounts = {};
   let inputTokens = 0;
   let outputTokens = 0;
   const testResults = [];
@@ -59,6 +60,7 @@ async function parseLog(logPath) {
           // Track files modified by Edit/Write tools
           if ((name === 'Edit' || name === 'Write') && block.input?.file_path) {
             filesModified.add(block.input.file_path);
+            fileEditCounts[block.input.file_path] = (fileEditCounts[block.input.file_path] || 0) + 1;
           }
         }
       }
@@ -85,6 +87,7 @@ async function parseLog(logPath) {
   return {
     toolUsage,
     filesModified: [...filesModified].sort(),
+    fileEditCounts,
     tokens: { input: inputTokens, output: outputTokens },
     testResults,
     logFile: logPath,
@@ -145,6 +148,19 @@ function formatSummary(metrics) {
     lines.push(`Files Modified (${metrics.filesModified.length}):`);
     for (const f of metrics.filesModified) {
       lines.push(`  ${f}`);
+    }
+    lines.push('');
+  }
+
+  // Most Edited Files (top 5 by edit count)
+  if (metrics.fileEditCounts && Object.keys(metrics.fileEditCounts).length > 0) {
+    const sorted = Object.entries(metrics.fileEditCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5);
+    lines.push('Most Edited Files:');
+    for (const [file, count] of sorted) {
+      const label = count === 1 ? 'edit' : 'edits';
+      lines.push(`  ${file} (${count} ${label})`);
     }
     lines.push('');
   }
