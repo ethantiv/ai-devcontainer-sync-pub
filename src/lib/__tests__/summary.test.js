@@ -299,6 +299,41 @@ describe('parseLog', () => {
     expect(metrics.fileEditCounts).toEqual({});
   });
 
+  test('tracks iteration count from result entries', async () => {
+    const logPath = writeJsonl(tmpDir, 'test.jsonl', [
+      { type: 'result', usage: { input_tokens: 100, output_tokens: 50 }, timestamp: '2026-03-03T10:00:00Z' },
+      { type: 'result', usage: { input_tokens: 200, output_tokens: 75 }, timestamp: '2026-03-03T10:05:00Z' },
+      { type: 'result', usage: { input_tokens: 150, output_tokens: 60 }, timestamp: '2026-03-03T10:12:00Z' },
+    ]);
+
+    const metrics = await parseLog(logPath);
+    expect(metrics.iterationCount).toBe(3);
+    expect(metrics.totalTimeMs).toBeGreaterThan(0);
+  });
+
+  test('tracks error count from result entries with is_error', async () => {
+    const logPath = writeJsonl(tmpDir, 'test.jsonl', [
+      { type: 'result', usage: { input_tokens: 100, output_tokens: 50 } },
+      { type: 'result', usage: { input_tokens: 100, output_tokens: 50 }, is_error: true },
+      { type: 'result', usage: { input_tokens: 100, output_tokens: 50 }, is_error: true },
+    ]);
+
+    const metrics = await parseLog(logPath);
+    expect(metrics.errorCount).toBe(2);
+    expect(metrics.iterationCount).toBe(3);
+  });
+
+  test('handles log with no result entries for timing', async () => {
+    const logPath = writeJsonl(tmpDir, 'test.jsonl', [
+      { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read' }] } },
+    ]);
+
+    const metrics = await parseLog(logPath);
+    expect(metrics.iterationCount).toBe(0);
+    expect(metrics.totalTimeMs).toBe(0);
+    expect(metrics.errorCount).toBe(0);
+  });
+
   test('extracts test results from multiple assistant messages', async () => {
     const logPath = writeJsonl(tmpDir, 'test.jsonl', [
       {

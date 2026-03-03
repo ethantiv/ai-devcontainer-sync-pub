@@ -26,6 +26,9 @@ function findLatestLog(logDir) {
  * - filesModified: set of file paths from Edit/Write tool inputs
  * - tokens: { input, output } totals from "result" entries with usage
  * - testResults: array of { passed, failed, total } from Bash tool output
+ * - iterationCount: number of result entries (one per iteration)
+ * - errorCount: number of result entries with is_error: true
+ * - totalTimeMs: duration from first to last result timestamp (ms)
  */
 async function parseLog(logPath) {
   const toolUsage = {};
@@ -34,6 +37,10 @@ async function parseLog(logPath) {
   let inputTokens = 0;
   let outputTokens = 0;
   const testResults = [];
+  let iterationCount = 0;
+  let errorCount = 0;
+  let firstTimestamp = null;
+  let lastTimestamp = null;
 
   const rl = readline.createInterface({
     input: fs.createReadStream(logPath),
@@ -66,10 +73,21 @@ async function parseLog(logPath) {
       }
     }
 
-    // Extract token usage from result entries
-    if (entry.type === 'result' && entry.usage) {
-      inputTokens += entry.usage.input_tokens || 0;
-      outputTokens += entry.usage.output_tokens || 0;
+    // Extract token usage and iteration metrics from result entries
+    if (entry.type === 'result') {
+      if (entry.usage) {
+        inputTokens += entry.usage.input_tokens || 0;
+        outputTokens += entry.usage.output_tokens || 0;
+      }
+      iterationCount++;
+      if (entry.is_error) errorCount++;
+      if (entry.timestamp) {
+        const ts = new Date(entry.timestamp).getTime();
+        if (!isNaN(ts)) {
+          if (firstTimestamp === null) firstTimestamp = ts;
+          lastTimestamp = ts;
+        }
+      }
     }
 
     // Extract test results from tool_result content (Bash output)
@@ -90,6 +108,9 @@ async function parseLog(logPath) {
     fileEditCounts,
     tokens: { input: inputTokens, output: outputTokens },
     testResults,
+    iterationCount,
+    errorCount,
+    totalTimeMs: (firstTimestamp && lastTimestamp) ? lastTimestamp - firstTimestamp : 0,
     logFile: logPath,
   };
 }
