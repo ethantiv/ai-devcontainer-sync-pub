@@ -185,6 +185,104 @@ describe('parseLog', () => {
     const metrics = await parseLog(logPath);
     expect(metrics.logFile).toBe(logPath);
   });
+
+  test('uses "unknown" for tool_use blocks with no name', async () => {
+    const logPath = writeJsonl(tmpDir, 'test.jsonl', [
+      {
+        type: 'assistant',
+        message: {
+          content: [
+            { type: 'tool_use' },
+          ],
+        },
+      },
+    ]);
+
+    const metrics = await parseLog(logPath);
+    expect(metrics.toolUsage).toEqual({ unknown: 1 });
+  });
+
+  test('ignores Edit/Write without file_path in input', async () => {
+    const logPath = writeJsonl(tmpDir, 'test.jsonl', [
+      {
+        type: 'assistant',
+        message: {
+          content: [
+            { type: 'tool_use', name: 'Edit', input: {} },
+            { type: 'tool_use', name: 'Write' },
+          ],
+        },
+      },
+    ]);
+
+    const metrics = await parseLog(logPath);
+    expect(metrics.toolUsage).toEqual({ Edit: 1, Write: 1 });
+    expect(metrics.filesModified).toEqual([]);
+  });
+
+  test('skips assistant entries where content is not an array', async () => {
+    const logPath = writeJsonl(tmpDir, 'test.jsonl', [
+      {
+        type: 'assistant',
+        message: { content: 'just a string' },
+      },
+      {
+        type: 'result',
+        usage: { input_tokens: 5, output_tokens: 3 },
+      },
+    ]);
+
+    const metrics = await parseLog(logPath);
+    expect(metrics.toolUsage).toEqual({});
+    expect(metrics.tokens).toEqual({ input: 5, output: 3 });
+  });
+
+  test('handles empty JSONL file', async () => {
+    const filePath = path.join(tmpDir, 'empty.jsonl');
+    fs.writeFileSync(filePath, '');
+
+    const metrics = await parseLog(filePath);
+    expect(metrics.toolUsage).toEqual({});
+    expect(metrics.filesModified).toEqual([]);
+    expect(metrics.tokens).toEqual({ input: 0, output: 0 });
+    expect(metrics.testResults).toEqual([]);
+  });
+
+  test('handles result entry with partial usage fields', async () => {
+    const logPath = writeJsonl(tmpDir, 'test.jsonl', [
+      { type: 'result', usage: { input_tokens: 100 } },
+      { type: 'result', usage: { output_tokens: 50 } },
+    ]);
+
+    const metrics = await parseLog(logPath);
+    expect(metrics.tokens).toEqual({ input: 100, output: 50 });
+  });
+
+  test('extracts test results from multiple assistant messages', async () => {
+    const logPath = writeJsonl(tmpDir, 'test.jsonl', [
+      {
+        type: 'assistant',
+        message: {
+          content: [
+            { type: 'text', text: 'Tests: 10 passed, 0 failed, 10 total' },
+          ],
+        },
+      },
+      {
+        type: 'assistant',
+        message: {
+          content: [
+            { type: 'text', text: 'Tests: 5 passed, 1 failed, 6 total' },
+          ],
+        },
+      },
+    ]);
+
+    const metrics = await parseLog(logPath);
+    expect(metrics.testResults).toHaveLength(2);
+    expect(metrics.testResults[0]).toEqual({ passed: 10, failed: 0, total: 10 });
+    expect(metrics.testResults[1]).toEqual({ passed: 5, failed: 1, total: 6 });
+  });
 });
 
 describe('formatSummary', () => {
