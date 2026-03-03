@@ -795,11 +795,11 @@ git commit -m "test: add formatSummary percentage and Total line assertions"
 
 ## Phase 5: loop doctor - Core Module
 
-**Status:** pending
+**Status:** complete
 
 ### Task 9: Create doctor.js with check runner framework
 
-- [ ] Create doctor module with health check functions and CLI registration
+- [x] Create doctor module with health check functions and CLI registration
 
 **Files:**
 - Create: `src/lib/doctor.js`
@@ -1050,7 +1050,7 @@ git commit -m "feat: add loop doctor command with core health checks"
 
 ### Task 10: Doctor integration test
 
-- [ ] Add integration test that runs doctor in a real temp project
+- [x] Add integration test that runs doctor in a real temp project
 
 **Files:**
 - Modify: `src/lib/__tests__/integration.test.js`

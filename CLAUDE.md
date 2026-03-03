@@ -16,8 +16,8 @@ Re-sync configuration after changes:
 ```bash
 claude mcp list                    # Verify MCP servers
 claude plugin marketplace list     # List installed plugins
-npm install --prefix src && npm test --prefix src  # Run JS tests (61 tests, requires install)
-npm run test:integration --prefix src              # Run only integration tests (14 tests)
+npm install --prefix src && npm test --prefix src  # Run JS tests (69 tests, requires install)
+npm run test:integration --prefix src              # Run only integration tests (16 tests)
 bash src/scripts/tests/test_write_idea.sh          # Run shell tests (18 tests)
 bash src/scripts/tests/test_check_completion.sh    # Run completion detection tests (20 tests)
 bash src/scripts/tests/test_ensure_playwright.sh   # Run Playwright lazy-install tests (14 tests)
@@ -62,6 +62,7 @@ Source at `src/`. Docker: `COPY src /opt/loop` + `npm install`, symlinked as `/u
 loop init / update      # Initialize/refresh symlinks in project
 loop design             # Interactive brainstorming / design session
 loop plan / build / run # Run planning (3 iter), build (99 iter), or both
+loop doctor             # Check loop installation health
 loop summary / cleanup  # Show run stats / kill dev server processes
 ```
 
