@@ -189,11 +189,11 @@ git commit -m "test: add full buildArgs coverage for all modes and flags"
 
 ## Phase 2: run.js checkLoopScript & cleanup.js Tests
 
-**Status:** pending
+**Status:** complete
 
 ### Task 3: Test checkLoopScript error paths
 
-- [ ] Test checkLoopScript for missing script, version mismatch, and happy path
+- [x] Test checkLoopScript for missing script, version mismatch, and happy path
 
 **Files:**
 - Modify: `src/lib/run.js:89` (export checkLoopScript)
@@ -281,7 +281,7 @@ git commit -m "test: add checkLoopScript tests for missing script and version mi
 
 ### Task 4: Create cleanup.test.js
 
-- [ ] Create unit tests for cleanup.js with spawn mocks
+- [x] Create unit tests for cleanup.js with spawn mocks
 
 **Files:**
 - Create: `src/lib/__tests__/cleanup.test.js`
