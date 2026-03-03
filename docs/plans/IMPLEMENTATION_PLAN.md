@@ -28,11 +28,11 @@
 
 ## Phase 1: run.js Testability Refactor
 
-**Status:** pending
+**Status:** complete
 
 ### Task 1: Extract buildArgs function
 
-- [ ] Extract `buildArgs(opts, mode)` from `spawnLoop()` and export it
+- [x] Extract `buildArgs(opts, mode)` from `spawnLoop()` and export it
 
 **Files:**
 - Modify: `src/lib/run.js:24-51`
@@ -111,7 +111,7 @@ git commit -m "refactor: extract buildArgs from spawnLoop for testability"
 
 ### Task 2: Full buildArgs test coverage
 
-- [ ] Test all modes and optional flags in buildArgs
+- [x] Test all modes and optional flags in buildArgs
 
 **Files:**
 - Modify: `src/lib/__tests__/run.test.js`
