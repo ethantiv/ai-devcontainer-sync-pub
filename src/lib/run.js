@@ -92,4 +92,4 @@ function runCombined(opts) {
   });
 }
 
-module.exports = { runPlan, runBuild, runCombined, runDesign, buildArgs };
+module.exports = { runPlan, runBuild, runCombined, runDesign, buildArgs, checkLoopScript };

@@ -1,4 +1,7 @@
-const { runDesign, buildArgs } = require('../run');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const { runDesign, buildArgs, checkLoopScript } = require('../run');
 
 describe('runDesign', () => {
   test('is exported as a function', () => {
@@ -61,5 +64,55 @@ describe('buildArgs', () => {
       earlyExit: false,
     }, 'build');
     expect(args).toEqual(['-i', '5', '-I', 'Fix bug', '-n', '-e']);
+  });
+});
+
+describe('checkLoopScript', () => {
+  let tmpDir, origCwd;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'run-test-'));
+    origCwd = process.cwd();
+    process.chdir(tmpDir);
+  });
+
+  afterEach(() => {
+    process.chdir(origCwd);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test('exits with code 1 when loop/loop.sh is missing', () => {
+    const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit');
+    });
+    const mockError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(() => checkLoopScript()).toThrow('process.exit');
+    expect(mockExit).toHaveBeenCalledWith(1);
+    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('loop/loop.sh not found'));
+
+    mockExit.mockRestore();
+    mockError.mockRestore();
+  });
+
+  test('returns script path when loop/loop.sh exists', () => {
+    fs.mkdirSync(path.join(tmpDir, 'loop'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, 'loop/loop.sh'), '#!/bin/bash\n');
+
+    const result = checkLoopScript();
+    expect(result).toBe('./loop/loop.sh');
+  });
+
+  test('warns on version mismatch', () => {
+    fs.mkdirSync(path.join(tmpDir, 'loop'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, 'loop/loop.sh'), '#!/bin/bash\n');
+    fs.writeFileSync(path.join(tmpDir, 'loop/.version'), '0.0.0\n');
+
+    const mockWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    checkLoopScript();
+    expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('version mismatch'));
+
+    mockWarn.mockRestore();
   });
 });
