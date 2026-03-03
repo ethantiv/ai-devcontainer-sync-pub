@@ -407,11 +407,11 @@ git commit -m "test: add cleanup.js unit tests with spawn mocks"
 
 ## Phase 3: Shell Script Tests for cleanup.sh
 
-**Status:** pending
+**Status:** complete
 
 ### Task 5: Create test_cleanup.sh
 
-- [ ] Write shell tests for cleanup.sh covering port cleanup and LOOP_PORTS override
+- [x] Write shell tests for cleanup.sh covering port cleanup and LOOP_PORTS override
 
 **Files:**
 - Create: `src/scripts/tests/test_cleanup.sh`
@@ -580,7 +580,7 @@ git commit -m "test: add shell tests for cleanup.sh port cleanup"
 
 ### Task 6: Verify all existing tests still pass
 
-- [ ] Run full test suite to confirm no regressions
+- [x] Run full test suite to confirm no regressions
 
 **Step 1: Run all JS tests**
 

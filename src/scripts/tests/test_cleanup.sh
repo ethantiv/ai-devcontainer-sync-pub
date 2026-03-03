@@ -8,12 +8,19 @@ TESTS_RUN=0
 TESTS_PASSED=0
 TESTS_FAILED=0
 
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m'
+RED='\033[31m'
+GREEN='\033[32m'
+RESET='\033[0m'
 
-pass() { TESTS_PASSED=$((TESTS_PASSED + 1)); echo -e "  ${GREEN}PASS${NC}: $1"; }
-fail() { TESTS_FAILED=$((TESTS_FAILED + 1)); echo -e "  ${RED}FAIL${NC}: $1 — $2"; }
+pass() {
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    echo -e "  ${GREEN}✓${RESET} $1"
+}
+
+fail() {
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+    echo -e "  ${RED}✗${RESET} $1: $2"
+}
 
 assert_eq() {
   local expected="$1" actual="$2" msg="$3"
@@ -245,7 +252,7 @@ teardown
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "Tests: $TESTS_RUN | Passed: $TESTS_PASSED | Failed: $TESTS_FAILED"
+echo "cleanup.sh tests: $TESTS_RUN total, $TESTS_PASSED passed, $TESTS_FAILED failed"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 [[ $TESTS_FAILED -eq 0 ]] && exit 0 || exit 1
