@@ -21,8 +21,7 @@ function checkLoopScript() {
   return loopScript;
 }
 
-function spawnLoop(opts, mode) {
-  const loopScript = checkLoopScript();
+function buildArgs(opts, mode) {
   const args = [];
 
   if (mode === 'plan') args.push('-p');
@@ -38,6 +37,13 @@ function spawnLoop(opts, mode) {
   if (opts.idea) args.push('-I', opts.idea);
   if (opts.new) args.push('-n');
   if (opts.earlyExit === false) args.push('-e');
+
+  return args;
+}
+
+function spawnLoop(opts, mode) {
+  const loopScript = checkLoopScript();
+  const args = buildArgs(opts, mode);
 
   return new Promise((resolve) => {
     const child = spawn(loopScript, args, {
@@ -86,4 +92,4 @@ function runCombined(opts) {
   });
 }
 
-module.exports = { runPlan, runBuild, runCombined, runDesign };
+module.exports = { runPlan, runBuild, runCombined, runDesign, buildArgs };
