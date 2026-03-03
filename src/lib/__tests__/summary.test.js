@@ -553,4 +553,53 @@ describe('formatSummary', () => {
     const output = formatSummary(metrics);
     expect(output).not.toContain('Most Edited');
   });
+
+  test('shows Iterations section with count and duration', () => {
+    const metrics = {
+      toolUsage: {},
+      filesModified: [],
+      fileEditCounts: {},
+      tokens: { input: 0, output: 0 },
+      testResults: [],
+      iterationCount: 5,
+      totalTimeMs: 720000,  // 12 minutes
+      errorCount: 0,
+      logFile: '/tmp/test.jsonl',
+    };
+    const output = formatSummary(metrics);
+    expect(output).toContain('Iterations: 5');
+    expect(output).toContain('Duration: 12m');
+  });
+
+  test('shows error rate when errors exist', () => {
+    const metrics = {
+      toolUsage: {},
+      filesModified: [],
+      fileEditCounts: {},
+      tokens: { input: 0, output: 0 },
+      testResults: [],
+      iterationCount: 10,
+      totalTimeMs: 600000,
+      errorCount: 3,
+      logFile: '/tmp/test.jsonl',
+    };
+    const output = formatSummary(metrics);
+    expect(output).toContain('Errors: 3/10 (30%)');
+  });
+
+  test('omits Iterations section when count is 0', () => {
+    const metrics = {
+      toolUsage: {},
+      filesModified: [],
+      fileEditCounts: {},
+      tokens: { input: 0, output: 0 },
+      testResults: [],
+      iterationCount: 0,
+      totalTimeMs: 0,
+      errorCount: 0,
+      logFile: '/tmp/test.jsonl',
+    };
+    const output = formatSummary(metrics);
+    expect(output).not.toContain('Iterations:');
+  });
 });

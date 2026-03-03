@@ -149,6 +149,20 @@ function formatSummary(metrics) {
   lines.push('=== Loop Run Summary ===');
   lines.push('');
 
+  // Iteration Stats
+  if (metrics.iterationCount > 0) {
+    lines.push(`Iterations: ${metrics.iterationCount}`);
+    if (metrics.totalTimeMs > 0) {
+      const mins = Math.round(metrics.totalTimeMs / 60000);
+      lines.push(`Duration: ${mins}m`);
+    }
+    if (metrics.errorCount > 0) {
+      const pct = Math.round((metrics.errorCount / metrics.iterationCount) * 100);
+      lines.push(`Errors: ${metrics.errorCount}/${metrics.iterationCount} (${pct}%)`);
+    }
+    lines.push('');
+  }
+
   // Tool Usage
   const sortedTools = Object.entries(metrics.toolUsage)
     .sort(([, a], [, b]) => b - a);
