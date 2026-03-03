@@ -12,6 +12,7 @@ const os = require('os');
 const path = require('path');
 const { init } = require('../init');
 const { generateSummary } = require('../summary');
+const { runChecks } = require('../doctor');
 
 const PACKAGE_ROOT = path.resolve(__dirname, '..', '..');
 
@@ -344,6 +345,33 @@ describe('loop summary (generateSummary end-to-end)', () => {
     expect(report).not.toContain('Tool Usage:');
     expect(report).not.toContain('Files Modified');
     expect(report).not.toContain('Test Results:');
+  });
+}, 30000);
+
+describe('loop doctor (integration)', () => {
+  let project;
+
+  beforeEach(() => {
+    project = useTempProject();
+  });
+
+  afterEach(() => {
+    project.restore();
+  });
+
+  test('symlink check fails before init', () => {
+    const results = runChecks();
+    const symCheck = results.find(r => r.name === 'Loop symlinks');
+    expect(symCheck.ok).toBe(false);
+  });
+
+  test('symlink and version checks pass after init', () => {
+    init();
+    const results = runChecks();
+    const symCheck = results.find(r => r.name === 'Loop symlinks');
+    const verCheck = results.find(r => r.name === 'Loop version');
+    expect(symCheck.ok).toBe(true);
+    expect(verCheck.ok).toBe(true);
   });
 }, 30000);
 
