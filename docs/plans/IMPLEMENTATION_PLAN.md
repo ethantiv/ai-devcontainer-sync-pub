@@ -484,7 +484,7 @@ MOCK
 chmod +x "$TEST_DIR/bin/fuser"
 export TEST_DIR
 
-output=$(PATH="$TEST_DIR/bin:$PATH" unset LOOP_PORTS; PATH="$TEST_DIR/bin:$PATH" bash "$CLEANUP_SCRIPT" 2>&1) || true
+output=$(unset LOOP_PORTS; PATH="$TEST_DIR/bin:$PATH" bash "$CLEANUP_SCRIPT" 2>&1) || true
 assert_not_contains "$output" "Released port" "No ports released when lsof reports nothing"
 teardown
 
