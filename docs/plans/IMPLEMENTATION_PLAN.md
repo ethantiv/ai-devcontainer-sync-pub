@@ -598,11 +598,11 @@ Expected: All pass
 
 ## Phase 4: summary.js Edge Case Tests
 
-**Status:** pending
+**Status:** complete
 
 ### Task 7: Test parseLog fallback paths
 
-- [ ] Test unknown tool name, missing file_path, non-array content, and empty file
+- [x] Test unknown tool name, missing file_path, non-array content, and empty file
 
 **Files:**
 - Modify: `src/lib/__tests__/summary.test.js`
@@ -727,7 +727,7 @@ git commit -m "test: add parseLog edge case tests for fallback paths"
 
 ### Task 8: Test formatSummary percentage and Total line
 
-- [ ] Test tool usage percentage calculation and token Total line
+- [x] Test tool usage percentage calculation and token Total line
 
 **Files:**
 - Modify: `src/lib/__tests__/summary.test.js`
