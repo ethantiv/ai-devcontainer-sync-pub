@@ -107,7 +107,7 @@ describe('parseLog', () => {
     ]);
 
     const metrics = await parseLog(logPath);
-    expect(metrics.tokens).toEqual({ input: 300, output: 125 });
+    expect(metrics.tokens).toEqual({ input: 300, output: 125, cacheRead: 0, cacheCreate: 0 });
   });
 
   test('skips malformed JSON lines', async () => {
@@ -115,7 +115,7 @@ describe('parseLog', () => {
     fs.writeFileSync(filePath, 'not json\n{"type":"result","usage":{"input_tokens":10,"output_tokens":5}}\n');
 
     const metrics = await parseLog(filePath);
-    expect(metrics.tokens).toEqual({ input: 10, output: 5 });
+    expect(metrics.tokens).toEqual({ input: 10, output: 5, cacheRead: 0, cacheCreate: 0 });
   });
 
   test('skips empty lines', async () => {
@@ -123,7 +123,7 @@ describe('parseLog', () => {
     fs.writeFileSync(filePath, '\n\n{"type":"result","usage":{"input_tokens":1,"output_tokens":1}}\n\n');
 
     const metrics = await parseLog(filePath);
-    expect(metrics.tokens).toEqual({ input: 1, output: 1 });
+    expect(metrics.tokens).toEqual({ input: 1, output: 1, cacheRead: 0, cacheCreate: 0 });
   });
 
   test('extracts Jest test results from tool output', async () => {
@@ -234,7 +234,7 @@ describe('parseLog', () => {
 
     const metrics = await parseLog(logPath);
     expect(metrics.toolUsage).toEqual({});
-    expect(metrics.tokens).toEqual({ input: 5, output: 3 });
+    expect(metrics.tokens).toEqual({ input: 5, output: 3, cacheRead: 0, cacheCreate: 0 });
   });
 
   test('handles empty JSONL file', async () => {
@@ -244,7 +244,7 @@ describe('parseLog', () => {
     const metrics = await parseLog(filePath);
     expect(metrics.toolUsage).toEqual({});
     expect(metrics.filesModified).toEqual([]);
-    expect(metrics.tokens).toEqual({ input: 0, output: 0 });
+    expect(metrics.tokens).toEqual({ input: 0, output: 0, cacheRead: 0, cacheCreate: 0 });
     expect(metrics.testResults).toEqual([]);
   });
 
@@ -255,7 +255,17 @@ describe('parseLog', () => {
     ]);
 
     const metrics = await parseLog(logPath);
-    expect(metrics.tokens).toEqual({ input: 100, output: 50 });
+    expect(metrics.tokens).toEqual({ input: 100, output: 50, cacheRead: 0, cacheCreate: 0 });
+  });
+
+  test('accumulates cache token usage from result entries', async () => {
+    const logPath = writeJsonl(tmpDir, 'test.jsonl', [
+      { type: 'result', usage: { input_tokens: 10, output_tokens: 50, cache_read_input_tokens: 5000, cache_creation_input_tokens: 200 } },
+      { type: 'result', usage: { input_tokens: 20, output_tokens: 75, cache_read_input_tokens: 8000, cache_creation_input_tokens: 300 } },
+    ]);
+
+    const metrics = await parseLog(logPath);
+    expect(metrics.tokens).toEqual({ input: 30, output: 125, cacheRead: 13000, cacheCreate: 500 });
   });
 
   test('tracks per-file edit counts', async () => {
@@ -478,6 +488,37 @@ describe('formatSummary', () => {
     };
     const output = formatSummary(metrics);
     expect(output).toContain('Total:  1,500');
+  });
+
+  test('shows cache token breakdown when cache tokens exist', () => {
+    const metrics = {
+      toolUsage: {},
+      filesModified: [],
+      tokens: { input: 100, output: 500, cacheRead: 9000, cacheCreate: 900 },
+      testResults: [],
+      logFile: '/tmp/test.jsonl',
+    };
+    const output = formatSummary(metrics);
+    expect(output).toContain('Input:  10,000');
+    expect(output).toContain('Cache read:    9,000 (90%)');
+    expect(output).toContain('Cache create:  900');
+    expect(output).toContain('Uncached:      100');
+    expect(output).toContain('Output: 500');
+    expect(output).toContain('Total:  10,500');
+  });
+
+  test('omits cache breakdown when no cache tokens', () => {
+    const metrics = {
+      toolUsage: {},
+      filesModified: [],
+      tokens: { input: 1000, output: 500, cacheRead: 0, cacheCreate: 0 },
+      testResults: [],
+      logFile: '/tmp/test.jsonl',
+    };
+    const output = formatSummary(metrics);
+    expect(output).toContain('Input:  1,000');
+    expect(output).not.toContain('Cache read');
+    expect(output).not.toContain('Uncached');
   });
 
   test('shows multiple test result entries', () => {

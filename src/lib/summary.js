@@ -24,7 +24,7 @@ function findLatestLog(logDir) {
  * Extracts:
  * - toolUsage: map of tool name → call count
  * - filesModified: set of file paths from Edit/Write tool inputs
- * - tokens: { input, output } totals from "result" entries with usage
+ * - tokens: { input, output, cacheRead, cacheCreate } totals from "result" entries with usage
  * - testResults: array of { passed, failed, total } from Bash tool output
  * - iterationCount: number of result entries (one per iteration)
  * - errorCount: number of result entries with is_error: true
@@ -36,6 +36,8 @@ async function parseLog(logPath) {
   const fileEditCounts = {};
   let inputTokens = 0;
   let outputTokens = 0;
+  let cacheReadTokens = 0;
+  let cacheCreateTokens = 0;
   const testResults = [];
   let iterationCount = 0;
   let errorCount = 0;
@@ -78,6 +80,8 @@ async function parseLog(logPath) {
       if (entry.usage) {
         inputTokens += entry.usage.input_tokens || 0;
         outputTokens += entry.usage.output_tokens || 0;
+        cacheReadTokens += entry.usage.cache_read_input_tokens || 0;
+        cacheCreateTokens += entry.usage.cache_creation_input_tokens || 0;
       }
       iterationCount++;
       if (entry.is_error) errorCount++;
@@ -106,7 +110,7 @@ async function parseLog(logPath) {
     toolUsage,
     filesModified: [...filesModified].sort(),
     fileEditCounts,
-    tokens: { input: inputTokens, output: outputTokens },
+    tokens: { input: inputTokens, output: outputTokens, cacheRead: cacheReadTokens, cacheCreate: cacheCreateTokens },
     testResults,
     iterationCount,
     errorCount,
@@ -211,11 +215,19 @@ function formatSummary(metrics) {
   }
 
   // Token Usage
-  if (metrics.tokens.input > 0 || metrics.tokens.output > 0) {
-    const total = metrics.tokens.input + metrics.tokens.output;
+  const { input, output, cacheRead = 0, cacheCreate = 0 } = metrics.tokens;
+  const totalInput = input + cacheRead + cacheCreate;
+  if (totalInput > 0 || output > 0) {
+    const total = totalInput + output;
     lines.push('Token Usage:');
-    lines.push(`  Input:  ${metrics.tokens.input.toLocaleString()}`);
-    lines.push(`  Output: ${metrics.tokens.output.toLocaleString()}`);
+    lines.push(`  Input:  ${totalInput.toLocaleString()}`);
+    if (cacheRead > 0 || cacheCreate > 0) {
+      const cachedPct = totalInput > 0 ? Math.round((cacheRead / totalInput) * 100) : 0;
+      lines.push(`    Cache read:    ${cacheRead.toLocaleString()} (${cachedPct}%)`);
+      lines.push(`    Cache create:  ${cacheCreate.toLocaleString()}`);
+      lines.push(`    Uncached:      ${input.toLocaleString()}`);
+    }
+    lines.push(`  Output: ${output.toLocaleString()}`);
     lines.push(`  Total:  ${total.toLocaleString()}`);
     lines.push('');
   }

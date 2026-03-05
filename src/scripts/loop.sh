@@ -111,6 +111,14 @@ archive_completed_plan() {
     timestamp=$(date +%Y-%m-%d_%H%M%S)
     mv "$plan" "$archive_dir/IMPLEMENTATION_PLAN_${timestamp}.md"
     echo "[NEW] Archived completed plan to $archive_dir/IMPLEMENTATION_PLAN_${timestamp}.md"
+
+    # Archive associated design docs
+    for doc in docs/plans/*-design.md; do
+        [[ -f "$doc" ]] || continue
+        mv "$doc" "$archive_dir/"
+        echo "[NEW] Archived design doc: $(basename "$doc")"
+    done
+
     return 0
 }
 
