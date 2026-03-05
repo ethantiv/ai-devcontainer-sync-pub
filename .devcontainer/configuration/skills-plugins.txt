@@ -15,7 +15,6 @@
 # Development tools
 atlassian
 claude-md-management
-code-simplifier
 commit-commands
 feature-dev
 frontend-design
