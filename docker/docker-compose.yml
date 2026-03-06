@@ -3,9 +3,9 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: ${APP_NAME:-claude-code}:latest
-    container_name: ${APP_NAME:-claude-code}
-    hostname: ${APP_NAME:-claude-code}
+    image: claude-code:latest
+    container_name: claude-code
+    hostname: claude-code
     env_file:
       - ../.devcontainer/.env
     volumes:
@@ -28,10 +28,10 @@ services:
 
 volumes:
   claude-config:
-    name: ${APP_NAME:-claude-code}-claude-config
+    name: claude-code-claude-config
   agents-skills:
-    name: ${APP_NAME:-claude-code}-agents-skills
+    name: claude-code-agents-skills
   gemini-config:
-    name: ${APP_NAME:-claude-code}-gemini-config
+    name: claude-code-gemini-config
   projects:
-    name: ${APP_NAME:-claude-code}-projects
+    name: claude-code-projects

@@ -46,7 +46,6 @@ Available as local marketplace plugins (`dev-marketplace`):
 | `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |
 | `STITCH_API_KEY` | No | Google Stitch API key for Stitch MCP server |
 | `GIT_USER_NAME` / `GIT_USER_EMAIL` | No | Git global identity |
-| `APP_NAME` | No | Volume name prefix (default: `claude-code`, `dev-claude-code` for dev) |
 
 Codespaces: add as repository secrets. Local: create `.devcontainer/.env` (copy from `.devcontainer/.env.example`).
 
@@ -98,7 +97,7 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 
 **Docker**: start → `entrypoint.sh` → sync `/opt/claude-config` → first-run (`.configured` marker) → `setup-claude.sh`. Claude binary installed to `~/.claude/bin/` (volume) at first start, not during build. GH auth via `gh auth login --with-token`.
 
-**Docker volumes** (4, prefixed with `APP_NAME`): `claude-config` (~/.claude), `agents-skills` (~/.agents), `gemini-config` (~/.gemini), `projects` (~/projects).
+**Docker volumes** (4): `claude-code-claude-config` (~/.claude), `claude-code-agents-skills` (~/.agents), `claude-code-gemini-config` (~/.gemini), `claude-code-projects` (~/projects).
 
 ### File Sync Mapping
 
@@ -119,8 +118,6 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 - **Skills install**: `npx -y skills add "$url" --skill "$name" --agent claude-code -g -y`
 - **Coolify MCP limitations**: `base_directory` and `docker_compose_location` not in MCP tool — use `curl -X PATCH` directly.
 - **MCP server JSON type**: Remote HTTP MCP servers require `"type": "http"` in `add-json` config, not `"type": "url"` (which silently fails).
-- **Docker Compose volumes**: Env var interpolation works only in YAML values (not keys). Volume `name:` uses `${APP_NAME:-claude-code}-<vol>` for dev/prod isolation.
-- **Dual deployment**: Prod uses `docker-compose.yml` (main branch), dev uses `docker-compose.dev.yml` (develop branch). Separate compose files = separate Coolify container names.
 - **Lazy Playwright**: Docker image ships without Chromium. `ensure-playwright.sh` installs system deps + browser on first `agent-browser` use via PreToolUse hook in `.claude/settings.json`. DevContainer retains build-time install.
 - **NODE_ENV gotcha**: DevContainer sets `NODE_ENV=production` which skips `devDependencies` on `npm install`. Use `NODE_ENV=development npm install --prefix src` to install jest and other dev tools.
 - **Jest 30 CLI**: Use `--testPathPatterns` (with trailing `s`), not `--testPathPattern`. The old flag is removed in Jest 30.
