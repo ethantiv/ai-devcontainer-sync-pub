@@ -59,7 +59,7 @@ async function parseLog(logPath) {
       continue;
     }
 
-    // Count tool uses from assistant messages
+    // Count tool uses and extract test results from assistant messages
     if (entry.type === 'assistant' && Array.isArray(entry.message?.content)) {
       for (const block of entry.message.content) {
         if (block.type === 'tool_use') {
@@ -71,6 +71,10 @@ async function parseLog(logPath) {
             filesModified.add(block.input.file_path);
             fileEditCounts[block.input.file_path] = (fileEditCounts[block.input.file_path] || 0) + 1;
           }
+        } else if (block.type === 'tool_result' || block.type === 'text') {
+          const text = typeof block.text === 'string' ? block.text :
+                       typeof block.content === 'string' ? block.content : '';
+          extractTestResults(text, testResults);
         }
       }
     }
@@ -90,17 +94,6 @@ async function parseLog(logPath) {
         if (!isNaN(ts)) {
           if (firstTimestamp === null) firstTimestamp = ts;
           lastTimestamp = ts;
-        }
-      }
-    }
-
-    // Extract test results from tool_result content (Bash output)
-    if (entry.type === 'assistant' && Array.isArray(entry.message?.content)) {
-      for (const block of entry.message.content) {
-        if (block.type === 'tool_result' || block.type === 'text') {
-          const text = typeof block.text === 'string' ? block.text :
-                       typeof block.content === 'string' ? block.content : '';
-          extractTestResults(text, testResults);
         }
       }
     }

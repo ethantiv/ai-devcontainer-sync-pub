@@ -127,4 +127,4 @@ function init({ force = false } = {}) {
   console.log('\nDone! Run: loop plan');
 }
 
-module.exports = { init };
+module.exports = { init, CORE_FILES };

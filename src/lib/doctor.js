@@ -1,7 +1,10 @@
 const fs = require('fs');
+const path = require('path');
 const { execSync } = require('child_process');
+const { CORE_FILES } = require('./init');
+const { checkVersionMismatch, PKG_VERSION } = require('./run');
 
-const SYMLINK_FILES = ['loop.sh', 'PROMPT_design.md', 'PROMPT_plan.md', 'PROMPT_build.md', 'cleanup.sh', 'kill-loop.sh'];
+const SYMLINK_FILES = CORE_FILES.map(f => path.basename(f.dest));
 
 const checks = [
   {
@@ -17,16 +20,14 @@ const checks = [
   {
     name: 'Loop version',
     fn() {
-      const versionPath = './loop/.version';
-      if (!fs.existsSync(versionPath)) {
+      const mismatch = checkVersionMismatch();
+      if (mismatch) {
+        return { ok: false, message: `project: ${mismatch.fileVersion}, installed: ${mismatch.pkgVersion}`, fix: 'Run "loop update" to refresh' };
+      }
+      if (!fs.existsSync('./loop/.version')) {
         return { ok: false, message: '.version file missing', fix: 'Run "loop init"' };
       }
-      const fileVersion = fs.readFileSync(versionPath, 'utf-8').trim();
-      const pkgVersion = require('../package.json').version;
-      if (fileVersion !== pkgVersion) {
-        return { ok: false, message: `project: ${fileVersion}, installed: ${pkgVersion}`, fix: 'Run "loop update" to refresh' };
-      }
-      return { ok: true, message: `v${pkgVersion}` };
+      return { ok: true, message: `v${PKG_VERSION}` };
     },
   },
   {

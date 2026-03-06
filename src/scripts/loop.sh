@@ -185,6 +185,9 @@ format_tool_use() {
     echo "$params" | jq -C . 2>/dev/null || echo -e "${C_YELLOW}${params}${C_RESET}"
 }
 
+# jq filter: sum input tokens from a usage object
+JQ_SUM_TOKENS='(.input_tokens // 0) + (.cache_read_input_tokens // 0) + (.cache_creation_input_tokens // 0) | select(. > 0)'
+
 # Format JSON stream from Claude CLI into readable console output
 format_stream() {
     while IFS= read -r line; do
@@ -199,13 +202,7 @@ format_stream() {
                     is_subagent=$(echo "$line" | jq -r '.parent_tool_use_id // empty' 2>/dev/null)
                     if [[ -z "$is_subagent" ]]; then
                         local atokens
-                        atokens=$(echo "$line" | jq -r '
-                            if .message.usage then
-                                (.message.usage.input_tokens // 0) +
-                                (.message.usage.cache_read_input_tokens // 0) +
-                                (.message.usage.cache_creation_input_tokens // 0)
-                            else empty end | select(. > 0)
-                        ' 2>/dev/null)
+                        atokens=$(echo "$line" | jq -r "if .message.usage then .message.usage | $JQ_SUM_TOKENS else empty end" 2>/dev/null)
                         [[ -n "$atokens" ]] && echo "$atokens" > "$CTX_FILE"
                     fi
                 fi
@@ -224,13 +221,7 @@ format_stream() {
             result)
                 if [[ -n "$CTX_FILE" ]]; then
                     local rtokens
-                    rtokens=$(echo "$line" | jq -r '
-                        if .usage then
-                            (.usage.input_tokens // 0) +
-                            (.usage.cache_read_input_tokens // 0) +
-                            (.usage.cache_creation_input_tokens // 0)
-                        else empty end | select(. > 0)
-                    ' 2>/dev/null)
+                    rtokens=$(echo "$line" | jq -r "if .usage then .usage | $JQ_SUM_TOKENS else empty end" 2>/dev/null)
                     [[ -n "$rtokens" ]] && echo "$rtokens" > "$CTX_FILE"
                 fi
                 local result
@@ -256,32 +247,21 @@ resolve_idea() {
         return 0
     fi
 
-    # GitHub issue URL — use gh issue view
-    if [[ "$idea" =~ ^https?://github\.com/[^/]+/[^/]+/issues/[0-9]+ ]]; then
+    # GitHub issue or PR URL — use gh CLI
+    if [[ "$idea" =~ ^https?://github\.com/[^/]+/[^/]+/(issues|pull)/[0-9]+ ]]; then
         if ! command -v gh &>/dev/null; then
-            echo "[WARN] gh CLI not found, cannot fetch GitHub issue" >&2
+            echo "[WARN] gh CLI not found, cannot fetch GitHub content" >&2
             return 1
         fi
+        local gh_type
+        case "${BASH_REMATCH[1]}" in
+            issues) gh_type="issue" ;;
+            pull)   gh_type="pr" ;;
+        esac
         local body
-        body=$(gh issue view "$idea" --json body -q .body 2>/dev/null)
+        body=$(gh "$gh_type" view "$idea" --json body -q .body 2>/dev/null)
         if [[ $? -ne 0 || -z "$body" ]]; then
-            echo "[WARN] Failed to fetch GitHub issue: $idea" >&2
-            return 1
-        fi
-        echo "$body"
-        return 0
-    fi
-
-    # GitHub PR URL — use gh pr view
-    if [[ "$idea" =~ ^https?://github\.com/[^/]+/[^/]+/pull/[0-9]+ ]]; then
-        if ! command -v gh &>/dev/null; then
-            echo "[WARN] gh CLI not found, cannot fetch GitHub PR" >&2
-            return 1
-        fi
-        local body
-        body=$(gh pr view "$idea" --json body -q .body 2>/dev/null)
-        if [[ $? -ne 0 || -z "$body" ]]; then
-            echo "[WARN] Failed to fetch GitHub PR: $idea" >&2
+            echo "[WARN] Failed to fetch GitHub $gh_type: $idea" >&2
             return 1
         fi
         echo "$body"
@@ -301,7 +281,7 @@ resolve_idea() {
             return 1
         fi
         # Strip HTML tags for basic content extraction
-        echo "$content" | sed 's/<[^>]*>//g' | sed '/^[[:space:]]*$/d' | head -200
+        echo "$content" | sed -e 's/<[^>]*>//g' -e '/^[[:space:]]*$/d' | head -200
         return 0
     fi
 
@@ -360,10 +340,10 @@ if [[ "$SCRIPT_NAME" == "design" ]]; then
     AUTONOMOUS=false
 fi
 
-# Default iterations: 5 for plan, 99 for build
+# Default iterations: 3 for plan, 99 for build
 if [[ -z "$ITERATIONS" ]]; then
     if [[ "$SCRIPT_NAME" == "plan" ]]; then
-        ITERATIONS=5
+        ITERATIONS=3
     else
         ITERATIONS=99
     fi

@@ -1,6 +1,19 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
 
+const PKG_VERSION = require('../package.json').version;
+
+function checkVersionMismatch() {
+  const versionPath = './loop/.version';
+  try {
+    const fileVersion = fs.readFileSync(versionPath, 'utf-8').trim();
+    if (fileVersion !== PKG_VERSION) {
+      return { fileVersion, pkgVersion: PKG_VERSION };
+    }
+  } catch { /* missing file — skip */ }
+  return null;
+}
+
 function checkLoopScript() {
   const loopScript = './loop/loop.sh';
   if (!fs.existsSync(loopScript)) {
@@ -8,14 +21,9 @@ function checkLoopScript() {
     process.exit(1);
   }
 
-  // Check version mismatch (warning only)
-  const versionPath = './loop/.version';
-  if (fs.existsSync(versionPath)) {
-    const fileVersion = fs.readFileSync(versionPath, 'utf-8').trim();
-    const pkgVersion = require('../package.json').version;
-    if (fileVersion !== pkgVersion) {
-      console.warn(`Warning: loop version mismatch — project: ${fileVersion}, installed: ${pkgVersion}. Run "loop update" to refresh.`);
-    }
+  const mismatch = checkVersionMismatch();
+  if (mismatch) {
+    console.warn(`Warning: loop version mismatch — project: ${mismatch.fileVersion}, installed: ${mismatch.pkgVersion}. Run "loop update" to refresh.`);
   }
 
   return loopScript;
@@ -92,4 +100,4 @@ function runCombined(opts) {
   });
 }
 
-module.exports = { runPlan, runBuild, runCombined, runDesign, buildArgs, checkLoopScript };
+module.exports = { runPlan, runBuild, runCombined, runDesign, buildArgs, checkLoopScript, checkVersionMismatch, PKG_VERSION };
