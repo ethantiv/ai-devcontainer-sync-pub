@@ -14,6 +14,11 @@
       "name": "roadmap",
       "description": "Generate or update ROADMAP.md with completed features and future proposals",
       "source": "./roadmap"
+    },
+    {
+      "name": "dependency-update",
+      "description": "Scan and update project dependencies across all ecosystems to their latest versions",
+      "source": "./dependency-update"
     }
   ]
 }

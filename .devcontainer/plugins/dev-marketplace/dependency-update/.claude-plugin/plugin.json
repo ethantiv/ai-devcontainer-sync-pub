@@ -1,0 +1,8 @@
+{
+  "name": "dependency-update",
+  "version": "0.1.0",
+  "description": "Scan and update project dependencies across all ecosystems to their latest versions",
+  "author": {
+    "name": "Mirek Zaniewicz"
+  }
+}
