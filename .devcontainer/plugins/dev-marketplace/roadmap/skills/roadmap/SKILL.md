@@ -1,5 +1,10 @@
 ---
-description: Generate or update docs/ROADMAP.md with future proposals
+name: roadmap
+description: >
+  This skill should be used when the user asks to "generate roadmap",
+  "update roadmap", "create ROADMAP.md", "project proposals", "plan features",
+  "roadmap proposals", or mentions generating, updating, or managing a
+  docs/ROADMAP.md file with project proposals and priorities.
 ---
 
 # docs/ROADMAP.md Generator
@@ -7,7 +12,7 @@ description: Generate or update docs/ROADMAP.md with future proposals
 <context>
 You are managing a project roadmap file that proposes future development directions. The docs/ROADMAP.md file serves as a living document for project planning.
 
-This command operates in two modes:
+This skill operates in two modes:
 - **CREATE**: When docs/ROADMAP.md doesn't exist, analyze the project and generate initial proposals
 - **UPDATE**: When docs/ROADMAP.md exists, remove implemented proposals and refresh remaining ones
 </context>

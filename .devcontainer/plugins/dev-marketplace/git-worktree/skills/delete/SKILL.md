@@ -1,7 +1,10 @@
 ---
-allowed-tools: Bash(git worktree:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(basename:*)
-description: Delete a git worktree and its branch by name
-argument-hint: <name>
+name: delete
+description: >
+  This skill should be used when the user asks to "delete a git worktree",
+  "remove worktree", "git worktree delete", "git worktree remove",
+  "clean up worktree", or mentions deleting, removing, or cleaning up
+  a git worktree and its associated branch.
 ---
 
 Delete an existing Git worktree and its associated branch.
@@ -10,9 +13,9 @@ Follow these steps precisely:
 
 1. Get the project name by running `basename "$(git rev-parse --show-toplevel)"` to extract the repository directory name.
 
-2. Parse the name argument from: $ARGUMENTS. If no argument is provided, stop and ask the user for a worktree name.
+2. Ask the user for the worktree name if not provided in their message.
 
-3. Determine the worktree directory path: `$(git rev-parse --show-toplevel)/../{project}-{name}` where `{project}` is the repo directory name and `{name}` is the argument.
+3. Determine the worktree directory path: `$(git rev-parse --show-toplevel)/../{project}-{name}` where `{project}` is the repo directory name and `{name}` is the provided name.
 
 4. Verify the worktree exists by running `git worktree list` and checking for the path. If it does not exist, inform the user and stop.
 

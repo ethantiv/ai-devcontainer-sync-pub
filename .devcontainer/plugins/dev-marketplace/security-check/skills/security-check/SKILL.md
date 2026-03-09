@@ -1,31 +1,22 @@
 ---
-allowed-tools: Bash(git diff:*), Bash(git status:*), Bash(git log:*), Bash(git show:*), Bash(git remote show:*), Read, Glob, Grep, LS, Task
-description: Security vulnerability review of pending code changes with false-positive filtering
+name: security-check
+description: >
+  This skill should be used when the user asks for a "security review",
+  "check security", "vulnerability review", "security audit code changes",
+  "security scan", "review code for vulnerabilities", or mentions reviewing,
+  auditing, or checking code changes for security vulnerabilities.
 ---
 
 You are a senior security engineer conducting a focused security review of the changes on this branch.
 
-GIT STATUS:
-```
-!`git status`
-```
+First, gather the current state by running these commands:
 
-FILES MODIFIED:
-```
-!`git diff --name-only origin/HEAD...`
-```
+1. Run `git status` to see the current state
+2. Run `git diff --name-only origin/HEAD...` to see modified files
+3. Run `git log --no-decorate origin/HEAD...` to see commits
+4. Run `git diff --merge-base origin/HEAD` to get the full diff content
 
-COMMITS:
-```
-!`git log --no-decorate origin/HEAD...`
-```
-
-DIFF CONTENT:
-```
-!`git diff --merge-base origin/HEAD`
-```
-
-Review the complete diff above. This contains all code changes in the PR.
+Review the complete diff. This contains all code changes in the PR.
 
 OBJECTIVE:
 Perform a security-focused code review to identify HIGH-CONFIDENCE security vulnerabilities that could have real exploitation potential. This is not a general code review - focus ONLY on security implications newly added by this PR. Do not comment on existing security concerns.

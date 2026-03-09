@@ -24,12 +24,14 @@ bash src/scripts/tests/test_ensure_playwright.sh   # Run Playwright lazy-install
 bash src/scripts/tests/test_cleanup.sh             # Run cleanup.sh port tests (11 tests)
 ```
 
-## Custom Slash Commands
+## Skills (dev-marketplace)
 
-Available as local marketplace plugins (`dev-marketplace`):
-- `/roadmap` - manage ROADMAP.md with features and proposals
-- `/git-worktree:create <name>` / `/git-worktree:delete <name>` - manage worktrees
-- `/security-check` - security vulnerability review of pending code changes
+Auto-triggered by Claude based on context (`dev-marketplace` plugins):
+- **roadmap** - generate or update docs/ROADMAP.md with project proposals
+- **git-worktree create/delete** - manage git worktrees with `{project}-{name}` naming
+- **security-check** - security vulnerability review of pending code changes
+- **dependency-update** - scan and update project dependencies across ecosystems
+- **read-arxiv-paper** - download and summarize arXiv papers
 
 ## Operational Notes
 
