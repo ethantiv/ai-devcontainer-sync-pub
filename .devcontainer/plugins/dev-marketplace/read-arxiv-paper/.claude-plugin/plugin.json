@@ -1,5 +1,5 @@
 {
   "name": "read-arxiv-paper",
   "description": "Download arXiv paper LaTeX source, analyze it, and produce a project-contextualized summary",
-  "version": "0.1.0"
+  "version": "0.1.1"
 }

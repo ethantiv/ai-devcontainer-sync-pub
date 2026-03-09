@@ -10,7 +10,7 @@ description: >
 
 # Read arXiv Paper
 
-Download an arXiv paper's LaTeX source, read and analyze it, and produce a project-contextualized summary in a local `knowledge/` directory.
+Download an arXiv paper's LaTeX source, read and analyze it, and produce a project-contextualized summary in a local `./arxiv/knowledge/` directory.
 
 ## Workflow
 
@@ -82,8 +82,8 @@ Generate a markdown summary at `./arxiv/knowledge/summary_{tag}.md` in the **cur
 Derive a short, descriptive `tag` from the paper's core topic (e.g., `conditional_memory`, `sparse_attention`, `rl_from_feedback`). Before writing, verify the filename does not already exist to avoid overwriting.
 
 ```bash
-mkdir -p ./knowledge
-ls ./knowledge/summary_*.md 2>/dev/null  # check existing summaries
+mkdir -p ../arxiv/knowledge
+ls ./arxiv/knowledge/summary_*.md 2>/dev/null  # check existing summaries
 ```
 
 #### Summary Structure
