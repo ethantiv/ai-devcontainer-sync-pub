@@ -4,10 +4,11 @@ const os = require('os');
 const { resolveTypes, listPresets, PRESETS } = require('../skill-presets');
 
 describe('resolveTypes', () => {
-  test('returns correct arrays for single type', () => {
+  test('returns same skills for plan and build', () => {
     const result = resolveTypes('web');
-    expect(result.plan).toEqual(PRESETS.web.plan);
-    expect(result.build).toEqual(PRESETS.web.build);
+    expect(result.plan).toEqual(PRESETS.web.skills);
+    expect(result.build).toEqual(PRESETS.web.skills);
+    expect(result.plan).toBe(result.build);
   });
 
   test('merges and deduplicates multiple types', () => {
@@ -23,11 +24,11 @@ describe('resolveTypes', () => {
 
   test('merges web,devops without overlap', () => {
     const result = resolveTypes('web,devops');
-    expect(result.plan).toEqual(['web-design-guidelines']);
-    expect(result.build).toEqual([
-      ...PRESETS.web.build,
-      ...PRESETS.devops.build,
+    expect(result.plan).toEqual([
+      ...PRESETS.web.skills,
+      ...PRESETS.devops.skills,
     ]);
+    expect(result.plan).toBe(result.build);
   });
 
   test('throws on unknown type with valid types listed', () => {
@@ -42,12 +43,13 @@ describe('resolveTypes', () => {
 
   test('handles whitespace in comma-separated list', () => {
     const result = resolveTypes(' web , devops ');
-    expect(result.plan).toEqual(['web-design-guidelines']);
+    expect(result.plan).toEqual([...PRESETS.web.skills, ...PRESETS.devops.skills]);
   });
 
-  test('devops has empty plan array', () => {
+  test('devops returns same skills for plan and build', () => {
     const result = resolveTypes('devops');
-    expect(result.plan).toEqual([]);
+    expect(result.plan).toEqual(PRESETS.devops.skills);
+    expect(result.plan).toBe(result.build);
   });
 });
 

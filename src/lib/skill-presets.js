@@ -1,28 +1,23 @@
 const PRESETS = {
   web: {
     description: 'Web frontend (React, Next.js, UI design)',
-    plan: ['web-design-guidelines'],
-    build: ['frontend-design:frontend-design', 'web-design-guidelines',
-            'vercel-composition-patterns', 'vercel-react-best-practices',
-],
+    skills: ['frontend-design:frontend-design', 'web-design-guidelines',
+             'vercel-composition-patterns', 'vercel-react-best-practices'],
   },
   devops: {
     description: 'Infrastructure & DevOps (Terraform, cloud)',
-    plan: [],
-    build: ['terraform-style-guide', 'terraform-test', 'refactor-module'],
+    skills: ['terraform-style-guide', 'terraform-test', 'refactor-module'],
   },
   docs: {
     description: 'Documentation & technical writing',
-    plan: ['beautiful-mermaid', 'mermaid-diagrams'],
-    build: ['beautiful-mermaid', 'mermaid-diagrams', 'visual-explainer',
-            'humanizer', 'docx', 'pdf'],
+    skills: ['beautiful-mermaid', 'mermaid-diagrams', 'visual-explainer',
+             'humanizer', 'docx', 'pdf'],
   },
   fullstack: {
     description: 'Full-stack web application',
-    plan: ['web-design-guidelines'],
-    build: ['frontend-design:frontend-design', 'web-design-guidelines',
-            'vercel-composition-patterns', 'vercel-react-best-practices',
-            'feature-dev:feature-dev'],
+    skills: ['frontend-design:frontend-design', 'web-design-guidelines',
+             'vercel-composition-patterns', 'vercel-react-best-practices',
+             'feature-dev:feature-dev'],
   },
 };
 
@@ -34,17 +29,13 @@ function resolveTypes(commaString) {
     throw new Error(`Unknown type(s): ${unknown.join(', ')}. Valid types: ${valid}`);
   }
 
-  const plan = [];
-  const build = [];
+  const skills = [];
   for (const type of types) {
-    for (const skill of PRESETS[type].plan) {
-      if (!plan.includes(skill)) plan.push(skill);
-    }
-    for (const skill of PRESETS[type].build) {
-      if (!build.includes(skill)) build.push(skill);
+    for (const skill of PRESETS[type].skills) {
+      if (!skills.includes(skill)) skills.push(skill);
     }
   }
-  return { plan, build };
+  return { plan: skills, build: skills };
 }
 
 function listPresets() {
