@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { resolveTypes } = require('./skill-presets');
 
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
 
@@ -30,7 +31,17 @@ function fileExists(p) {
   try { return fs.statSync(p).nlink > 0; } catch { return false; }
 }
 
-function init({ force = false } = {}) {
+function appendSkills(filePath, skills) {
+  if (!skills.length) return;
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const existing = skills.filter(s => !content.includes(s));
+  if (!existing.length) return;
+  const section = '\n# Project-specific skills (--type)\n'
+    + existing.map(s => `- \`${s}\``).join('\n') + '\n';
+  fs.writeFileSync(filePath, content.trimEnd() + '\n' + section);
+}
+
+function init({ force = false, types } = {}) {
   const projectRoot = process.cwd();
 
   // Don't create symlinks if running from the source repo itself
@@ -122,6 +133,24 @@ function init({ force = false } = {}) {
   } else {
     fs.writeFileSync(gitignorePath, `${entries.join('\n')}\n`);
     console.log('  created .gitignore with loop entries');
+  }
+
+  // Resolve types: use explicit flag, fall back to persisted .type
+  const typeFile = path.join(projectRoot, 'loop/.type');
+  const effectiveTypes = types
+    || (fs.existsSync(typeFile) ? fs.readFileSync(typeFile, 'utf-8').trim() : null);
+
+  if (types) {
+    fs.writeFileSync(typeFile, types + '\n');
+  }
+
+  if (effectiveTypes) {
+    const resolved = resolveTypes(effectiveTypes);
+    const planPath = path.join(projectRoot, 'loop/PROMPT_skills_plan.md');
+    const buildPath = path.join(projectRoot, 'loop/PROMPT_skills_build.md');
+    if (fs.existsSync(planPath)) appendSkills(planPath, resolved.plan);
+    if (fs.existsSync(buildPath)) appendSkills(buildPath, resolved.build);
+    console.log(`  applied skills for type: ${effectiveTypes}`);
   }
 
   console.log('\nDone! Run: loop plan');

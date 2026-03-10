@@ -2,6 +2,7 @@
 
 const { program } = require('commander');
 const { init } = require('../lib/init');
+const { listPresets } = require('../lib/skill-presets');
 const { runPlan, runBuild, runCombined, runDesign } = require('../lib/run');
 const { cleanup } = require('../lib/cleanup');
 const { generateSummary } = require('../lib/summary');
@@ -28,7 +29,18 @@ program
 program
   .command('init')
   .description('Symlink scripts/prompts and copy templates into current project')
-  .action(() => init());
+  .option('-t, --type <types>', 'Project type(s) for domain-specific skills (comma-separated)')
+  .option('--list-types', 'List available project types and exit')
+  .action((opts) => {
+    if (opts.listTypes) {
+      console.log('Available project types:\n');
+      for (const { name, description } of listPresets()) {
+        console.log(`  ${name.padEnd(12)} ${description}`);
+      }
+      return;
+    }
+    init({ types: opts.type });
+  });
 
 program
   .command('design')
@@ -85,11 +97,14 @@ program
 program
   .command('update')
   .description('Force-refresh all symlinks and templates from package')
-  .action(() => init({ force: true }));
+  .option('-t, --type <types>', 'Project type(s) for domain-specific skills (comma-separated)')
+  .action((opts) => init({ force: true, types: opts.type }));
 
 program.addHelpText('after', `
 Examples:
   $ loop init               Set up loop in current project
+  $ loop init --type web    Init with web-specific skills
+  $ loop init --list-types  Show available project types
   $ loop design             Interactive design/brainstorming session
   $ loop plan               Plan mode (3 autonomous iterations)
   $ loop build              Build mode (99 autonomous iterations)

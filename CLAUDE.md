@@ -16,7 +16,7 @@ Re-sync configuration after changes:
 ```bash
 claude mcp list                    # Verify MCP servers
 claude plugin marketplace list     # List installed plugins
-npm install --prefix src && npm test --prefix src  # Run JS tests (81 tests, requires install)
+npm install --prefix src && npm test --prefix src  # Run JS tests (95 tests, requires install)
 npm run test:integration --prefix src              # Run only integration tests (17 tests)
 bash src/scripts/tests/test_write_idea.sh          # Run shell tests (18 tests)
 bash src/scripts/tests/test_check_completion.sh    # Run completion detection tests (20 tests)
@@ -61,6 +61,8 @@ Source at `src/`. Docker: `COPY src /opt/loop` + `npm install`, symlinked as `/u
 
 ```bash
 loop init / update      # Initialize/refresh symlinks in project
+loop init --type web    # Init with domain-specific skills (web/devops/docs/fullstack)
+loop init --list-types  # Show available project types
 loop design             # Interactive brainstorming / design session
 loop plan / build / run # Run planning (3 iter), build (99 iter), or both
 loop doctor             # Check loop installation health
@@ -123,3 +125,4 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 - **Lazy Playwright**: Docker image ships without Chromium. `ensure-playwright.sh` installs system deps + browser on first `agent-browser` use via PreToolUse hook in `.claude/settings.json`. DevContainer retains build-time install.
 - **NODE_ENV gotcha**: DevContainer sets `NODE_ENV=production` which skips `devDependencies` on `npm install`. Use `NODE_ENV=development npm install --prefix src` to install jest and other dev tools.
 - **Jest 30 CLI**: Use `--testPathPatterns` (with trailing `s`), not `--testPathPattern`. The old flag is removed in Jest 30.
+- **Skill presets**: `src/lib/skill-presets.js` defines project type → skills mapping. `loop init --type` appends to PROMPT_skills_{plan,build}.md. Type persisted in `loop/.type` for `loop update`.
