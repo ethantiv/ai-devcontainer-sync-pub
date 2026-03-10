@@ -1,6 +1,8 @@
-0a. For each skill listed in @loop/PROMPT_skills_build.md, invoke the **Skill** tool. Load all skills in parallel in a single message.
+0a. <autonomous_mode>You are running in a fully autonomous pipeline with no human available to respond. When information is ambiguous or missing, resolve it yourself using available context (files, git history, existing docs) and choose the most reasonable option. Commit to your decision and proceed without interruption.</autonomous_mode>
 
-0b. Study @docs/plans/IMPLEMENTATION_PLAN.md — check completion:
+0b. For each skill listed in @loop/PROMPT_skills_build.md, invoke the **Skill** tool. Load all skills in parallel in a single message.
+
+0c. Study @docs/plans/IMPLEMENTATION_PLAN.md — check completion:
    - If `**Status:** COMPLETE` (uppercase) exists at document level → output "BUILD COMPLETE" and EXIT.
    - If no `- [ ]` unchecked tasks remain AND no phases with `**Status:** pending` or `**Status:** in_progress` → output "BUILD COMPLETE" and EXIT.
    - Otherwise → continue to step 1.
@@ -12,13 +14,13 @@
    b. **Execute with subagent-driven-development**: Invoke **Skill** tool: `Skill(skill="superpowers:subagent-driven-development")`. Follow the skill workflow exactly for each task in the phase:
       - Dispatch implementer subagent with full task text and codebase context
       - Implementer follows `superpowers:test-driven-development` (Red-Green-Refactor): write failing test → verify fails → implement → verify passes → refactor
-      - On errors or unexpected behavior: use `superpowers:systematic-debugging` — diagnose root cause, don't guess
+      - On errors or unexpected behavior: use `superpowers:systematic-debugging` to diagnose root cause before attempting fixes
       - For independent failures across different subsystems: use `superpowers:dispatching-parallel-agents`
       - After implementation: dispatch spec compliance reviewer subagent (does code match task spec?)
       - After spec review: dispatch code quality reviewer subagent
       - Each task ends with a commit from the implementer subagent
 
-   c. **ONE PHASE PER ITERATION.** After completing the current phase, proceed to steps 2-5 and stop. Do NOT start the next phase — it will be handled in a fresh iteration with clean context.
+   c. Complete one phase per iteration. After finishing the current phase, proceed to steps 2-5 and stop — the next phase runs in a fresh iteration with clean context.
 
 2. **Update the plan** in @docs/plans/IMPLEMENTATION_PLAN.md:
    - Mark completed task checkboxes: `- [ ]` → `- [x]`
@@ -26,11 +28,11 @@
    - If ALL phases are now `complete`: add `**Status:** COMPLETE` (UPPERCASE) at the top of the document, below the header
    - If the file exceeds 800 lines, trim completed content: remove `[x]` tasks, phases with status `complete`. Keep pending tasks, active phases, Findings & Decisions. Git history = full audit trail.
 
-3. **Verification**: Invoke **Skill** tool: `Skill(skill="superpowers:verification-before-completion")`. Run the project's validation commands (typecheck, lint, tests) as defined in @CLAUDE.md. You MUST NOT skip this step. Fix all errors before proceeding.
+3. **Verification**: Invoke **Skill** tool: `Skill(skill="superpowers:verification-before-completion")`. Run the project's validation commands (typecheck, lint, tests) as defined in @CLAUDE.md. Fix all errors before proceeding — the next iteration depends on a clean state.
 
 4. **Update CLAUDE.md**: Invoke **Skill** tool: `Skill(skill="auto-revise-claude-md")` to update Operational Notes.
 
-5. **Commit and push**: Run `git add -A && git commit` with a descriptive message, then `git push`. Every iteration MUST end with a git push. Do NOT skip this step.
+5. **Commit and push**: Run `git add -A && git commit` with a descriptive message, then `git push`. Each iteration ends with a push so the next iteration starts from the latest remote state.
 
 ## Important Rules
 

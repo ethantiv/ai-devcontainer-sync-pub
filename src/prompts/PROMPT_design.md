@@ -16,8 +16,8 @@
 
 ## Important Rules
 
-- DESIGN ONLY — do NOT implement anything, do NOT create implementation plans.
+- This session produces a design doc only — implementation plans come from `loop plan`.
 - This is an interactive session — ask questions, wait for answers, iterate.
-- Scope is defined by @docs/ROADMAP.md. Do NOT invent features beyond what ROADMAP describes.
+- Scope comes from @docs/ROADMAP.md. Stay within that scope.
 - The output is a design doc in `docs/plans/YYYY-MM-DD-<topic>-design.md`.
 - After design is approved, the user runs `loop plan` separately to create the implementation plan.

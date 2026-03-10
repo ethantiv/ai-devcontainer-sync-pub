@@ -396,7 +396,7 @@ if [[ "$AUTONOMOUS" == true ]]; then
         echo -e "\n=============================\n  Iteration $i/$ITERATIONS\n============================="
         echo "$i" > "$LOG_DIR/.progress"
 
-        claude -p --verbose --output-format stream-json < "$PROMPT_FILE" | tee -a "$LOG_FILE" | format_stream
+        claude -p --verbose --output-format stream-json --disallowedTools "AskUserQuestion" < "$PROMPT_FILE" | tee -a "$LOG_FILE" | format_stream
         ((COMPLETED_ITERATIONS++))
         [[ "$SCRIPT_NAME" != "build" ]] && ensure_committed
 

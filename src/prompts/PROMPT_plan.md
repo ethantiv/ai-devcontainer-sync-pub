@@ -1,10 +1,12 @@
-0a. For each skill listed in @loop/PROMPT_skills_plan.md, invoke the **Skill** tool. Load all skills in parallel in a single message.
+0a. <autonomous_mode>You are running in a fully autonomous pipeline with no human available to respond. When information is ambiguous or missing, resolve it yourself using available context (files, git history, existing docs) and choose the most reasonable option. Commit to your decision and proceed without interruption.</autonomous_mode>
 
-0b. Read @docs/ROADMAP.md — this defines the scope for planning.
+0b. For each skill listed in @loop/PROMPT_skills_plan.md, invoke the **Skill** tool. Load all skills in parallel in a single message.
 
-0c. Read @docs/plans/IMPLEMENTATION_PLAN.md (if it exists).
+0c. Read @docs/ROADMAP.md — this defines the scope for planning.
 
-0d. Search @docs/plans/ for any design docs (YYYY-MM-DD-*-design.md). If found, read the most recent one — it provides architecture decisions and constraints.
+0d. Read @docs/plans/IMPLEMENTATION_PLAN.md (if it exists).
+
+0e. Search @docs/plans/ for any design docs (YYYY-MM-DD-*-design.md). If found, read the most recent one — it provides architecture decisions and constraints.
 
 1. **Explore**: Launch up to 4 `feature-dev:code-explorer` subagents via **Task** tool to map @src/ architecture and compare against @docs/. Look for: TODO, placeholders, minimal implementations, missing tests, skipped/flaky tests, inconsistent patterns.
 
@@ -17,15 +19,15 @@
    - Set initial phase **Status:** `pending` (all phases start pending)
    - Document findings in **Findings & Decisions** section
 
-3. **Commit and push**: After updating the plan: `git add -A && git commit` then `git push`. You MUST commit your plan updates before the session ends.
+3. **Commit and push**: After updating the plan: `git add -A && git commit` then `git push`. The build loop reads the plan from the remote, so pushing is essential.
 
-## Plan Format Requirements (CRITICAL for loop automation)
+## Plan Format Requirements
 
-The loop's `check_completion()` function parses the plan file. Your plan MUST follow this format exactly:
+<format_rationale>The loop's `check_completion()` function parses the plan file with regex. Deviating from this format breaks automated completion detection and early exit.</format_rationale>
 
 ### Phase headers with Status
 
-Each phase MUST have a status line. Use **lowercase** for active states:
+Each phase needs a status line. Use lowercase for active states:
 
 ```markdown
 ## Phase 1: [Deliverable Name]
@@ -37,7 +39,7 @@ Valid status values: `pending` → `in_progress` → `complete` (lowercase for t
 
 ### Task checkboxes
 
-Each task MUST have a checkbox summary line as the FIRST line under the task heading:
+Each task starts with a checkbox summary line directly under the task heading:
 
 ```markdown
 ### Task 1: [Component Name]
@@ -50,7 +52,7 @@ Each task MUST have a checkbox summary line as the FIRST line under the task hea
 
 ### Completion marker
 
-Do NOT add a completion marker yourself. The build loop adds `**Status:** COMPLETE` (uppercase) when all phases are done.
+The build loop adds `**Status:** COMPLETE` (uppercase) automatically when all phases are done. Leave this to the automation.
 
 ### Example structure
 
@@ -89,8 +91,8 @@ Do NOT add a completion marker yourself. The build loop adds `**Status:** COMPLE
 
 ## Important Rules
 
-- PLAN ONLY — do NOT implement anything.
-- Before adding a task: search code to confirm it doesn't already exist.
-- Scope is defined by @docs/ROADMAP.md and @docs/specs/. Do NOT invent features beyond what ROADMAP describes.
-- Tasks must be granular enough to complete in 2-5 minutes each, with explicit test commands and expected output.
+- This session produces a plan only — implementation happens in `loop build`.
+- Before adding a task, search the code to confirm the functionality doesn't already exist.
+- Scope comes from @docs/ROADMAP.md and @docs/specs/. Stay within that scope.
+- Tasks should be granular enough to complete in 2-5 minutes each, with explicit test commands and expected output.
 - @src/lib = project's standard library, prefer consolidated implementations there over ad-hoc copies.
