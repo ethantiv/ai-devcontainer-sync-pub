@@ -661,11 +661,12 @@ parse_mcp_servers() {
         [[ ! "$line" =~ (stdio|http) ]] && continue
 
         local tags_str="all"
-        if [[ "$line" =~ \[([a-z,]+)\]$ ]]; then
+        if [[ "$line" =~ \[([a-z,\ ]+)\]$ ]]; then
             tags_str="${BASH_REMATCH[1]}"
             line="${line% \[*}"
         fi
 
+        tags_str="${tags_str// /}"
         if [[ "$tags_str" != "all" ]] && [[ ! ",$tags_str," =~ ,"$ENVIRONMENT_TAG", ]]; then
             continue
         fi
@@ -718,7 +719,7 @@ sync_mcp_servers() {
     parse_mcp_servers "$plugins_file"
 
     # Get installed MCP servers from .claude.json
-    local settings_file="$HOME/.claude/.claude.json"
+    local settings_file="${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json"
     local installed=()
     if [[ -f "$settings_file" ]]; then
         while IFS= read -r name; do
