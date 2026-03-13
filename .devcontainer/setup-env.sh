@@ -133,6 +133,8 @@ setup_github_token() {
 
     ok "GitHub token configured"
     echo "export GH_TOKEN='${GH_TOKEN}'" >> ~/.bashrc
+    # Register gh as git credential helper for HTTPS repos
+    gh auth setup-git 2>/dev/null || warn "Failed to configure gh as git credential helper"
     echo "alias cc='clear && claude'" >> ~/.bashrc
     echo "alias ccc='clear && claude -c'" >> ~/.bashrc
     echo "alias ccr='clear && claude -r'" >> ~/.bashrc
