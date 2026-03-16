@@ -47,7 +47,9 @@ Auto-triggered by Claude based on context (`dev-marketplace` plugins):
 | `COOLIFY_BASE_URL` | No | URL of Coolify instance |
 | `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |
 | `STITCH_API_KEY` | No | Google Stitch API key for Stitch MCP server |
+| `GH_TOKEN_ROCHE` | No | GitHub PAT (classic) with SSO for corporate account |
 | `GIT_USER_NAME` / `GIT_USER_EMAIL` | No | Git global identity |
+| `GIT_USER_EMAIL_ROCHE` | No | Git email for corporate (Roche) account |
 
 Codespaces: add as repository secrets. Local: create `.devcontainer/.env` (copy from `.devcontainer/.env.example`).
 

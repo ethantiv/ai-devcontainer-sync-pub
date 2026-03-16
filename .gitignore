@@ -13,6 +13,7 @@ package-lock.json
 # Python
 __pycache__/
 
-# Logs
+# Logs and Docs
 src/logs/
 loop/logs/
+docs/

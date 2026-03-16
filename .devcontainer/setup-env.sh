@@ -140,6 +140,81 @@ setup_github_token() {
     echo "alias ccr='clear && claude -r'" >> ~/.bashrc
 }
 
+setup_multi_github() {
+    # Skip if no Roche token configured
+    [[ -n "${GH_TOKEN_ROCHE:-}" ]] || return 0
+
+    echo "🔐 Setting up multi-GitHub account routing..."
+
+    local user_name="${GIT_USER_NAME:-}"
+    local user_email="${GIT_USER_EMAIL:-}"
+    local roche_email="${GIT_USER_EMAIL_ROCHE:-$user_email}"
+
+    # Set global git identity (needed for includeIf to have a base)
+    if [[ -n "$user_name" ]]; then
+        git config --global user.name "$user_name"
+    fi
+    if [[ -n "$user_email" ]]; then
+        git config --global user.email "$user_email"
+    fi
+
+    # Add includeIf for Roche repos (idempotent — unset first, then set)
+    git config --global --unset-all 'includeIf.gitdir:~/projects/Roche/.path' 2>/dev/null || true
+    git config --global 'includeIf.gitdir:~/projects/Roche/.path' '~/.gitconfig-roche'
+
+    # Write ~/.gitconfig-roche
+    cat > "$HOME/.gitconfig-roche" << EOF
+[user]
+    email = ${roche_email}
+
+[credential "https://github.com"]
+    helper =
+    helper = !~/.local/bin/git-credential-github-multi
+EOF
+    ok "Git identity routing configured"
+
+    # Write credential helper script
+    ensure_directory "$HOME/.local/bin"
+    cat > "$HOME/.local/bin/git-credential-github-multi" << 'CREDEOF'
+#!/bin/bash
+# Credential helper for Roche GitHub account
+[ "$1" != "get" ] && exit 0
+if [[ -z "$GH_TOKEN_ROCHE" ]]; then
+    echo "quit=true"
+    exit 0
+fi
+while IFS= read -r line; do
+    [[ -z "$line" ]] && break
+done
+echo "username=x-access-token"
+echo "password=${GH_TOKEN_ROCHE}"
+CREDEOF
+    chmod +x "$HOME/.local/bin/git-credential-github-multi"
+    ok "Credential helper installed"
+
+    # Append to bashrc (with idempotency guard)
+    if ! grep -q "GH_TOKEN_ROCHE" "$HOME/.bashrc" 2>/dev/null; then
+        cat >> "$HOME/.bashrc" << BASHEOF
+
+# Multi-GitHub: Roche account routing
+export GH_TOKEN_ROCHE='${GH_TOKEN_ROCHE}'
+
+gh() {
+    local token="\$GH_TOKEN"
+    case "\$PWD" in
+        /home/vscode/projects/Roche/*|/home/vscode/projects/Roche)
+            token="\${GH_TOKEN_ROCHE:-\$GH_TOKEN}"
+            ;;
+    esac
+    GH_TOKEN="\$token" command gh "\$@"
+}
+BASHEOF
+        ok "Shell wrapper configured"
+    fi
+
+    ok "Multi-GitHub setup complete (ethantiv + zaniewim_roche)"
+}
+
 # =============================================================================
 # LOOP CLI INSTALLATION
 # =============================================================================
@@ -736,6 +811,7 @@ main() {
 
     setup_ssh_authentication
     setup_github_token
+    setup_multi_github
     install_loop_cli
 
     # Optional config reset (set RESET_CLAUDE_CONFIG=true or RESET_GEMINI_CONFIG=true)
