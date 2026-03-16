@@ -13,17 +13,25 @@
 # =============================================================================
 
 # Development tools
+agent-sdk-dev
 atlassian
+claude-code-setup
 claude-md-management
+code-simplifier
 commit-commands
+explanatory-output-style
 feature-dev
 frontend-design
+hookify
 playground
 plugin-dev
+skill-creator
 superpowers
 
 # Language Server Protocol (LSP) plugins
+jdtls-lsp
 pyright-lsp
+rust-analyzer-lsp
 typescript-lsp
 
 # =============================================================================
