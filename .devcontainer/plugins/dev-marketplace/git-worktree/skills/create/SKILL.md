@@ -1,5 +1,5 @@
 ---
-name: create
+name: git-worktree:create
 description: >
   This skill should be used when the user asks to "create a git worktree",
   "new worktree", "git worktree create", "add worktree", "git worktree add",

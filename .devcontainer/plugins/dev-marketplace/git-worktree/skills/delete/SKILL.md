@@ -1,5 +1,5 @@
 ---
-name: delete
+name: git-worktree:delete
 description: >
   This skill should be used when the user asks to "delete a git worktree",
   "remove worktree", "git worktree delete", "git worktree remove",

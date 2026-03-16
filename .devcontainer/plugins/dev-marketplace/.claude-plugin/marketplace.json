@@ -6,19 +6,14 @@
   },
   "plugins": [
     {
-      "name": "git-worktree",
-      "description": "Create and delete Git worktrees with conventional naming: {project}-{name} on branch {name}",
-      "source": "./git-worktree"
-    },
-    {
-      "name": "roadmap",
-      "description": "Generate or update ROADMAP.md with completed features and future proposals",
-      "source": "./roadmap"
-    },
-    {
       "name": "dependency-update",
       "description": "Scan and update project dependencies across all ecosystems to their latest versions",
       "source": "./dependency-update"
+    },
+    {
+      "name": "git-worktree",
+      "description": "Create and delete Git worktrees with conventional naming: {project}-{name} on branch {name}",
+      "source": "./git-worktree"
     },
     {
       "name": "read-arxiv-paper",
@@ -26,9 +21,9 @@
       "source": "./read-arxiv-paper"
     },
     {
-      "name": "security-check",
-      "description": "Security vulnerability review of code changes with 3-phase sub-agent pipeline and false-positive filtering",
-      "source": "./security-check"
+      "name": "roadmap",
+      "description": "Generate or update ROADMAP.md with completed features and future proposals",
+      "source": "./roadmap"
     }
   ]
 }
