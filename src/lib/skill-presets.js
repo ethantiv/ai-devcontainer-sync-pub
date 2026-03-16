@@ -29,12 +29,7 @@ function resolveTypes(commaString) {
     throw new Error(`Unknown type(s): ${unknown.join(', ')}. Valid types: ${valid}`);
   }
 
-  const skills = [];
-  for (const type of types) {
-    for (const skill of PRESETS[type].skills) {
-      if (!skills.includes(skill)) skills.push(skill);
-    }
-  }
+  const skills = [...new Set(types.flatMap(t => PRESETS[t].skills))];
   return { plan: skills, build: skills };
 }
 

@@ -64,25 +64,34 @@ function spawnLoop(opts, mode) {
   });
 }
 
-function runPlan(opts) {
-  spawnLoop(opts, 'plan').then((code) => process.exit(code));
+async function runPlan(opts) {
+  const code = await spawnLoop(opts, 'plan');
+  process.exit(code);
 }
 
-function runBuild(opts) {
-  spawnLoop(opts, 'build').then((code) => process.exit(code));
+async function runBuild(opts) {
+  const code = await spawnLoop(opts, 'build');
+  process.exit(code);
 }
 
-function runDesign(opts) {
-  spawnLoop({ ...opts, interactive: true }, 'design').then((code) => process.exit(code));
+async function runDesign(opts) {
+  const code = await spawnLoop({ ...opts, interactive: true }, 'design');
+  process.exit(code);
 }
 
-function runCombined(opts) {
+async function runCombined(opts) {
   // Plan phase: default iterations, pass --idea, ignore -i override
   const planOpts = {
     interactive: opts.interactive,
     idea: opts.idea,
     new: opts.new,
   };
+
+  const planCode = await spawnLoop(planOpts, 'plan');
+  if (planCode !== 0) {
+    console.error(`Plan phase exited with code ${planCode}, skipping build.`);
+    process.exit(planCode);
+  }
 
   // Build phase: uses -i if given, no --idea (plan already wrote it to ROADMAP)
   const buildOpts = {
@@ -91,13 +100,8 @@ function runCombined(opts) {
     iterations: opts.iterations,
   };
 
-  spawnLoop(planOpts, 'plan').then((planCode) => {
-    if (planCode !== 0) {
-      console.error(`Plan phase exited with code ${planCode}, skipping build.`);
-      process.exit(planCode);
-    }
-    spawnLoop(buildOpts, 'build').then((buildCode) => process.exit(buildCode));
-  });
+  const buildCode = await spawnLoop(buildOpts, 'build');
+  process.exit(buildCode);
 }
 
 module.exports = { runPlan, runBuild, runCombined, runDesign, buildArgs, checkLoopScript, checkVersionMismatch, PKG_VERSION };

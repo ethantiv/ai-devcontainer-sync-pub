@@ -34,10 +34,10 @@ function fileExists(p) {
 function appendSkills(filePath, skills) {
   if (!skills.length) return;
   const content = fs.readFileSync(filePath, 'utf-8');
-  const existing = skills.filter(s => !content.includes(s));
-  if (!existing.length) return;
+  const newSkills = skills.filter(s => !content.includes(s));
+  if (!newSkills.length) return;
   const section = '\n# Project-specific skills (--type)\n'
-    + existing.map(s => `- \`${s}\``).join('\n') + '\n';
+    + newSkills.map(s => `- \`${s}\``).join('\n') + '\n';
   fs.writeFileSync(filePath, content.trimEnd() + '\n' + section);
 }
 

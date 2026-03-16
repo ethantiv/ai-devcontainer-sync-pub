@@ -92,12 +92,7 @@ function runChecks() {
 }
 
 function formatResults(results) {
-  const lines = [];
-  lines.push('=== Loop Doctor ===');
-  lines.push('');
-
-  let passed = 0;
-  let failed = 0;
+  const lines = ['=== Loop Doctor ===', ''];
 
   for (const r of results) {
     const icon = r.ok ? '[OK]' : '[FAIL]';
@@ -105,12 +100,11 @@ function formatResults(results) {
     if (!r.ok && r.fix) {
       lines.push(`      Fix: ${r.fix}`);
     }
-    if (r.ok) passed++;
-    else failed++;
   }
 
-  lines.push('');
-  lines.push(`${passed} passed, ${failed} failed`);
+  const passed = results.filter(r => r.ok).length;
+  const failed = results.length - passed;
+  lines.push('', `${passed} passed, ${failed} failed`);
 
   return lines.join('\n');
 }
