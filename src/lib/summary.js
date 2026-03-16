@@ -71,9 +71,8 @@ async function parseLog(logPath) {
             filesModified.add(block.input.file_path);
             fileEditCounts[block.input.file_path] = (fileEditCounts[block.input.file_path] || 0) + 1;
           }
-        } else if (block.type === 'tool_result' || block.type === 'text') {
-          const text = typeof block.text === 'string' ? block.text :
-                       typeof block.content === 'string' ? block.content : '';
+        } else if (block.type === 'text') {
+          const text = typeof block.text === 'string' ? block.text : '';
           extractTestResults(text, testResults);
         }
       }

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { resolveTypes } = require('./skill-presets');
+const { PKG_VERSION } = require('./run');
 
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
 
@@ -115,9 +116,8 @@ function init({ force = false, types } = {}) {
 
   // Write version file for run-time checks
   const versionPath = path.join(projectRoot, 'loop/.version');
-  const version = require('../package.json').version;
-  fs.writeFileSync(versionPath, version + '\n');
-  console.log(`  wrote loop/.version (${version})`);
+  fs.writeFileSync(versionPath, PKG_VERSION + '\n');
+  console.log(`  wrote loop/.version (${PKG_VERSION})`);
 
   // Add loop artifacts to .gitignore
   const gitignorePath = path.join(projectRoot, '.gitignore');

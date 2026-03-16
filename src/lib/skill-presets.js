@@ -15,9 +15,7 @@ const PRESETS = {
   },
   fullstack: {
     description: 'Full-stack web application',
-    skills: ['frontend-design:frontend-design', 'web-design-guidelines',
-             'vercel-composition-patterns', 'vercel-react-best-practices',
-             'feature-dev:feature-dev'],
+    get skills() { return [...PRESETS.web.skills, 'feature-dev:feature-dev']; },
   },
 };
 
