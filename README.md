@@ -6,9 +6,10 @@ Ready-to-use development environment with Claude Code, Gemini CLI, autonomous de
 
 - **Claude Code** and **Gemini CLI** — pre-installed and configured
 - **dev-loop** — autonomous plan/build cycles powered by Claude CLI (`loop` command)
-- **MCP Servers** — AWS docs, Terraform, Context7, Coolify, Stitch
-- **Slash Commands** — `/code-review`, `/roadmap`, `/git-worktree`, `/loop-analyzer`
-- **Skills & Plugins** — auto-installed from `skills-plugins.txt`
+- **MCP Servers** — Context7, Coolify, AWS docs, Terraform
+- **Slash Commands** — `/roadmap`, `/git-worktree:create`, `/git-worktree:delete`, `/dependency-update`, `/read-arxiv-paper`
+- **Skills & Plugins** — 18 official + 4 local + 13 external skills, auto-installed from `skills-plugins.txt`
+- **LSP Support** — TypeScript, Python (Pyright), Rust (rust-analyzer), Java (jdtls)
 
 ## Getting Started
 
@@ -116,3 +117,4 @@ Set in `.devcontainer/.env` (copy from `.devcontainer/.env.example`).
 | `CONTEXT7_API_KEY` | No | Context7 MCP server |
 | `COOLIFY_BASE_URL` / `COOLIFY_ACCESS_TOKEN` | No | Coolify deployment management |
 | `STITCH_API_KEY` | No | Google Stitch MCP server |
+| `RESET_CLAUDE_CONFIG` / `RESET_GEMINI_CONFIG` | No | Set `true` to clear config on startup |
