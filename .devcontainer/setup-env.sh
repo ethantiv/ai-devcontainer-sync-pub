@@ -192,24 +192,56 @@ CREDEOF
     chmod +x "$HOME/.local/bin/git-credential-github-multi"
     ok "Credential helper installed"
 
-    # Append to bashrc (with idempotency guard)
+    # Remove legacy gh() wrapper from bashrc (replaced by shim)
+    if grep -q '^gh()' "$HOME/.bashrc" 2>/dev/null; then
+        sed -i '/^gh()/,/^}/d' "$HOME/.bashrc"
+        sed -i '/# Multi-GitHub: Roche account routing/d' "$HOME/.bashrc"
+    fi
+
+    # Export GH_TOKEN_ROCHE for child processes (idempotent guard)
     if ! grep -q "GH_TOKEN_ROCHE" "$HOME/.bashrc" 2>/dev/null; then
         cat >> "$HOME/.bashrc" << BASHEOF
 
-# Multi-GitHub: Roche account routing
+# Multi-GitHub: Roche account token
 export GH_TOKEN_ROCHE='${GH_TOKEN_ROCHE}'
+BASHEOF
+    fi
 
-gh() {
-    local token="\$GH_TOKEN"
-    case "\$PWD" in
-        /home/vscode/projects/Roche/*|/home/vscode/projects/Roche)
-            token="\${GH_TOKEN_ROCHE:-\$GH_TOKEN}"
+    # Write gh CLI shim (works in both interactive and non-interactive shells)
+    cat > "$HOME/.local/bin/gh" << 'GHEOF'
+#!/bin/bash
+# Multi-GitHub account router — shadows /usr/bin/gh
+# Routes GH_TOKEN based on URL arguments and PWD
+token="${GH_TOKEN:-}"
+roche_orgs="${GH_ROCHE_ORGS:-RIS-Navify-Data-Platform}"
+
+# URL-based detection: scan args for Roche org URLs
+for arg in "$@"; do
+    if [[ "$arg" =~ github\.com[:/](${roche_orgs})(/|$) ]]; then
+        token="${GH_TOKEN_ROCHE:-$token}"
+        break
+    fi
+done
+
+# PWD-based detection (fallback)
+if [[ "$token" == "${GH_TOKEN:-}" ]]; then
+    case "$PWD" in
+        "$HOME/projects/Roche"/*|"$HOME/projects/Roche")
+            token="${GH_TOKEN_ROCHE:-$token}"
             ;;
     esac
-    GH_TOKEN="\$token" command gh "\$@"
-}
-BASHEOF
-        ok "Shell wrapper configured"
+fi
+
+GH_TOKEN="$token" exec /usr/bin/gh "$@"
+GHEOF
+    chmod +x "$HOME/.local/bin/gh"
+    ok "gh CLI shim installed"
+
+    # Warn about missing token scopes (non-fatal)
+    if command -v /usr/bin/gh &>/dev/null; then
+        if GH_TOKEN="$GH_TOKEN_ROCHE" /usr/bin/gh auth status 2>&1 | grep -q "Missing required token scopes"; then
+            warn "GH_TOKEN_ROCHE may be missing required scopes (e.g., read:org). Run: GH_TOKEN=\$GH_TOKEN_ROCHE gh auth status"
+        fi
     fi
 
     ok "Multi-GitHub setup complete (ethantiv + zaniewim_roche)"

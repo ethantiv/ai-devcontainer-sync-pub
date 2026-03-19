@@ -46,6 +46,9 @@
     "TZ": "Europe/Warsaw",
     "LC_TIME": "pl_PL.UTF-8"
   },
+  "remoteEnv": {
+    "PATH": "${containerEnv:HOME}/.local/bin:${containerEnv:PATH}"
+  },
   "runArgs": [
     "--env-file",
     ".devcontainer/.env",
