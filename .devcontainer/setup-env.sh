@@ -7,6 +7,11 @@ set -e
 # Ensure ~/.local/bin is in PATH (Claude CLI installed there by install.sh)
 export PATH="$HOME/.local/bin:$PATH"
 
+# Persist PATH for non-login shells (gh shim, credential helpers)
+if ! grep -q '\.local/bin.*PATH' "$HOME/.bashrc" 2>/dev/null; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+fi
+
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
