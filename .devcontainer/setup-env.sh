@@ -6,6 +6,9 @@ set -e
 
 # Ensure ~/.local/bin is in PATH (Claude CLI installed there by install.sh)
 export PATH="$HOME/.local/bin:$PATH"
+if ! grep -q '\.local/bin' "$HOME/.bashrc" 2>/dev/null; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+fi
 
 # =============================================================================
 # CONFIGURATION
@@ -44,6 +47,8 @@ has_command() {
 ok()   { echo -e "  \033[32m✔︎\033[0m $1"; }
 warn() { echo -e "  \033[33m⚠️\033[0m  $1"; }
 fail() { echo -e "  \033[31m❌\033[0m $1"; }
+
+trim_whitespace() { local v="$*"; v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"; echo "$v"; }
 
 setup_file_lock() {
     exec 200>"$LOCK_FILE"
@@ -132,12 +137,19 @@ setup_github_token() {
     fi
 
     ok "GitHub token configured"
-    echo "export GH_TOKEN='${GH_TOKEN}'" >> ~/.bashrc
     # Register gh as git credential helper for HTTPS repos
     gh auth setup-git 2>/dev/null || warn "Failed to configure gh as git credential helper"
-    echo "alias cc='clear && claude'" >> ~/.bashrc
-    echo "alias ccc='clear && claude -c'" >> ~/.bashrc
-    echo "alias ccr='clear && claude -r'" >> ~/.bashrc
+    # Append token export and aliases (idempotent)
+    if ! grep -q "GH_TOKEN" "$HOME/.bashrc" 2>/dev/null; then
+        cat >> ~/.bashrc << TOKENEOF
+
+# GitHub token and Claude aliases
+export GH_TOKEN='${GH_TOKEN}'
+alias cc='clear && claude'
+alias ccc='clear && claude -c'
+alias ccr='clear && claude -r'
+TOKENEOF
+    fi
 }
 
 setup_multi_github() {
@@ -327,7 +339,7 @@ sync_claude_scripts() {
     for script in "$source_dir"/*.sh; do
         [[ -f "$script" ]] || continue
         cp "$script" "$CLAUDE_SCRIPTS_DIR/"
-        chmod +x "$CLAUDE_SCRIPTS_DIR/$(basename "$script")"
+        chmod +x "$CLAUDE_SCRIPTS_DIR/${script##*/}"
     done
     ok "Synced scripts to ~/.claude/scripts/"
 }
@@ -427,7 +439,7 @@ install_all_plugins_and_skills() {
         # Stop at MCP SERVERS section (handled by sync_mcp_servers)
         [[ "$line" =~ "MCP SERVERS" ]] && break
         [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
-        line=$(echo "$line" | xargs)
+        line=$(trim_whitespace "$line")
         [[ -z "$line" ]] && continue
 
         # New format: - <url> --skill <name>
@@ -601,7 +613,7 @@ parse_mcp_servers() {
         [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
         [[ $in_mcp_section -eq 0 ]] && continue
 
-        line=$(echo "$line" | xargs)
+        line=$(trim_whitespace "$line")
         [[ -z "$line" ]] && continue
 
         # Skip non-MCP lines (skills, plugins)
@@ -763,8 +775,11 @@ build_expected_plugins_list() {
         while IFS= read -r line || [[ -n "$line" ]]; do
             [[ "$line" =~ "MCP SERVERS" ]] && break
             [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
-            line=$(echo "$line" | xargs)
+            line=$(trim_whitespace "$line")
             [[ -z "$line" ]] && continue
+
+            # Skip skill lines (new format: - <url> --skill <name>)
+            [[ "$line" =~ ^- ]] && continue
 
             if [[ "$line" =~ @ ]]; then
                 local name="${line%%@*}"
