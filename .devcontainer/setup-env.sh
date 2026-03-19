@@ -6,9 +6,6 @@ set -e
 
 # Ensure ~/.local/bin is in PATH (Claude CLI installed there by install.sh)
 export PATH="$HOME/.local/bin:$PATH"
-if ! grep -q '\.local/bin' "$HOME/.bashrc" 2>/dev/null; then
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-fi
 
 # =============================================================================
 # CONFIGURATION
