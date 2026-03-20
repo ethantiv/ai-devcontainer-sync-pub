@@ -14,7 +14,6 @@ readonly CLAUDE_SETTINGS_FILE="$CLAUDE_DIR/settings.json"
 readonly CLAUDE_SCRIPTS_DIR="$CLAUDE_DIR/scripts"
 
 readonly ENVIRONMENT_TAG="local"
-readonly CLAUDE_PLUGINS_FILE="configuration/skills-plugins.txt"
 readonly OFFICIAL_MARKETPLACE_NAME="claude-plugins-official"
 readonly OFFICIAL_MARKETPLACE_REPO="anthropics/claude-plugins-official"
 readonly LOCAL_MARKETPLACE_NAME="dev-marketplace"
@@ -32,6 +31,10 @@ get_script_dir() {
 
 SCRIPT_DIR="$(get_script_dir)"
 DEVCONTAINER_DIR="$SCRIPT_DIR/.devcontainer"
+
+# Config parser (replaces skills-plugins.txt DSL)
+CONFIG_PARSER="$SCRIPT_DIR/src/lib/config-parser.js"
+CONFIG_FILE="$SCRIPT_DIR/.devcontainer/configuration/env-config.yaml"
 
 # =============================================================================
 # UTILITY FUNCTIONS
@@ -116,7 +119,7 @@ check_requirements() {
         echo ""
         for dep in "${missing[@]}"; do
             case "$dep" in
-                jq) echo "  brew install jq" ;;
+                jq) echo "  jq is required — install with: brew install jq" ;;
                 node|npm|npx) echo "  brew install node" ;;
                 brew) echo "  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"" ;;
             esac
@@ -196,29 +199,29 @@ install_loop() {
 # =============================================================================
 
 apply_claude_settings() {
-    local default_settings='{
-        "permissions": {
-            "allow": [],
-            "deny": [],
-            "ask": [],
-            "defaultMode": "bypassPermissions"
-        },
-        "language": "Polski",
-        "statusLine": {
-            "type": "command",
-            "command": "~/.claude/scripts/context-bar.sh"
-        }
-    }'
+    has_command jq || { warn "jq not found - cannot manage settings"; return 0; }
+
+    local claude_config
+    claude_config=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section claude) || {
+        warn "Failed to parse Claude settings"; return 0
+    }
+
+    # statusLine stays hardcoded — design doc marks it out of scope
+    local default_settings
+    default_settings=$(echo "$claude_config" | jq --argjson sl '{"type":"command","command":"~/.claude/scripts/context-bar.sh"}' '{
+        permissions: .permissions,
+        language: .language,
+        statusLine: $sl
+    }')
 
     if [[ -f "$CLAUDE_SETTINGS_FILE" ]]; then
         local merged
         merged=$(jq -s '.[0] * .[1]' <(echo "$default_settings") "$CLAUDE_SETTINGS_FILE" 2>/dev/null)
         [[ -n "$merged" ]] && echo "$merged" > "$CLAUDE_SETTINGS_FILE"
-        ok "Settings merged with existing"
     else
         echo "$default_settings" | jq '.' > "$CLAUDE_SETTINGS_FILE"
-        ok "Settings created"
     fi
+    ok "Settings configured"
 }
 
 sync_claude_scripts() {
@@ -245,6 +248,29 @@ copy_claude_memory() {
     [[ -f "$source_file" ]] && cp "$source_file" "$CLAUDE_DIR/CLAUDE.md" && ok "CLAUDE.md synced"
 }
 
+propagate_env_from_config() {
+    local config_json
+    config_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --all 2>/dev/null) || return 0
+
+    local tz locale git_name git_email work_email work_orgs
+    tz=$(echo "$config_json" | jq -r '.timezone // empty')
+    locale=$(echo "$config_json" | jq -r '.locale // empty')
+    git_name=$(echo "$config_json" | jq -r '.git.personal.name // empty')
+    git_email=$(echo "$config_json" | jq -r '.git.personal.email // empty')
+    work_email=$(echo "$config_json" | jq -r '.git.work.email // empty')
+    work_orgs=$(echo "$config_json" | jq -r '.git.work.orgs // empty')
+
+    local bashrc="$HOME/.bashrc"
+    [[ -n "$tz" ]] && ! grep -q "^export TZ=" "$bashrc" 2>/dev/null && echo "export TZ=\"$tz\"" >> "$bashrc"
+    [[ -n "$locale" ]] && ! grep -q "^export LC_TIME=" "$bashrc" 2>/dev/null && echo "export LC_TIME=\"$locale\"" >> "$bashrc"
+    [[ -n "$git_name" ]] && ! grep -q "^export GIT_USER_NAME=" "$bashrc" 2>/dev/null && echo "export GIT_USER_NAME=\"$git_name\"" >> "$bashrc"
+    [[ -n "$git_email" ]] && ! grep -q "^export GIT_USER_EMAIL=" "$bashrc" 2>/dev/null && echo "export GIT_USER_EMAIL=\"$git_email\"" >> "$bashrc"
+    [[ -n "$work_email" ]] && ! grep -q "^export GIT_USER_EMAIL_ROCHE=" "$bashrc" 2>/dev/null && echo "export GIT_USER_EMAIL_ROCHE=\"$work_email\"" >> "$bashrc"
+    [[ -n "$work_orgs" ]] && ! grep -q "^export GH_ROCHE_ORGS=" "$bashrc" 2>/dev/null && echo "export GH_ROCHE_ORGS=\"$work_orgs\"" >> "$bashrc"
+
+    ok "Environment variables propagated to ~/.bashrc"
+}
+
 setup_claude_configuration() {
     print_header "Claude configuration"
 
@@ -254,6 +280,7 @@ setup_claude_configuration() {
     ensure_directory "$CLAUDE_DIR/skills"
 
     apply_claude_settings
+    propagate_env_from_config
     copy_claude_memory
     sync_claude_scripts
 }
@@ -346,9 +373,8 @@ install_github_skill() {
 install_all_plugins_and_skills() {
     print_header "Installing plugins and skills"
 
-    local plugins_file="$DEVCONTAINER_DIR/$CLAUDE_PLUGINS_FILE"
-
-    [[ -f "$plugins_file" ]] || { warn "$plugins_file not found"; return 0; }
+    has_command claude || { warn "Claude CLI not found"; return 0; }
+    has_command jq || { warn "jq not found"; return 0; }
 
     if ! ensure_marketplace "$OFFICIAL_MARKETPLACE_NAME" "$OFFICIAL_MARKETPLACE_REPO"; then
         warn "Skipping official marketplace plugins"
@@ -363,62 +389,54 @@ install_all_plugins_and_skills() {
 
     local plugins_installed=0 plugins_skipped=0 plugins_failed=0
     local skills_installed=0 skills_failed=0
-    local _seen_marketplaces=""
 
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        # Stop at MCP SERVERS section (handled by sync_mcp_servers)
-        [[ "$line" =~ "MCP SERVERS" ]] && break
-        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
-        line=$(echo "$line" | xargs)
-        [[ -z "$line" ]] && continue
+    # Plugins (flat array from parser)
+    local plugins_json
+    plugins_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section plugins_flat) || {
+        warn "Failed to parse plugin config"; return 0
+    }
 
-        # New format: - <url> --skill <name>
-        if [[ "$line" =~ ^-[[:space:]]+(https://[^[:space:]]+)[[:space:]]+--skill[[:space:]]+([^[:space:]]+) ]]; then
-            local url="${BASH_REMATCH[1]}"
-            local name="${BASH_REMATCH[2]}"
-            install_skill "$name" "$url" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
-            continue
-        fi
+    local _seen_ext_marketplaces=""
+    while IFS= read -r plugin; do
+        local name type source
+        name=$(echo "$plugin" | jq -r '.name')
+        type=$(echo "$plugin" | jq -r '.type')
+        source=$(echo "$plugin" | jq -r '.source // empty')
 
-        if [[ "$line" =~ @ ]]; then
-            local name="${line%%@*}"
-            local rest="${line#*@}"
-            local type="${rest%%=*}"
-            local source="${rest#*=}"
-
-            case "$type" in
-                *-marketplace)
-                    if [[ "$_seen_marketplaces" != *"|$type|"* ]]; then
-                        ensure_marketplace "$type" "$source" || continue
-                        claude plugin marketplace update "$type" 2>/dev/null || true
-                        _seen_marketplaces="${_seen_marketplaces}|$type|"
-                    fi
-                    local rc=0; install_plugin "${name}@${type}" "$name" || rc=$?
-                    case $rc in
-                        0) plugins_installed=$((plugins_installed + 1)) ;;
-                        1) plugins_skipped=$((plugins_skipped + 1)) ;;
-                        2) plugins_failed=$((plugins_failed + 1)) ;;
-                    esac
-                    ;;
-                skills)
-                    install_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
-                    ;;
-                github)
-                    install_github_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
-                    ;;
-                *)
-                    warn "Unknown source type: $type for $name"
-                    ;;
+        if [[ "$type" == "marketplace" ]]; then
+            local rc=0; install_plugin "${name}@${OFFICIAL_MARKETPLACE_NAME}" "$name" || rc=$?
+            case $rc in
+                0) plugins_installed=$((plugins_installed + 1)) ;;
+                1) plugins_skipped=$((plugins_skipped + 1)) ;;
+                2) plugins_failed=$((plugins_failed + 1)) ;;
             esac
         else
-            local rc=0; install_plugin "${line}@${OFFICIAL_MARKETPLACE_NAME}" "$line" || rc=$?
+            if [[ -n "$source" && "$_seen_ext_marketplaces" != *"|$type|"* ]]; then
+                ensure_marketplace "$type" "$source" || continue
+                claude plugin marketplace update "$type" 2>/dev/null || true
+                _seen_ext_marketplaces="${_seen_ext_marketplaces}|$type|"
+            fi
+            local rc=0; install_plugin "${name}@${type}" "$name" || rc=$?
             case $rc in
                 0) plugins_installed=$((plugins_installed + 1)) ;;
                 1) plugins_skipped=$((plugins_skipped + 1)) ;;
                 2) plugins_failed=$((plugins_failed + 1)) ;;
             esac
         fi
-    done < "$plugins_file"
+    done < <(echo "$plugins_json" | jq -c '.[]')
+
+    # Skills
+    local skills_json
+    skills_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section skills) || {
+        warn "Failed to parse skills config"; return 0
+    }
+
+    while IFS= read -r skill; do
+        local name url
+        name=$(echo "$skill" | jq -r '.name')
+        url=$(echo "$skill" | jq -r '.url')
+        install_skill "$name" "$url" < /dev/null && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
+    done < <(echo "$skills_json" | jq -c '.[]')
 
     echo ""
     echo "  📊 Plugins: $plugins_installed installed, $plugins_skipped present, $plugins_failed failed"
@@ -467,37 +485,24 @@ install_local_marketplace_plugins() {
 # Build newline-separated list of expected plugin IDs from configuration
 # Sets global: _expected_plugins
 build_expected_plugins_list() {
-    local plugins_file="$DEVCONTAINER_DIR/$CLAUDE_PLUGINS_FILE"
-    local local_manifest="$DEVCONTAINER_DIR/plugins/$LOCAL_MARKETPLACE_NAME/.claude-plugin/marketplace.json"
-
     _expected_plugins=""
 
-    # Parse skills-plugins.txt (only plugins, skip skills/github/MCP)
-    if [[ -f "$plugins_file" ]]; then
-        while IFS= read -r line || [[ -n "$line" ]]; do
-            [[ "$line" =~ "MCP SERVERS" ]] && break
-            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
-            line=$(echo "$line" | xargs)
-            [[ -z "$line" ]] && continue
+    local plugins_json
+    plugins_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section plugins_flat) || return 0
 
-            # Skip new-format skill entries (- https://... --skill ...)
-            [[ "$line" =~ ^-[[:space:]] ]] && continue
+    while IFS= read -r plugin; do
+        local name type
+        name=$(echo "$plugin" | jq -r '.name')
+        type=$(echo "$plugin" | jq -r '.type')
+        if [[ "$type" == "marketplace" ]]; then
+            _expected_plugins="${_expected_plugins}${name}@${OFFICIAL_MARKETPLACE_NAME}"$'\n'
+        else
+            _expected_plugins="${_expected_plugins}${name}@${type}"$'\n'
+        fi
+    done < <(echo "$plugins_json" | jq -c '.[]')
 
-            if [[ "$line" =~ @ ]]; then
-                local name="${line%%@*}"
-                local rest="${line#*@}"
-                local type="${rest%%=*}"
-                case "$type" in
-                    skills|github) ;; # not in settings.json
-                    *) _expected_plugins="${_expected_plugins}${name}@${type}"$'\n' ;;
-                esac
-            else
-                _expected_plugins="${_expected_plugins}${line}@${OFFICIAL_MARKETPLACE_NAME}"$'\n'
-            fi
-        done < "$plugins_file"
-    fi
-
-    # Parse local marketplace
+    # Local marketplace plugins (auto-discovered, not from YAML)
+    local local_manifest="$DEVCONTAINER_DIR/plugins/$LOCAL_MARKETPLACE_NAME/.claude-plugin/marketplace.json"
     if [[ -f "$local_manifest" ]]; then
         while IFS= read -r plugin; do
             [[ -n "$plugin" ]] && _expected_plugins="${_expected_plugins}${plugin}@${LOCAL_MARKETPLACE_NAME}"$'\n'
@@ -573,137 +578,27 @@ add_mcp_server() {
     fi
 }
 
-# Build JSON config for a stdio MCP server from parsed tokens
-build_stdio_json() {
-    local tokens=("$@")
-    local command="${tokens[0]}"
-    local args=()
-    local env_pairs=()
-
-    for token in "${tokens[@]:1}"; do
-        if [[ "$token" =~ ^env:(.+)=(.+)$ ]]; then
-            env_pairs+=("${BASH_REMATCH[1]}|${BASH_REMATCH[2]}")
-        elif [[ "$token" =~ ^env:(.+)$ ]]; then
-            local var="${BASH_REMATCH[1]}"
-            env_pairs+=("${var}|${!var:-}")
-        elif [[ "$token" =~ ^(requires:|header:) ]]; then
-            continue
-        else
-            args+=("$token")
-        fi
-    done
-
-    local json
-    json=$(jq -n --arg cmd "$command" \
-        --argjson args "$(printf '%s\n' "${args[@]}" | jq -R . | jq -s .)" \
-        '{type: "stdio", command: $cmd, args: $args}')
-
-    if [[ ${#env_pairs[@]} -gt 0 ]]; then
-        local env_obj="{}"
-        for pair in "${env_pairs[@]}"; do
-            local key="${pair%%|*}"
-            local val="${pair#*|}"
-            env_obj=$(echo "$env_obj" | jq --arg k "$key" --arg v "$val" '. + {($k): $v}')
-        done
-        json=$(echo "$json" | jq --argjson env "$env_obj" '. + {env: $env}')
-    fi
-
-    echo "$json"
-}
-
-# Build JSON config for an HTTP MCP server from parsed tokens
-build_http_json() {
-    local tokens=("$@")
-    local url="${tokens[0]}"
-    local header_pairs=()
-
-    for token in "${tokens[@]:1}"; do
-        if [[ "$token" =~ ^header:(.+)=(.+)$ ]]; then
-            local key="${BASH_REMATCH[1]}"
-            local var="${BASH_REMATCH[2]}"
-            header_pairs+=("${key}|${!var:-}")
-        fi
-    done
-
-    local json
-    json=$(jq -n --arg url "$url" '{type: "http", url: $url}')
-
-    if [[ ${#header_pairs[@]} -gt 0 ]]; then
-        local headers="{}"
-        for pair in "${header_pairs[@]}"; do
-            local key="${pair%%|*}"
-            local val="${pair#*|}"
-            headers=$(echo "$headers" | jq --arg k "$key" --arg v "$val" '. + {($k): $v}')
-        done
-        json=$(echo "$json" | jq --argjson h "$headers" '. + {headers: $h}')
-    fi
-
-    echo "$json"
-}
-
-# Parse MCP server declarations from skills-plugins.txt
 parse_mcp_servers() {
-    local file="$1"
-    local in_mcp_section=0
+    local mcp_json
+    mcp_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section mcp_servers) || {
+        warn "Failed to parse MCP config"; return 0
+    }
 
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        if [[ "$line" =~ "MCP SERVERS" ]]; then
-            in_mcp_section=1
-            continue
-        fi
-        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
-        [[ $in_mcp_section -eq 0 ]] && continue
-
-        line=$(echo "$line" | xargs)
-        [[ -z "$line" ]] && continue
-
-        [[ "$line" =~ ^- ]] && continue
-        [[ ! "$line" =~ (stdio|http) ]] && continue
-
-        local tags_str="all"
-        if [[ "$line" =~ \[([a-z,\ ]+)\]$ ]]; then
-            tags_str="${BASH_REMATCH[1]}"
-            line="${line% \[*}"
-        fi
-
-        tags_str="${tags_str// /}"
-        if [[ "$tags_str" != "all" ]] && [[ ! ",$tags_str," =~ ,"$ENVIRONMENT_TAG", ]]; then
-            continue
-        fi
-
+    while IFS= read -r server; do
         local name type
-        name="${line%% *}"; line="${line#* }"
-        type="${line%% *}"; line="${line#* }"
+        name=$(echo "$server" | jq -r '.name')
+        type=$(echo "$server" | jq -r '.type')
 
-        local tokens=()
-        read -ra tokens <<< "$line"
-
-        local skip=0
-        for token in "${tokens[@]}"; do
-            if [[ "$token" =~ ^requires:(.+)$ ]]; then
-                local var="${BASH_REMATCH[1]}"
-                if [[ -z "${!var:-}" ]]; then
-                    warn "Skipping $name: $var not set"
-                    skip=1
-                    break
-                fi
-            fi
-        done
-        [[ $skip -eq 1 ]] && continue
-
-        local json
+        local config_json
         if [[ "$type" == "stdio" ]]; then
-            json=$(build_stdio_json "${tokens[@]}")
-        elif [[ "$type" == "http" ]]; then
-            json=$(build_http_json "${tokens[@]}")
+            config_json=$(echo "$server" | jq '{type, command, args, env}')
         else
-            warn "Unknown MCP type: $type for $name"
-            continue
+            config_json=$(echo "$server" | jq '{type, url, headers}')
         fi
 
         mcp_expected+=("$name")
-        add_mcp_server "$name" "$json"
-    done < "$file"
+        add_mcp_server "$name" "$config_json"
+    done < <(echo "$mcp_json" | jq -c '.[]')
 }
 
 # Sync MCP servers: add from config, remove stale ones
@@ -712,11 +607,8 @@ sync_mcp_servers() {
     has_command claude || { warn "Claude CLI not found"; return 0; }
     has_command jq || { warn "jq not found"; return 0; }
 
-    local plugins_file="$DEVCONTAINER_DIR/$CLAUDE_PLUGINS_FILE"
-    [[ -f "$plugins_file" ]] || { warn "$plugins_file not found"; return 0; }
-
     local mcp_expected=()
-    parse_mcp_servers "$plugins_file"
+    parse_mcp_servers
 
     # Get installed MCP servers from .claude.json
     local settings_file="${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json"
