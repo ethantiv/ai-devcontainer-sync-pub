@@ -878,15 +878,15 @@ Verify: `bash -n docker/setup-claude.sh` — no syntax errors.
 
 ## Phase 7: Local Setup and DevContainer JSON Migration
 
-**Status:** pending
+**Status:** complete
 
 ### Task 11: Migrate setup-local.sh to config-parser
 
-- [ ] Add config-parser variables and replace DSL parsing in `setup-local.sh`
+- [x] Add config-parser variables and replace DSL parsing in `setup-local.sh`
 
 Key differences:
-- Parser path: `CONFIG_PARSER="$DEVCONTAINER_DIR/src/lib/config-parser.js"` (resolved from repo root)
-- Config path: `CONFIG_FILE="$DEVCONTAINER_DIR/.devcontainer/configuration/env-config.yaml"`
+- Parser path: `CONFIG_PARSER="$SCRIPT_DIR/src/lib/config-parser.js"` (resolved from repo root, where setup-local.sh lives)
+- Config path: `CONFIG_FILE="$SCRIPT_DIR/.devcontainer/configuration/env-config.yaml"`
 - Environment tag: `ENVIRONMENT_TAG="local"`
 
 Replace same functions as other scripts. Additionally:
@@ -904,7 +904,7 @@ Verify: `bash -n setup-local.sh` — no syntax errors.
 
 ### Task 12: Remove hardcoded values from devcontainer.json
 
-- [ ] Remove personal env vars from `containerEnv` in `devcontainer.json`
+- [x] Remove personal env vars from `containerEnv` in `devcontainer.json`
 
 Remove these keys from `containerEnv` (they're now in `env-config.yaml` and propagated by setup-env.sh):
 - `GIT_USER_NAME`
