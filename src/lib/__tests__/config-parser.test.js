@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { execFileSync } = require('child_process');
 const { loadConfig, mergeConfig, interpolateVars, validateConfig, flattenSection } = require('../config-parser');
 
 let tmpDir;
@@ -152,5 +153,88 @@ describe('flattenSection', () => {
     const result = flattenSection({ personal: { name: 'Test', email: 'e@e.com' } });
     expect(result).toContain('PERSONAL_NAME=Test');
     expect(result).toContain('PERSONAL_EMAIL=e@e.com');
+  });
+});
+
+const parserPath = path.resolve(__dirname, '../config-parser.js');
+
+describe('CLI', () => {
+  test('--all returns full merged JSON', () => {
+    const configPath = writeYaml('cli.yaml', `
+defaults:
+  git:
+    personal:
+      name: CLI Test
+      email: cli@test.com
+  timezone: UTC
+environments:
+  devcontainer:
+    timezone: Europe/Warsaw
+`);
+    const output = execFileSync('node', [parserPath, '--config', configPath, '--env', 'devcontainer', '--all'], { encoding: 'utf8' });
+    const parsed = JSON.parse(output);
+    expect(parsed.timezone).toBe('Europe/Warsaw');
+    expect(parsed.git.personal.name).toBe('CLI Test');
+  });
+
+  test('--section returns specific section as JSON for objects', () => {
+    const configPath = writeYaml('cli2.yaml', `
+defaults:
+  git:
+    personal:
+      name: Test
+      email: t@t.com
+  timezone: UTC
+environments: {}
+`);
+    const output = execFileSync('node', [parserPath, '--config', configPath, '--section', 'git'], { encoding: 'utf8' });
+    const parsed = JSON.parse(output);
+    expect(parsed.personal.name).toBe('Test');
+  });
+
+  test('--section returns scalar as KEY=value', () => {
+    const configPath = writeYaml('cli3.yaml', `
+defaults:
+  git:
+    personal:
+      name: Test
+      email: t@t.com
+  timezone: UTC
+environments: {}
+`);
+    const output = execFileSync('node', [parserPath, '--config', configPath, '--section', 'timezone'], { encoding: 'utf8' });
+    expect(output.trim()).toBe('TIMEZONE=UTC');
+  });
+
+  test('exits with error on unknown env', () => {
+    const configPath = writeYaml('cli4.yaml', `
+defaults:
+  git:
+    personal:
+      name: T
+      email: t@t.com
+environments:
+  devcontainer: {}
+`);
+    expect(() => execFileSync('node', [parserPath, '--config', configPath, '--env', 'bad', '--all'], { encoding: 'utf8' }))
+      .toThrow();
+  });
+
+  test('exits with error when --config missing', () => {
+    expect(() => execFileSync('node', [parserPath, '--all'], { encoding: 'utf8' }))
+      .toThrow();
+  });
+
+  test('exits with error when neither --section nor --all given', () => {
+    const configPath = writeYaml('cli5.yaml', `
+defaults:
+  git:
+    personal:
+      name: T
+      email: t@t.com
+environments: {}
+`);
+    expect(() => execFileSync('node', [parserPath, '--config', configPath], { encoding: 'utf8' }))
+      .toThrow();
   });
 });

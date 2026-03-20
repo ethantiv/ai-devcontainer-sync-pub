@@ -97,3 +97,47 @@ function flattenSection(obj, prefix = '') {
 }
 
 module.exports = { loadConfig, mergeConfig, interpolateVars, validateConfig, flattenSection };
+
+if (require.main === module) {
+  const args = process.argv.slice(2);
+  const getArg = (name) => {
+    const idx = args.indexOf(`--${name}`);
+    return idx >= 0 && idx + 1 < args.length ? args[idx + 1] : null;
+  };
+
+  const configPath = getArg('config');
+  const env = getArg('env');
+  const section = getArg('section');
+  const showAll = args.includes('--all');
+
+  if (!configPath) {
+    process.stderr.write('Error: --config <path> is required\n');
+    process.exit(1);
+  }
+
+  try {
+    const config = loadConfig(configPath, env);
+
+    if (showAll) {
+      process.stdout.write(JSON.stringify(config, null, 2) + '\n');
+    } else if (section) {
+      const value = config[section];
+      if (value === undefined) {
+        process.stderr.write(`Error: section "${section}" not found\n`);
+        process.exit(1);
+      }
+      if (typeof value === 'object') {
+        process.stdout.write(JSON.stringify(value, null, 2) + '\n');
+      } else {
+        // Scalar value — flat KEY=value output
+        process.stdout.write(`${section.toUpperCase()}=${value}\n`);
+      }
+    } else {
+      process.stderr.write('Error: --section <name> or --all is required\n');
+      process.exit(1);
+    }
+  } catch (err) {
+    process.stderr.write(`Error: ${err.message}\n`);
+    process.exit(1);
+  }
+}
