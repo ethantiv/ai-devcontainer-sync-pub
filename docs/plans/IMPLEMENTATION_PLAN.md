@@ -19,6 +19,9 @@
 - Docker: `skills-plugins.txt` is copied to `/opt/claude-config/` at build, then synced to `~/.claude/` at startup. Same flow applies to `env-config.yaml`.
 - **`requires:VAR` behavior change:** The old DSL had `requires:VAR` tags that skipped MCP server registration entirely when the var was unset. The new YAML uses `${VAR}` interpolation which resolves to empty string + stderr warning. MCP servers will now be registered with empty env values instead of being skipped. This is acceptable — `claude mcp add-json` handles empty env values gracefully, and the server will simply fail to connect at runtime (same user-visible outcome).
 - **Bash subshell gotcha:** All `while read` loops consuming piped `jq` output must use process substitution (`< <(...)`) instead of pipes to avoid subshell variable scoping issues.
+- **Docker `build_expected_plugins_list` bug:** `docker/setup-claude.sh` is missing the `^-` skip guard (present in `setup-env.sh` line 784 and `setup-local.sh` line 484). This means new-format skill lines (`- https://...`) could leak into the expected plugins map. The migration to config-parser eliminates this bug entirely since plugin data comes from structured JSON, not DSL line parsing.
+- **Mirror workflow outdated references:** The `.github/workflows/mirror-repository.yml` still references `loop/` directory (renamed to `src/`). This is out of scope but noted for awareness.
+- **`setup-local.sh` macOS compatibility:** Uses string variable `_expected_plugins` (newline-separated) instead of `declare -gA` associative arrays. External marketplace type filter requires `*-marketplace` glob suffix. The config-parser migration normalizes all three scripts to the same `jq`-based iteration pattern.
 
 ---
 
@@ -375,21 +378,16 @@ if (require.main === module) {
     if (showAll) {
       process.stdout.write(JSON.stringify(config, null, 2) + '\n');
     } else if (section) {
-      // Special computed sections
-      if (section === 'plugins_flat') {
-        process.stdout.write(JSON.stringify(flattenPlugins(config), null, 2) + '\n');
+      const value = config[section];
+      if (value === undefined) {
+        process.stderr.write(`Error: section "${section}" not found\n`);
+        process.exit(1);
+      }
+      if (typeof value === 'object') {
+        process.stdout.write(JSON.stringify(value, null, 2) + '\n');
       } else {
-        const value = config[section];
-        if (value === undefined) {
-          process.stderr.write(`Error: section "${section}" not found\n`);
-          process.exit(1);
-        }
-        if (typeof value === 'object') {
-          process.stdout.write(JSON.stringify(value, null, 2) + '\n');
-        } else {
-          // Scalar value — flat KEY=value output
-          process.stdout.write(`${section.toUpperCase()}=${value}\n`);
-        }
+        // Scalar value — flat KEY=value output
+        process.stdout.write(`${section.toUpperCase()}=${value}\n`);
       }
     } else {
       process.stderr.write('Error: --section <name> or --all is required\n');
@@ -544,7 +542,17 @@ function flattenPlugins(config) {
 }
 ```
 
-Export `flattenPlugins` and add `--section plugins_flat` CLI support that returns the flattened array.
+Export `flattenPlugins` and add `--section plugins_flat` CLI support that returns the flattened array. In the CLI `if (require.main === module)` block, add a special case BEFORE the generic section lookup:
+
+```javascript
+      // Special computed section (added by Task 6)
+      if (section === 'plugins_flat') {
+        process.stdout.write(JSON.stringify(flattenPlugins(config), null, 2) + '\n');
+      } else {
+        const value = config[section];
+        // ... existing generic section handling
+      }
+```
 
 - [ ] Write tests for `flattenPlugins`
 
