@@ -1,0 +1,211 @@
+# env-config.example.yaml
+#
+# Template configuration for ai-devcontainer-sync.
+# Copy this file to env-config.yaml and fill in your personal values.
+# env-config.yaml should remain PRIVATE (not committed to the public mirror).
+#
+# MERGE RULES (applied by src/lib/config-parser.js):
+#   - Scalars:          environment value overrides default
+#   - Lists of objects: environment entries appended to defaults, deduplicated by `name`
+#   - Lists of strings: environment entries appended, deduplicated by value
+#   - Environment sections EXTEND `defaults` — they do not replace it
+
+# =============================================================================
+# DEFAULTS — base values shared across all environments
+# =============================================================================
+defaults:
+
+  # -------------------------------------------------------------------------
+  # Git identity
+  # -------------------------------------------------------------------------
+  git:
+    personal:
+      name: "Your Name"                   # Required — git commit author name
+      email: "your@email.com"             # Required — git commit author email
+    work:
+      email: "your.work@company.com"      # Used for commits inside work org repos
+      orgs: "YourOrg"                     # Pipe-separated GitHub org names routed to work token
+
+  # -------------------------------------------------------------------------
+  # Locale & timezone
+  # -------------------------------------------------------------------------
+  timezone: "UTC"
+  locale: "en_US.UTF-8"
+
+  # -------------------------------------------------------------------------
+  # Claude settings
+  # -------------------------------------------------------------------------
+  claude:
+    language: "English"                   # Language for Claude responses
+    permissions:
+      allow: []                           # Tool patterns always allowed (e.g. "Bash(*)")
+      deny: []                            # Tool patterns always denied
+      ask: []                             # Tool patterns that require confirmation
+      defaultMode: "bypassPermissions"    # "bypassPermissions" | "default"
+
+  # -------------------------------------------------------------------------
+  # Plugins — installed from the official marketplace or external sources
+  #
+  # plugins.marketplace  — official anthropics/claude-plugins-official entries
+  # plugins.lsp          — Language Server Protocol plugins
+  # plugins.external     — external marketplace repos
+  #
+  # Merge: lists are appended and deduplicated (strings by value, objects by name)
+  # -------------------------------------------------------------------------
+  plugins:
+    marketplace:
+      - agent-sdk-dev
+      - atlassian
+      - claude-code-setup
+      - claude-md-management
+      - code-simplifier
+      - commit-commands
+      - explanatory-output-style
+      - feature-dev
+      - frontend-design
+      - hookify
+      - playground
+      - plugin-dev
+      - skill-creator
+      - superpowers
+    lsp:
+      - jdtls-lsp
+      - pyright-lsp
+      - rust-analyzer-lsp
+      - typescript-lsp
+    external:
+      - name: dev-marketplace
+        type: dev-marketplace
+        source: ethantiv/dev-marketplace
+
+  # -------------------------------------------------------------------------
+  # Skills — installed via `npx skills add`
+  #
+  # Each entry has:
+  #   url:  GitHub repo URL
+  #   name: skill name within that repo
+  #
+  # Merge: appended and deduplicated by `name`
+  # -------------------------------------------------------------------------
+  skills:
+    - url: "https://github.com/anthropics/skills"
+      name: docx
+    - url: "https://github.com/anthropics/skills"
+      name: pdf
+    - url: "https://github.com/anthropics/skills"
+      name: xlsx
+    - url: "https://github.com/hashicorp/agent-skills"
+      name: refactor-module
+    - url: "https://github.com/hashicorp/agent-skills"
+      name: terraform-style-guide
+    - url: "https://github.com/hashicorp/agent-skills"
+      name: terraform-test
+    - url: "https://github.com/intellectronica/agent-skills"
+      name: beautiful-mermaid
+    - url: "https://github.com/nicobailon/visual-explainer"
+      name: visual-explainer
+    - url: "https://github.com/softaworks/agent-toolkit"
+      name: humanizer
+    - url: "https://github.com/softaworks/agent-toolkit"
+      name: mermaid-diagrams
+    - url: "https://github.com/vercel-labs/agent-browser"
+      name: agent-browser
+    - url: "https://github.com/vercel-labs/agent-skills"
+      name: vercel-composition-patterns
+    - url: "https://github.com/vercel-labs/agent-skills"
+      name: vercel-react-best-practices
+    - url: "https://github.com/vercel-labs/agent-skills"
+      name: web-design-guidelines
+    - url: "https://github.com/vercel-labs/skills"
+      name: find-skills
+
+# =============================================================================
+# ENVIRONMENTS — per-environment overrides that extend defaults
+# =============================================================================
+environments:
+
+  # ---------------------------------------------------------------------------
+  # devcontainer — VS Code Dev Container / GitHub Codespaces
+  # ---------------------------------------------------------------------------
+  devcontainer:
+    # Path inside the container where projects are stored
+    projects_path: /home/vscode/projects
+
+    # projects_bind_mount: host path mounted into the container as projects_path.
+    # NOTE: This value is documentation-only in this file — it must also be
+    # declared in .devcontainer/devcontainer.json under the `mounts` key.
+    projects_bind_mount: "~/your/projects"
+
+    # -------------------------------------------------------------------------
+    # MCP Servers for devcontainer
+    #
+    # Each entry:
+    #   name:    unique server identifier
+    #   type:    "stdio" | "http"
+    #   command: executable (stdio only)
+    #   args:    list of arguments (stdio only)
+    #   url:     server URL (http only)
+    #   env:     environment variables passed to the server process (optional)
+    #   headers: HTTP headers (http only, optional)
+    #
+    # ${VAR} placeholders are resolved from process.env at load time.
+    # Merge: appended and deduplicated by `name`
+    # -------------------------------------------------------------------------
+    mcp_servers:
+      - name: context7
+        type: stdio
+        command: npx
+        args: ["-y", "@upstash/context7-mcp"]
+        env:
+          CONTEXT7_API_KEY: "${CONTEXT7_API_KEY}"
+
+      - name: coolify
+        type: stdio
+        command: npx
+        args: ["-y", "@masonator/coolify-mcp@latest"]
+        env:
+          COOLIFY_BASE_URL: "${COOLIFY_BASE_URL}"
+          COOLIFY_ACCESS_TOKEN: "${COOLIFY_ACCESS_TOKEN}"
+
+      - name: aws-documentation
+        type: stdio
+        command: uvx
+        args: ["awslabs.aws-documentation-mcp-server@latest"]
+        env:
+          FASTMCP_LOG_LEVEL: "ERROR"
+          AWS_DOCUMENTATION_PARTITION: "aws"
+
+      - name: terraform
+        type: stdio
+        command: uvx
+        args: ["awslabs.terraform-mcp-server@latest"]
+        env:
+          FASTMCP_LOG_LEVEL: "ERROR"
+
+  # ---------------------------------------------------------------------------
+  # docker — self-hosted Docker container (e.g. on Raspberry Pi via Coolify)
+  # ---------------------------------------------------------------------------
+  docker:
+    projects_path: /home/developer/projects
+
+    mcp_servers:
+      - name: context7
+        type: stdio
+        command: npx
+        args: ["-y", "@upstash/context7-mcp"]
+        env:
+          CONTEXT7_API_KEY: "${CONTEXT7_API_KEY}"
+
+      - name: coolify
+        type: stdio
+        command: npx
+        args: ["-y", "@masonator/coolify-mcp@latest"]
+        env:
+          COOLIFY_BASE_URL: "${COOLIFY_BASE_URL}"
+          COOLIFY_ACCESS_TOKEN: "${COOLIFY_ACCESS_TOKEN}"
+
+  # ---------------------------------------------------------------------------
+  # local — macOS local install (setup-local.sh)
+  # ---------------------------------------------------------------------------
+  local:
+    projects_path: "~/your/projects"

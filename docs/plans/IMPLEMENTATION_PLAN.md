@@ -469,11 +469,11 @@ Expected: All tests pass (unit + CLI tests).
 
 ## Phase 3: YAML Config Files
 
-**Status:** pending
+**Status:** complete
 
 ### Task 4: Create env-config.example.yaml
 
-- [ ] Create `.devcontainer/configuration/env-config.example.yaml` with placeholder values
+- [x] Create `.devcontainer/configuration/env-config.example.yaml` with placeholder values
 
 Use the structure from the design doc. Replace personal data with placeholders like `Your Name`, `your@email.com`. Add inline comments explaining each section and the merge rules.
 
@@ -487,7 +487,7 @@ Expected: Valid JSON output with placeholder values.
 
 ### Task 5: Create env-config.yaml with real data
 
-- [ ] Create `.devcontainer/configuration/env-config.yaml` by migrating all current values
+- [x] Create `.devcontainer/configuration/env-config.yaml` by migrating all current values
 
 Sources to migrate from:
 1. **Git identity** — from `devcontainer.json` `containerEnv`: `GIT_USER_NAME`, `GIT_USER_EMAIL`
