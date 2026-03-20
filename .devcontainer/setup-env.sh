@@ -34,6 +34,10 @@ readonly OFFICIAL_MARKETPLACE_NAME="claude-plugins-official"
 readonly OFFICIAL_MARKETPLACE_REPO="anthropics/claude-plugins-official"
 readonly LOCAL_MARKETPLACE_NAME="dev-marketplace"
 
+# Config parser (replaces skills-plugins.txt DSL)
+CONFIG_PARSER="$WORKSPACE_FOLDER/src/lib/config-parser.js"
+CONFIG_FILE="$WORKSPACE_FOLDER/.devcontainer/configuration/env-config.yaml"
+
 # =============================================================================
 # UTILITY FUNCTIONS
 # =============================================================================
@@ -411,16 +415,13 @@ ensure_marketplace() {
     return 1
 }
 
-# Parse plugins and skills from configuration file
-# Handles: official marketplace, external marketplaces, skills, github skills
+# Parse plugins and skills from YAML configuration via config-parser
+# Handles: official marketplace, external marketplaces, skills
 install_all_plugins_and_skills() {
-    local plugins_file="$WORKSPACE_FOLDER/.devcontainer/$CLAUDE_PLUGINS_FILE"
-
     echo "📦 Installing plugins and skills..."
 
     has_command claude || { warn "Claude CLI not found"; return 0; }
     has_command jq || { warn "jq not found"; return 0; }
-    [[ -f "$plugins_file" ]] || { warn "$plugins_file not found"; return 0; }
 
     if ! ensure_marketplace "$OFFICIAL_MARKETPLACE_NAME" "$OFFICIAL_MARKETPLACE_REPO"; then
         warn "Skipping official marketplace plugins"
@@ -435,51 +436,48 @@ install_all_plugins_and_skills() {
 
     local plugins_installed=0 plugins_skipped=0 plugins_failed=0
     local skills_installed=0 skills_failed=0
+
+    # Plugins (flat array from parser)
+    local plugins_json
+    plugins_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section plugins_flat) || {
+        warn "Failed to parse plugin config"; return 0
+    }
+
+    # NOTE: Use process substitution (< <(...)) to avoid subshell variable scoping.
+    # Piped while-loops run in subshells where counter/array mutations are lost.
     declare -A external_marketplaces
+    while IFS= read -r plugin; do
+        local name type source
+        name=$(echo "$plugin" | jq -r '.name')
+        type=$(echo "$plugin" | jq -r '.type')
+        source=$(echo "$plugin" | jq -r '.source // empty')
 
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        # Stop at MCP SERVERS section (handled by sync_mcp_servers)
-        [[ "$line" =~ "MCP SERVERS" ]] && break
-        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
-        line=$(trim_whitespace "$line")
-        [[ -z "$line" ]] && continue
-
-        # New format: - <url> --skill <name>
-        if [[ "$line" =~ ^-[[:space:]]+(https://[^[:space:]]+)[[:space:]]+--skill[[:space:]]+([^[:space:]]+) ]]; then
-            local url="${BASH_REMATCH[1]}"
-            local name="${BASH_REMATCH[2]}"
-            install_skill "$name" "$url" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
-            continue
-        fi
-
-        if [[ "$line" =~ @ ]]; then
-            local name="${line%%@*}"
-            local rest="${line#*@}"
-            local type="${rest%%=*}"
-            local source="${rest#*=}"
-
-            case "$type" in
-                skills)
-                    install_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
-                    ;;
-                github)
-                    install_github_skill "$name" "$source" && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
-                    ;;
-                *)
-                    if [[ -z "${external_marketplaces[$type]}" ]]; then
-                        ensure_marketplace "$type" "$source" || continue
-                        claude plugin marketplace update "$type" 2>/dev/null || true
-                        external_marketplaces[$type]=1
-                    fi
-                    local rc=0; install_plugin "${name}@${type}" "$name" || rc=$?
-                    update_plugin_counters $rc plugins_installed plugins_skipped plugins_failed
-                    ;;
-            esac
+        if [[ "$type" == "marketplace" ]]; then
+            local rc=0; install_plugin "${name}@${OFFICIAL_MARKETPLACE_NAME}" "$name" || rc=$?
+            update_plugin_counters $rc plugins_installed plugins_skipped plugins_failed
         else
-            local rc=0; install_plugin "${line}@${OFFICIAL_MARKETPLACE_NAME}" "$line" || rc=$?
+            if [[ -n "$source" && -z "${external_marketplaces[$type]}" ]]; then
+                ensure_marketplace "$type" "$source" || continue
+                claude plugin marketplace update "$type" 2>/dev/null || true
+                external_marketplaces[$type]=1
+            fi
+            local rc=0; install_plugin "${name}@${type}" "$name" || rc=$?
             update_plugin_counters $rc plugins_installed plugins_skipped plugins_failed
         fi
-    done < "$plugins_file"
+    done < <(echo "$plugins_json" | jq -c '.[]')
+
+    # Skills
+    local skills_json
+    skills_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section skills) || {
+        warn "Failed to parse skills config"; return 0
+    }
+
+    while IFS= read -r skill; do
+        local name url
+        name=$(echo "$skill" | jq -r '.name')
+        url=$(echo "$skill" | jq -r '.url')
+        install_skill "$name" "$url" < /dev/null && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
+    done < <(echo "$skills_json" | jq -c '.[]')
 
     echo "  📊 Plugins: $plugins_installed installed, $plugins_skipped present, $plugins_failed failed"
     echo "  📊 Skills: $skills_installed installed, $skills_failed failed"
@@ -600,78 +598,30 @@ build_http_json() {
     echo "$json"
 }
 
-# Parse MCP server declarations from skills-plugins.txt
+# Parse MCP server declarations from YAML configuration via config-parser
 # Populates mcp_expected array and calls add_mcp_server for each
 parse_mcp_servers() {
-    local file="$1"
-    local in_mcp_section=0
+    local mcp_json
+    mcp_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section mcp_servers) || {
+        warn "Failed to parse MCP config"; return 0
+    }
 
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        # Detect MCP section header
-        if [[ "$line" =~ "MCP SERVERS" ]]; then
-            in_mcp_section=1
-            continue
-        fi
-        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
-        [[ $in_mcp_section -eq 0 ]] && continue
-
-        line=$(trim_whitespace "$line")
-        [[ -z "$line" ]] && continue
-
-        # Skip non-MCP lines (skills, plugins)
-        [[ "$line" =~ ^- ]] && continue
-        [[ ! "$line" =~ (stdio|http) ]] && continue
-
-        # Extract [tags] from end
-        local tags_str="all"
-        if [[ "$line" =~ \[([a-z,\ ]+)\]$ ]]; then
-            tags_str="${BASH_REMATCH[1]}"
-            line="${line% \[*}"
-        fi
-
-        # Check tag match
-        tags_str="${tags_str// /}"
-        if [[ "$tags_str" != "all" ]] && [[ ! ",$tags_str," =~ ,"$ENVIRONMENT_TAG", ]]; then
-            continue
-        fi
-
-        # Parse: name type rest...
+    # Process substitution to preserve mcp_expected array modifications
+    while IFS= read -r server; do
         local name type
-        name="${line%% *}"; line="${line#* }"
-        type="${line%% *}"; line="${line#* }"
+        name=$(echo "$server" | jq -r '.name')
+        type=$(echo "$server" | jq -r '.type')
 
-        # Read remaining tokens
-        local tokens=()
-        read -ra tokens <<< "$line"
-
-        # Check requires:
-        local skip=0
-        for token in "${tokens[@]}"; do
-            if [[ "$token" =~ ^requires:(.+)$ ]]; then
-                local var="${BASH_REMATCH[1]}"
-                if [[ -z "${!var:-}" ]]; then
-                    warn "Skipping $name: $var not set"
-                    skip=1
-                    break
-                fi
-            fi
-        done
-        [[ $skip -eq 1 ]] && continue
-
-        # Build JSON config
-        local json
+        local config_json
         if [[ "$type" == "stdio" ]]; then
-            json=$(build_stdio_json "${tokens[@]}")
-        elif [[ "$type" == "http" ]]; then
-            json=$(build_http_json "${tokens[@]}")
+            config_json=$(echo "$server" | jq '{type, command, args, env}')
         else
-            warn "Unknown MCP type: $type for $name"
-            continue
+            config_json=$(echo "$server" | jq '{type, url, headers}')
         fi
 
         mcp_expected+=("$name")
-        add_mcp_server "$name" "$json"
-    done < "$file"
+        add_mcp_server "$name" "$config_json"
+    done < <(echo "$mcp_json" | jq -c '.[]')
 }
 
 # Sync MCP servers: add from config, remove stale ones
@@ -680,11 +630,8 @@ sync_mcp_servers() {
     has_command claude || return 0
     has_command jq || return 0
 
-    local plugins_file="$WORKSPACE_FOLDER/.devcontainer/$CLAUDE_PLUGINS_FILE"
-    [[ -f "$plugins_file" ]] || { warn "$plugins_file not found"; return 0; }
-
     local mcp_expected=()
-    parse_mcp_servers "$plugins_file"
+    parse_mcp_servers
 
     # Get installed MCP servers from .claude.json
     local settings_file="$HOME/.claude/.claude.json"
@@ -763,45 +710,36 @@ install_github_skill() {
 # PLUGIN SYNCHRONIZATION
 # =============================================================================
 
-# Build list of expected plugins from configuration
+# Build list of expected plugins from YAML configuration via config-parser
 # Sets global: expected_plugins[plugin_id]=1
 build_expected_plugins_list() {
-    local plugins_file="$WORKSPACE_FOLDER/.devcontainer/$CLAUDE_PLUGINS_FILE"
-    local local_manifest="$WORKSPACE_FOLDER/.devcontainer/plugins/$LOCAL_MARKETPLACE_NAME/.claude-plugin/marketplace.json"
-
     declare -gA expected_plugins
     expected_plugins=()
 
-    # Parse skills-plugins.txt (only plugins, skip skills and MCP)
-    if [[ -f "$plugins_file" ]]; then
-        while IFS= read -r line || [[ -n "$line" ]]; do
-            [[ "$line" =~ "MCP SERVERS" ]] && break
-            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
-            line=$(trim_whitespace "$line")
-            [[ -z "$line" ]] && continue
+    local plugins_json
+    plugins_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section plugins_flat) || return 0
 
-            # Skip skill lines (new format: - <url> --skill <name>)
-            [[ "$line" =~ ^- ]] && continue
+    # Process substitution to preserve expected_plugins associative array
+    while IFS= read -r plugin; do
+        local name type
+        name=$(echo "$plugin" | jq -r '.name')
+        type=$(echo "$plugin" | jq -r '.type')
+        if [[ "$type" == "marketplace" ]]; then
+            expected_plugins["${name}@${OFFICIAL_MARKETPLACE_NAME}"]=1
+        else
+            expected_plugins["${name}@${type}"]=1
+        fi
+    done < <(echo "$plugins_json" | jq -c '.[]')
 
-            if [[ "$line" =~ @ ]]; then
-                local name="${line%%@*}"
-                local rest="${line#*@}"
-                local type="${rest%%=*}"
-                case "$type" in
-                    skills|github) ;; # skills - not in settings.json
-                    *) expected_plugins["${name}@${type}"]=1 ;;
-                esac
-            else
-                expected_plugins["${line}@${OFFICIAL_MARKETPLACE_NAME}"]=1
-            fi
-        done < "$plugins_file"
-    fi
-
-    # Parse local marketplace
-    if [[ -f "$local_manifest" ]]; then
-        while IFS= read -r plugin; do
-            [[ -n "$plugin" ]] && expected_plugins["${plugin}@${LOCAL_MARKETPLACE_NAME}"]=1
-        done < <(jq -r '.plugins[].name // empty' "$local_manifest" 2>/dev/null)
+    # Local marketplace plugins (auto-discovered, not from YAML)
+    local marketplace_json="$WORKSPACE_FOLDER/.devcontainer/plugins/${LOCAL_MARKETPLACE_NAME}/.claude-plugin/marketplace.json"
+    if [[ -f "$marketplace_json" ]]; then
+        local plugin_names
+        plugin_names=$(jq -r '.plugins[].name // empty' "$marketplace_json" 2>/dev/null)
+        while IFS= read -r name; do
+            [[ -z "$name" ]] && continue
+            expected_plugins["${name}@${LOCAL_MARKETPLACE_NAME}"]=1
+        done <<< "$plugin_names"
     fi
 }
 
