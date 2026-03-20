@@ -21,9 +21,8 @@ jobs:
           git rm -rf --ignore-unmatch \
             .claude/settings.json \
             .claude/skills/ \
-            loop/CLAUDE_template.md \
-            docs/plans/IMPLEMENTATION_PLAN_template.md \
-            loop/
+            .devcontainer/configuration/env-config.yaml \
+            docs/plans/IMPLEMENTATION_PLAN_template.md
           git commit -m "chore: exclude private files from public repo"
 
       - name: Push mirror
