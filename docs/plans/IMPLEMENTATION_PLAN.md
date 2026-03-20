@@ -27,17 +27,17 @@
 
 ## Phase 1: Config Parser Module
 
-**Status:** pending
+**Status:** complete
 
 ### Task 1: Add js-yaml dependency and scaffold config-parser.js
 
-- [ ] Add `js-yaml` to `src/package.json` dependencies and bump version
+- [x] Add `js-yaml` to `src/package.json` dependencies and bump version
 
 Run: `cd /workspaces/ai-devcontainer-sync/src && npm install js-yaml --save`
 
 Verify: `node -e "require('js-yaml')"` in `src/` — should exit 0.
 
-- [ ] Create `src/lib/config-parser.js` with YAML loading, merge logic, and variable interpolation
+- [x] Create `src/lib/config-parser.js` with YAML loading, merge logic, and variable interpolation
 
 The module exports: `loadConfig(configPath, env)`, `mergeConfig(defaults, envOverrides)`, `interpolateVars(obj)`.
 
@@ -151,7 +151,7 @@ function flattenSection(obj, prefix = '') {
 module.exports = { loadConfig, mergeConfig, interpolateVars, validateConfig, flattenSection };
 ```
 
-- [ ] Bump version in `src/package.json` from `0.9.0` to `0.10.0`
+- [x] Bump version in `src/package.json` from `0.9.0` to `0.10.0`
 
 **Files:**
 - Modify: `src/package.json` (add js-yaml dep, bump version)
@@ -161,7 +161,7 @@ module.exports = { loadConfig, mergeConfig, interpolateVars, validateConfig, fla
 
 ### Task 2: Write config-parser tests
 
-- [ ] Create `src/lib/__tests__/config-parser.test.js` with tests for all core functions
+- [x] Create `src/lib/__tests__/config-parser.test.js` with tests for all core functions
 
 Test categories:
 1. **`interpolateVars`** — resolves `${VAR}`, leaves non-vars alone, warns on unresolved

@@ -18,10 +18,15 @@ function writeYaml(name, content) {
 }
 
 describe('interpolateVars', () => {
+  afterEach(() => {
+    delete process.env.TEST_VAR;
+    delete process.env.TV1;
+    delete process.env.TV2;
+  });
+
   test('resolves env vars in strings', () => {
     process.env.TEST_VAR = 'hello';
     expect(interpolateVars('${TEST_VAR}')).toBe('hello');
-    delete process.env.TEST_VAR;
   });
 
   test('warns and returns empty for unresolved vars', () => {
@@ -36,8 +41,6 @@ describe('interpolateVars', () => {
     process.env.TV2 = 'b';
     const result = interpolateVars({ x: '${TV1}', y: ['${TV2}'] });
     expect(result).toEqual({ x: 'a', y: ['b'] });
-    delete process.env.TV1;
-    delete process.env.TV2;
   });
 
   test('passes through non-string primitives', () => {
