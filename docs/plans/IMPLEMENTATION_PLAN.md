@@ -510,11 +510,11 @@ Expected: Full merged config JSON with resolved env vars. Warnings on stderr for
 
 ## Phase 4: Plugin Flattening in Parser
 
-**Status:** pending
+**Status:** complete
 
 ### Task 6: Add plugin flattening logic to config-parser
 
-- [ ] Add `flattenPlugins(config)` function to `config-parser.js`
+- [x] Add `flattenPlugins(config)` function to `config-parser.js`
 
 The YAML has plugins in structured form (`marketplace`, `lsp`, `external`). Setup scripts need a flat array for iteration:
 ```json
@@ -554,7 +554,7 @@ Export `flattenPlugins` and add `--section plugins_flat` CLI support that return
       }
 ```
 
-- [ ] Write tests for `flattenPlugins`
+- [x] Write tests for `flattenPlugins`
 
 ```javascript
 describe('flattenPlugins', () => {
