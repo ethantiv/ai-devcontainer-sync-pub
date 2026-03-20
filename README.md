@@ -8,7 +8,7 @@ Ready-to-use development environment with Claude Code, Gemini CLI, autonomous de
 - **dev-loop** — autonomous plan/build cycles powered by Claude CLI (`loop` command)
 - **MCP Servers** — Context7, Coolify, AWS docs, Terraform
 - **Slash Commands** — `/roadmap`, `/git-worktree:create`, `/git-worktree:delete`, `/dependency-update`, `/read-arxiv-paper`
-- **Skills & Plugins** — 18 official + 4 local + 13 external skills, auto-installed from `skills-plugins.txt`
+- **Skills & Plugins** — 18 official + 4 local + 13 external skills, auto-installed from `env-config.yaml`
 - **LSP Support** — TypeScript, Python (Pyright), Rust (rust-analyzer), Java (jdtls)
 
 ## Getting Started

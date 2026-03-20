@@ -121,7 +121,6 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 - **Setup scripts must be non-fatal**: Writes to dotfiles use `|| warn` / `|| true`. Don't block plugin/MCP setup on non-essential ops.
 - **UTF-8 locale**: Dockerfile must generate `en_US.UTF-8` locale. Without it, Polish chars in tmux show as `_`.
 - **Shell helpers**: `ok()`, `warn()`, `fail()` for colored status output in setup scripts.
-- **skills-plugins.txt formats**: Plugins: `plugin-name` (official), `name@type=owner/repo` (external). Skills: `- https://github.com/owner/repo --skill name` (new), `name@skills=repo` (legacy). MCP: `name stdio cmd args... [env:KEY] [tags]` or `name http url [header:K=V] [requires:VAR] [tags]`. Gotcha: `setup-local.sh` requires external plugin type to match `*-marketplace` glob.
 - **Skills install**: `npx -y skills add "$url" --skill "$name" --agent claude-code -g -y`
 - **Coolify MCP limitations**: `base_directory` and `docker_compose_location` not in MCP tool — use `curl -X PATCH` directly.
 - **MCP server JSON type**: Remote HTTP MCP servers require `"type": "http"` in `add-json` config, not `"type": "url"` (which silently fails).
