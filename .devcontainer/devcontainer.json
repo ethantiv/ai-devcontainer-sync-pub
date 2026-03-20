@@ -39,12 +39,7 @@
     }
   ],
   "containerEnv": {
-    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
-    "GIT_USER_NAME": "Mirosław Zaniewicz",
-    "GIT_USER_EMAIL": "mirek@example.com",
-    "GIT_USER_EMAIL_ROCHE": "",
-    "TZ": "Europe/Warsaw",
-    "LC_TIME": "pl_PL.UTF-8"
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
   },
   "remoteEnv": {
     "PATH": "/home/vscode/.local/bin:${containerEnv:PATH}"
