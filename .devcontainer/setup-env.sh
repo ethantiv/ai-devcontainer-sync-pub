@@ -29,14 +29,13 @@ readonly CLAUDE_SCRIPTS_DIR="$CLAUDE_DIR/scripts"
 readonly GEMINI_DIR="$HOME/.gemini"
 
 readonly ENVIRONMENT_TAG="devcontainer"
-readonly CLAUDE_PLUGINS_FILE="configuration/skills-plugins.txt"
 readonly OFFICIAL_MARKETPLACE_NAME="claude-plugins-official"
 readonly OFFICIAL_MARKETPLACE_REPO="anthropics/claude-plugins-official"
 readonly LOCAL_MARKETPLACE_NAME="dev-marketplace"
 
-# Config parser (replaces skills-plugins.txt DSL)
-CONFIG_PARSER="$WORKSPACE_FOLDER/src/lib/config-parser.js"
-CONFIG_FILE="$WORKSPACE_FOLDER/.devcontainer/configuration/env-config.yaml"
+# Config parser paths (set after WORKSPACE_FOLDER is detected — see detect_workspace_folder)
+CONFIG_PARSER=""
+CONFIG_FILE=""
 
 # =============================================================================
 # UTILITY FUNCTIONS
@@ -54,8 +53,6 @@ ok()   { echo -e "  \033[32m✔︎\033[0m $1"; }
 warn() { echo -e "  \033[33m⚠️\033[0m  $1"; }
 fail() { echo -e "  \033[31m❌\033[0m $1"; }
 
-trim_whitespace() { local v="$*"; v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"; echo "$v"; }
-
 setup_file_lock() {
     exec 200>"$LOCK_FILE"
     if ! flock -n 200; then
@@ -70,6 +67,8 @@ setup_file_lock() {
 
 detect_workspace_folder() {
     WORKSPACE_FOLDER="${CODESPACE_VSCODE_FOLDER:-$PWD}"
+    CONFIG_PARSER="$WORKSPACE_FOLDER/src/lib/config-parser.js"
+    CONFIG_FILE="$WORKSPACE_FOLDER/.devcontainer/configuration/env-config.yaml"
     local env_type="local DevContainer"
     [[ -n "${CODESPACE_VSCODE_FOLDER}" ]] && env_type="Codespaces"
     echo "🌍 Detected $env_type environment: $WORKSPACE_FOLDER"
@@ -305,21 +304,20 @@ reset_config_if_requested() {
 }
 
 apply_claude_settings() {
-    local default_settings='{
-        "permissions": {
-            "allow": [],
-            "deny": [],
-            "ask": [],
-            "defaultMode": "bypassPermissions"
-        },
-        "language": "Polski",
-        "statusLine": {
-            "type": "command",
-            "command": "~/.claude/scripts/context-bar.sh"
-        }
-    }'
-
     has_command jq || { warn "jq not found - cannot manage settings"; return 0; }
+
+    local claude_config
+    claude_config=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section claude) || {
+        warn "Failed to parse Claude settings"; return 0
+    }
+
+    # statusLine stays hardcoded — design doc marks it out of scope
+    local default_settings
+    default_settings=$(echo "$claude_config" | jq --argjson sl '{"type":"command","command":"~/.claude/scripts/context-bar.sh"}' '{
+        permissions: .permissions,
+        language: .language,
+        statusLine: $sl
+    }')
 
     if [[ -f "$CLAUDE_SETTINGS_FILE" ]]; then
         local merged
@@ -350,6 +348,31 @@ sync_claude_scripts() {
     ok "Synced scripts to ~/.claude/scripts/"
 }
 
+# Propagate timezone, locale, and git work identity from config
+propagate_env_from_config() {
+    local config_json
+    config_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --all 2>/dev/null) || return 0
+
+    local tz locale git_name git_email work_email work_orgs
+    tz=$(echo "$config_json" | jq -r '.timezone // empty')
+    locale=$(echo "$config_json" | jq -r '.locale // empty')
+    git_name=$(echo "$config_json" | jq -r '.git.personal.name // empty')
+    git_email=$(echo "$config_json" | jq -r '.git.personal.email // empty')
+    work_email=$(echo "$config_json" | jq -r '.git.work.email // empty')
+    work_orgs=$(echo "$config_json" | jq -r '.git.work.orgs // empty')
+
+    # Append to ~/.bashrc if not already present (idempotent)
+    local bashrc="$HOME/.bashrc"
+    [[ -n "$tz" ]] && ! grep -q "^export TZ=" "$bashrc" 2>/dev/null && echo "export TZ=\"$tz\"" >> "$bashrc"
+    [[ -n "$locale" ]] && ! grep -q "^export LC_TIME=" "$bashrc" 2>/dev/null && echo "export LC_TIME=\"$locale\"" >> "$bashrc"
+    [[ -n "$git_name" ]] && ! grep -q "^export GIT_USER_NAME=" "$bashrc" 2>/dev/null && echo "export GIT_USER_NAME=\"$git_name\"" >> "$bashrc"
+    [[ -n "$git_email" ]] && ! grep -q "^export GIT_USER_EMAIL=" "$bashrc" 2>/dev/null && echo "export GIT_USER_EMAIL=\"$git_email\"" >> "$bashrc"
+    [[ -n "$work_email" ]] && ! grep -q "^export GIT_USER_EMAIL_ROCHE=" "$bashrc" 2>/dev/null && echo "export GIT_USER_EMAIL_ROCHE=\"$work_email\"" >> "$bashrc"
+    [[ -n "$work_orgs" ]] && ! grep -q "^export GH_ROCHE_ORGS=" "$bashrc" 2>/dev/null && echo "export GH_ROCHE_ORGS=\"$work_orgs\"" >> "$bashrc"
+
+    ok "Environment variables propagated to ~/.bashrc"
+}
+
 setup_claude_configuration() {
     echo "📄 Setting up Claude configuration..."
 
@@ -358,6 +381,7 @@ setup_claude_configuration() {
     export TMPDIR="$CLAUDE_DIR/tmp"
 
     apply_claude_settings
+    propagate_env_from_config
     copy_claude_memory "$WORKSPACE_FOLDER"
     sync_claude_scripts "$WORKSPACE_FOLDER"
 }
@@ -526,76 +550,6 @@ add_mcp_server() {
     else
         warn "Failed to add $name"
     fi
-}
-
-# Build JSON config for a stdio MCP server from parsed tokens
-# Args: command arg1 arg2... env:KEY env:KEY=val
-build_stdio_json() {
-    local tokens=("$@")
-    local command="${tokens[0]}"
-    local args=()
-    local env_pairs=()
-
-    for token in "${tokens[@]:1}"; do
-        if [[ "$token" =~ ^env:(.+)=(.+)$ ]]; then
-            env_pairs+=("${BASH_REMATCH[1]}|${BASH_REMATCH[2]}")
-        elif [[ "$token" =~ ^env:(.+)$ ]]; then
-            local var="${BASH_REMATCH[1]}"
-            env_pairs+=("${var}|${!var:-}")
-        elif [[ "$token" =~ ^(requires:|header:) ]]; then
-            continue
-        else
-            args+=("$token")
-        fi
-    done
-
-    local json
-    json=$(jq -n --arg cmd "$command" \
-        --argjson args "$(printf '%s\n' "${args[@]}" | jq -R . | jq -s .)" \
-        '{type: "stdio", command: $cmd, args: $args}')
-
-    if [[ ${#env_pairs[@]} -gt 0 ]]; then
-        local env_obj="{}"
-        for pair in "${env_pairs[@]}"; do
-            local key="${pair%%|*}"
-            local val="${pair#*|}"
-            env_obj=$(echo "$env_obj" | jq --arg k "$key" --arg v "$val" '. + {($k): $v}')
-        done
-        json=$(echo "$json" | jq --argjson env "$env_obj" '. + {env: $env}')
-    fi
-
-    echo "$json"
-}
-
-# Build JSON config for an HTTP MCP server from parsed tokens
-# Args: url header:KEY=VAR
-build_http_json() {
-    local tokens=("$@")
-    local url="${tokens[0]}"
-    local header_pairs=()
-
-    for token in "${tokens[@]:1}"; do
-        if [[ "$token" =~ ^header:(.+)=(.+)$ ]]; then
-            local key="${BASH_REMATCH[1]}"
-            local var="${BASH_REMATCH[2]}"
-            header_pairs+=("${key}|${!var:-}")
-        fi
-    done
-
-    local json
-    json=$(jq -n --arg url "$url" '{type: "http", url: $url}')
-
-    if [[ ${#header_pairs[@]} -gt 0 ]]; then
-        local headers="{}"
-        for pair in "${header_pairs[@]}"; do
-            local key="${pair%%|*}"
-            local val="${pair#*|}"
-            headers=$(echo "$headers" | jq --arg k "$key" --arg v "$val" '. + {($k): $v}')
-        done
-        json=$(echo "$json" | jq --argjson h "$headers" '. + {headers: $h}')
-    fi
-
-    echo "$json"
 }
 
 # Parse MCP server declarations from YAML configuration via config-parser
