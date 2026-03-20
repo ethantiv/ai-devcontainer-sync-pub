@@ -611,7 +611,7 @@ sync_mcp_servers() {
     parse_mcp_servers
 
     # Get installed MCP servers from .claude.json
-    local settings_file="${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json"
+    local settings_file="$CLAUDE_DIR/.claude.json"
     local installed=()
     if [[ -f "$settings_file" ]]; then
         while IFS= read -r name; do
