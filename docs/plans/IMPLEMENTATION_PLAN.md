@@ -22,6 +22,7 @@
 - **Docker `build_expected_plugins_list` bug:** `docker/setup-claude.sh` is missing the `^-` skip guard (present in `setup-env.sh` line 784 and `setup-local.sh` line 484). This means new-format skill lines (`- https://...`) could leak into the expected plugins map. The migration to config-parser eliminates this bug entirely since plugin data comes from structured JSON, not DSL line parsing.
 - **Mirror workflow outdated references:** The `.github/workflows/mirror-repository.yml` still references `loop/` directory (renamed to `src/`). This is out of scope but noted for awareness.
 - **`setup-local.sh` macOS compatibility:** Uses string variable `_expected_plugins` (newline-separated) instead of `declare -gA` associative arrays. External marketplace type filter requires `*-marketplace` glob suffix. The config-parser migration normalizes all three scripts to the same `jq`-based iteration pattern.
+- **Env propagation ordering:** `propagate_env_from_config()` writes env vars to `~/.bashrc` (takes effect in future sessions). `setup_multi_github()` reads `GIT_USER_NAME`/`GIT_USER_EMAIL` from current env. Currently safe because `devcontainer.json` `containerEnv` provides them. When Task 12 removes `containerEnv` values, `propagate_env_from_config()` must either export vars into current session or be called before `setup_multi_github()`.
 
 ---
 
@@ -592,11 +593,11 @@ Expected: All tests pass.
 
 ## Phase 5: setup-env.sh Migration
 
-**Status:** pending
+**Status:** complete
 
 ### Task 7: Replace DSL-based plugin/skill/MCP parsing in setup-env.sh
 
-- [ ] Add config-parser invocation variables near top of `setup-env.sh`
+- [x] Add config-parser invocation variables near top of `setup-env.sh`
 
 After the existing constants block (around line 35), add:
 
@@ -606,7 +607,7 @@ CONFIG_PARSER="$WORKSPACE_FOLDER/src/lib/config-parser.js"
 CONFIG_FILE="$WORKSPACE_FOLDER/.devcontainer/configuration/env-config.yaml"
 ```
 
-- [ ] Replace `install_all_plugins_and_skills()` body with config-parser calls
+- [x] Replace `install_all_plugins_and_skills()` body with config-parser calls
 
 Replace the DSL while-loop (lines ~420-480) with:
 
@@ -655,7 +656,7 @@ install_all_plugins_and_skills() {
 }
 ```
 
-- [ ] Replace `parse_mcp_servers()` body with config-parser calls
+- [x] Replace `parse_mcp_servers()` body with config-parser calls
 
 Replace the DSL while-loop with:
 
@@ -685,7 +686,7 @@ parse_mcp_servers() {
 }
 ```
 
-- [ ] Replace `build_expected_plugins_list()` body with config-parser calls
+- [x] Replace `build_expected_plugins_list()` body with config-parser calls
 
 ```bash
 build_expected_plugins_list() {
@@ -732,7 +733,7 @@ Expected: No syntax errors.
 
 ### Task 8: Replace hardcoded Claude settings and remove DSL functions from setup-env.sh
 
-- [ ] Replace `apply_claude_settings()` to read from config-parser
+- [x] Replace `apply_claude_settings()` to read from config-parser
 
 ```bash
 apply_claude_settings() {
@@ -762,7 +763,7 @@ apply_claude_settings() {
 }
 ```
 
-- [ ] Add timezone, locale, and git work identity propagation to `setup_claude_configuration()` or `main()`
+- [x] Add timezone, locale, and git work identity propagation to `setup_claude_configuration()` or `main()`
 
 After `apply_claude_settings`, add environment propagation block. This replaces the hardcoded values previously in `devcontainer.json` `containerEnv`:
 
@@ -795,7 +796,7 @@ propagate_env_from_config() {
 
 This function replaces the hardcoded `containerEnv` values that were previously in `devcontainer.json`. The `setup_multi_github()` function in `setup-env.sh` already reads `GIT_USER_EMAIL_ROCHE` and `GH_ROCHE_ORGS` from environment — now those vars come from `~/.bashrc` instead of `containerEnv`.
 
-- [ ] Remove dead DSL parsing code from `setup-env.sh`
+- [x] Remove dead DSL parsing code from `setup-env.sh`
 
 Remove these functions that are no longer called:
 - `trim_whitespace()` (~line 53)
