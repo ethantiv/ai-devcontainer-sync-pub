@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { execFileSync } = require('child_process');
-const { loadConfig, mergeConfig, interpolateVars, validateConfig, flattenSection } = require('../config-parser');
+const { loadConfig, mergeConfig, interpolateVars, validateConfig, flattenSection, flattenPlugins } = require('../config-parser');
 
 let tmpDir;
 beforeEach(() => {
@@ -156,6 +156,29 @@ describe('flattenSection', () => {
   });
 });
 
+describe('flattenPlugins', () => {
+  test('flattens marketplace, lsp, and external into flat array', () => {
+    const config = {
+      plugins: {
+        marketplace: ['plugin-a', 'plugin-b'],
+        lsp: ['ts-lsp'],
+        external: [{ name: 'ext1', type: 'dev-marketplace', source: 'owner/repo' }]
+      }
+    };
+    const result = flattenPlugins(config);
+    expect(result).toEqual([
+      { name: 'plugin-a', type: 'marketplace' },
+      { name: 'plugin-b', type: 'marketplace' },
+      { name: 'ts-lsp', type: 'marketplace' },
+      { name: 'ext1', type: 'dev-marketplace', source: 'owner/repo' },
+    ]);
+  });
+
+  test('handles missing sections gracefully', () => {
+    expect(flattenPlugins({})).toEqual([]);
+  });
+});
+
 const parserPath = path.resolve(__dirname, '../config-parser.js');
 
 describe('CLI', () => {
@@ -236,5 +259,32 @@ environments: {}
 `);
     expect(() => execFileSync('node', [parserPath, '--config', configPath], { encoding: 'utf8' }))
       .toThrow();
+  });
+
+  test('--section plugins_flat returns flattened plugin array', () => {
+    const configPath = writeYaml('cli-plugins.yaml', `
+defaults:
+  git:
+    personal:
+      name: Test
+      email: t@t.com
+  plugins:
+    marketplace:
+      - plugin-a
+    lsp:
+      - ts-lsp
+    external:
+      - name: ext1
+        type: dev-marketplace
+        source: owner/repo
+environments: {}
+`);
+    const output = execFileSync('node', [parserPath, '--config', configPath, '--section', 'plugins_flat'], { encoding: 'utf8' });
+    const parsed = JSON.parse(output);
+    expect(parsed).toEqual([
+      { name: 'plugin-a', type: 'marketplace' },
+      { name: 'ts-lsp', type: 'marketplace' },
+      { name: 'ext1', type: 'dev-marketplace', source: 'owner/repo' },
+    ]);
   });
 });

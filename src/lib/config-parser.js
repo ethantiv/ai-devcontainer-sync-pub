@@ -96,7 +96,22 @@ function flattenSection(obj, prefix = '') {
   return lines;
 }
 
-module.exports = { loadConfig, mergeConfig, interpolateVars, validateConfig, flattenSection };
+function flattenPlugins(config) {
+  const plugins = config.plugins || {};
+  const result = [];
+  for (const name of (plugins.marketplace || [])) {
+    result.push({ name, type: 'marketplace' });
+  }
+  for (const name of (plugins.lsp || [])) {
+    result.push({ name, type: 'marketplace' });
+  }
+  for (const ext of (plugins.external || [])) {
+    result.push({ name: ext.name, type: ext.type, source: ext.source });
+  }
+  return result;
+}
+
+module.exports = { loadConfig, mergeConfig, interpolateVars, validateConfig, flattenSection, flattenPlugins };
 
 if (require.main === module) {
   const args = process.argv.slice(2);
@@ -121,16 +136,21 @@ if (require.main === module) {
     if (showAll) {
       process.stdout.write(JSON.stringify(config, null, 2) + '\n');
     } else if (section) {
-      const value = config[section];
-      if (value === undefined) {
-        process.stderr.write(`Error: section "${section}" not found\n`);
-        process.exit(1);
-      }
-      if (typeof value === 'object') {
-        process.stdout.write(JSON.stringify(value, null, 2) + '\n');
+      // Special computed section
+      if (section === 'plugins_flat') {
+        process.stdout.write(JSON.stringify(flattenPlugins(config), null, 2) + '\n');
       } else {
-        // Scalar value — flat KEY=value output
-        process.stdout.write(`${section.toUpperCase()}=${value}\n`);
+        const value = config[section];
+        if (value === undefined) {
+          process.stderr.write(`Error: section "${section}" not found\n`);
+          process.exit(1);
+        }
+        if (typeof value === 'object') {
+          process.stdout.write(JSON.stringify(value, null, 2) + '\n');
+        } else {
+          // Scalar value — flat KEY=value output
+          process.stdout.write(`${section.toUpperCase()}=${value}\n`);
+        }
       }
     } else {
       process.stderr.write('Error: --section <name> or --all is required\n');
