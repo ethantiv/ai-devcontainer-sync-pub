@@ -78,11 +78,11 @@ ensure_marketplace() {
     local name="$1"
     local source="$2"
 
-    if claude plugin marketplace list < /dev/null 2>/dev/null | grep -q "$name"; then
+    if claude plugin marketplace list 2>/dev/null | grep -q "$name"; then
         return 0
     fi
 
-    if claude plugin marketplace add "$source" < /dev/null 2>/dev/null; then
+    if claude plugin marketplace add "$source" 2>/dev/null; then
         ok "Added marketplace: $name"
         return 0
     fi
@@ -209,7 +209,7 @@ install_all_plugins_and_skills() {
         warn "Skipping official marketplace plugins"
         return 0
     fi
-    claude plugin marketplace update "$OFFICIAL_MARKETPLACE_NAME" < /dev/null 2>/dev/null || true
+    claude plugin marketplace update "$OFFICIAL_MARKETPLACE_NAME" 2>/dev/null || true
 
     # Clean stale gemini skill symlinks (gemini-cli scans ~/.agents/skills/ directly)
     if [ -d "$HOME/.gemini/skills" ]; then
@@ -240,7 +240,7 @@ install_all_plugins_and_skills() {
         else
             if [[ -n "$source" && -z "${external_marketplaces[$type]}" ]]; then
                 ensure_marketplace "$type" "$source" || continue
-                claude plugin marketplace update "$type" < /dev/null 2>/dev/null || true
+                claude plugin marketplace update "$type" 2>/dev/null || true
                 external_marketplaces[$type]=1
             fi
             local rc=0; install_plugin "${name}@${type}" "$name" || rc=$?

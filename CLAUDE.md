@@ -56,7 +56,7 @@ Codespaces: add as repository secrets. Local: create `.devcontainer/.env` (copy 
 
 ### MCP Servers
 
-Declared in `env-config.yaml` (per-environment `mcp_servers` section) — single source of truth. `setup-env.sh` uses `config-parser.js` to read YAML and sync (add/remove) servers automatically. Docker and local scripts still use old DSL (`skills-plugins.txt`) until migrated.
+Declared in `env-config.yaml` (per-environment `mcp_servers` section) — single source of truth. `setup-env.sh` and `docker/setup-claude.sh` use `config-parser.js` to read YAML and sync (add/remove) servers automatically. Local script (`setup-local.sh`) still uses old DSL (`skills-plugins.txt`) until migrated.
 
 ### Loop System
 
@@ -82,7 +82,7 @@ loop summary / cleanup  # Show run stats / kill dev server processes
 
 **Global npm tools** — 4 files: `.devcontainer/Dockerfile`, `docker/Dockerfile`, `setup-local.sh`, `skills-plugins.txt` (if plugin).
 
-**Plugins/Skills** — Edit `.devcontainer/configuration/env-config.yaml` (plugins/skills sections). DevContainer reads via config-parser; Docker/local still use `skills-plugins.txt` until migrated. Local plugins: add to `.devcontainer/plugins/dev-marketplace/` + register in `marketplace.json`.
+**Plugins/Skills** — Edit `.devcontainer/configuration/env-config.yaml` (plugins/skills sections). DevContainer and Docker read via config-parser; local (`setup-local.sh`) still uses `skills-plugins.txt` until migrated. Local plugins: add to `.devcontainer/plugins/dev-marketplace/` + register in `marketplace.json`.
 
 **Local plugin layout**: `plugins/dev-marketplace/<name>/.claude-plugin/plugin.json` + `commands/<cmd>.md` (YAML frontmatter: `allowed-tools`, `description`, `argument-hint`).
 
@@ -129,5 +129,5 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 - **NODE_ENV gotcha**: DevContainer sets `NODE_ENV=production` which skips `devDependencies` on `npm install`. Use `NODE_ENV=development npm install --prefix src` to install jest and other dev tools.
 - **Jest 30 CLI**: Use `--testPathPatterns` (with trailing `s`), not `--testPathPattern`. The old flag is removed in Jest 30.
 - **Skill presets**: `src/lib/skill-presets.js` defines project type → skills mapping. `loop init --type` appends to PROMPT_skills_{plan,build}.md. Type persisted in `loop/.type` for `loop update`.
-- **Config parser**: `src/lib/config-parser.js` reads `env-config.yaml`, merges defaults with environment overrides, interpolates `${VAR}` from env. Exports: `loadConfig`, `mergeConfig`, `interpolateVars`, `validateConfig`, `flattenSection`, `flattenPlugins`. CLI: `node config-parser.js --config <path> --env <env> --section <name>` (scalars→`KEY=value`, objects→JSON, `plugins_flat`→flattened plugin array) or `--all` (full JSON). YAML configs: `.devcontainer/configuration/env-config.yaml` (real data, private) and `env-config.example.yaml` (template, public). `setup-env.sh` fully migrated; Docker/local scripts pending.
+- **Config parser**: `src/lib/config-parser.js` reads `env-config.yaml`, merges defaults with environment overrides, interpolates `${VAR}` from env. Exports: `loadConfig`, `mergeConfig`, `interpolateVars`, `validateConfig`, `flattenSection`, `flattenPlugins`. CLI: `node config-parser.js --config <path> --env <env> --section <name>` (scalars→`KEY=value`, objects→JSON, `plugins_flat`→flattened plugin array) or `--all` (full JSON). YAML configs: `.devcontainer/configuration/env-config.yaml` (real data, private) and `env-config.example.yaml` (template, public). `setup-env.sh` and `docker/setup-claude.sh` fully migrated; `setup-local.sh` pending.
 - **Config parser path timing**: `CONFIG_PARSER`/`CONFIG_FILE` must be set inside `detect_workspace_folder()`, not at script top-level — `WORKSPACE_FOLDER` is unset until that function runs.

@@ -80,10 +80,8 @@ sync_config_files() {
         cp -r "$CONFIG_SOURCE/plugins/dev-marketplace" "$CLAUDE_DIR/plugins/"
     fi
 
-    # Sync plugin configuration file
-    if [[ -f "$CONFIG_SOURCE/skills-plugins.txt" ]]; then
-        cp "$CONFIG_SOURCE/skills-plugins.txt" "$CLAUDE_DIR/skills-plugins.txt"
-    fi
+    # Sync YAML configuration file
+    cp "$CONFIG_SOURCE/env-config.yaml" "$CLAUDE_DIR/env-config.yaml" 2>/dev/null && ok "env-config.yaml synced" || true
 }
 
 # Always sync config files (from image to volume)

@@ -822,11 +822,11 @@ Expected: No syntax errors.
 
 ## Phase 6: Docker Migration
 
-**Status:** pending
+**Status:** complete
 
 ### Task 9: Update Dockerfile and entrypoint.sh for env-config.yaml
 
-- [ ] Modify `docker/Dockerfile` to copy `env-config.yaml` instead of `skills-plugins.txt`
+- [x] Modify `docker/Dockerfile` to copy `env-config.yaml` instead of `skills-plugins.txt`
 
 In Dockerfile, find the line that copies `skills-plugins.txt` to `/opt/claude-config/` and change to:
 
@@ -836,7 +836,7 @@ COPY .devcontainer/configuration/env-config.yaml /opt/claude-config/env-config.y
 
 Keep other COPY lines (`CLAUDE.md.memory`, `scripts/`, `plugins/`) unchanged.
 
-- [ ] Modify `docker/entrypoint.sh` to sync `env-config.yaml` instead of `skills-plugins.txt`
+- [x] Modify `docker/entrypoint.sh` to sync `env-config.yaml` instead of `skills-plugins.txt`
 
 In `sync_config_files()`, change the `skills-plugins.txt` sync line to:
 
@@ -856,7 +856,7 @@ Verify: `bash -n docker/entrypoint.sh` — no syntax errors.
 
 ### Task 10: Migrate setup-claude.sh to config-parser
 
-- [ ] Add config-parser variables and replace DSL parsing in `docker/setup-claude.sh`
+- [x] Add config-parser variables and replace DSL parsing in `docker/setup-claude.sh`
 
 Same pattern as `setup-env.sh` migration (Task 7-8). Key differences:
 - Parser path: `CONFIG_PARSER="/opt/loop/lib/config-parser.js"` (Docker bakes loop to `/opt/loop`)
@@ -867,7 +867,7 @@ Replace: `install_all_plugins_and_skills()`, `parse_mcp_servers()`, `build_expec
 
 Remove: `build_stdio_json()`, `build_http_json()`, `trim_whitespace()` (if present), old DSL loop code, `$CLAUDE_PLUGINS_FILE` constant.
 
-- [ ] Add timezone/locale propagation (same pattern as Task 8)
+- [x] Add timezone/locale propagation (same pattern as Task 8)
 
 **Files:**
 - Modify: `docker/setup-claude.sh`

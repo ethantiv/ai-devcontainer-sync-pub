@@ -86,7 +86,7 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
 
 # Copy configuration files for runtime sync to volume
 COPY .devcontainer/configuration/CLAUDE.md.memory /opt/claude-config/CLAUDE.md
-COPY .devcontainer/configuration/skills-plugins.txt /opt/claude-config/skills-plugins.txt
+COPY .devcontainer/configuration/env-config.yaml /opt/claude-config/env-config.yaml
 COPY .devcontainer/scripts/*.sh /opt/claude-config/scripts/
 COPY .devcontainer/plugins/dev-marketplace /opt/claude-config/plugins/dev-marketplace
 COPY docker/entrypoint.sh docker/setup-claude.sh /usr/local/bin/
