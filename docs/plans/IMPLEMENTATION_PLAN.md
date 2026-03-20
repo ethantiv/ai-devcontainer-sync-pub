@@ -337,11 +337,11 @@ Expected: All tests pass.
 
 ## Phase 2: Config Parser CLI
 
-**Status:** pending
+**Status:** complete
 
 ### Task 3: Add CLI interface to config-parser.js
 
-- [ ] Add CLI entry point at the bottom of `config-parser.js` for bash script consumption
+- [x] Add CLI entry point at the bottom of `config-parser.js` for bash script consumption
 
 The CLI is invoked by bash scripts as:
 ```bash
@@ -400,7 +400,7 @@ if (require.main === module) {
 }
 ```
 
-- [ ] Write CLI integration tests
+- [x] Write CLI integration tests
 
 Test the CLI by spawning `node config-parser.js` as a child process with a temp YAML file.
 
