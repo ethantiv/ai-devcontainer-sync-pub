@@ -15,5 +15,8 @@ __pycache__/
 
 # Logs and Docs
 src/logs/
-loop/logs/
 docs/
+
+# Project-local (created by loop init)
+loop/
+.claude/
