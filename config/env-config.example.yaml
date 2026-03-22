@@ -128,14 +128,6 @@ environments:
   # devcontainer — VS Code Dev Container / GitHub Codespaces
   # ---------------------------------------------------------------------------
   devcontainer:
-    # Path inside the container where projects are stored
-    projects_path: /home/vscode/projects
-
-    # projects_bind_mount: host path mounted into the container as projects_path.
-    # NOTE: This value is documentation-only in this file — it must also be
-    # declared in .devcontainer/devcontainer.json under the `mounts` key.
-    projects_bind_mount: "~/your/projects"
-
     # -------------------------------------------------------------------------
     # MCP Servers for devcontainer
     #
@@ -186,8 +178,6 @@ environments:
   # docker — self-hosted Docker container (e.g. on Raspberry Pi via Coolify)
   # ---------------------------------------------------------------------------
   docker:
-    projects_path: /home/developer/projects
-
     mcp_servers:
       - name: context7
         type: stdio
@@ -203,9 +193,3 @@ environments:
         env:
           COOLIFY_BASE_URL: "${COOLIFY_BASE_URL}"
           COOLIFY_ACCESS_TOKEN: "${COOLIFY_ACCESS_TOKEN}"
-
-  # ---------------------------------------------------------------------------
-  # local — macOS local install (setup-local.sh)
-  # ---------------------------------------------------------------------------
-  local:
-    projects_path: "~/your/projects"

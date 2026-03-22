@@ -17,11 +17,11 @@ Ready-to-use development environment with Claude Code, Gemini CLI, autonomous de
 
 1. Install [Docker](https://www.docker.com/) and [VS Code](https://code.visualstudio.com/) with [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 2. Clone this repository
-3. Create `.devcontainer/.env`:
+3. Create `config/.env`:
 
    ```bash
-   cp .devcontainer/.env.example .devcontainer/.env
-   # Edit .devcontainer/.env — at minimum set GH_TOKEN
+   cp config/.env.example config/.env
+   # Edit config/.env — at minimum set GH_TOKEN
    ```
 
 4. Open in VS Code and click **Reopen in Container**
@@ -31,8 +31,8 @@ Ready-to-use development environment with Claude Code, Gemini CLI, autonomous de
 Works on ARM64 (Raspberry Pi 5, Apple Silicon) and x86_64.
 
 ```bash
-cp .devcontainer/.env.example .devcontainer/.env
-# Edit .devcontainer/.env — at minimum set GH_TOKEN
+cp config/.env.example config/.env
+# Edit config/.env — at minimum set GH_TOKEN
 
 docker compose -f docker/docker-compose.yml up -d
 docker exec -it claude-code bash
@@ -44,7 +44,7 @@ Deploy as a Docker Compose app on a [Coolify](https://coolify.io/)-managed serve
 
 1. Create a new **Docker Compose** resource pointing to this repository
 2. Set **Base Directory** to `/docker` and **Docker Compose Location** to `/docker-compose.yml`
-3. Add environment variables (same as `.devcontainer/.env`) in app settings
+3. Add environment variables (same as `config/.env`) in app settings
 4. Deploy
 
 
@@ -107,7 +107,7 @@ When a plan is complete and you want to start a new one, use `--new` to archive 
 
 ## Environment Variables
 
-Set in `.devcontainer/.env` (copy from `.devcontainer/.env.example`).
+Set in `config/.env` (copy from `config/.env.example`).
 
 | Variable | Required | Description |
 |----------|----------|-------------|

@@ -52,7 +52,7 @@ Auto-triggered by Claude based on context (`dev-marketplace` plugins):
 | `GIT_USER_NAME` / `GIT_USER_EMAIL` | No | Git global identity |
 | `GIT_USER_EMAIL_ROCHE` | No | Git email for corporate (Roche) account |
 
-Codespaces: add as repository secrets. Local: create `.devcontainer/.env` (copy from `.devcontainer/.env.example`).
+Codespaces: add as repository secrets. Local: create `config/.env` (copy from `config/.env.example`).
 
 ### MCP Servers
 

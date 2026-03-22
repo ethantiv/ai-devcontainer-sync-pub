@@ -75,7 +75,7 @@ detect_workspace_folder() {
 }
 
 load_env_file() {
-    local env_file="$WORKSPACE_FOLDER/.devcontainer/.env"
+    local env_file="$WORKSPACE_FOLDER/config/.env"
     if [[ -f "$env_file" ]]; then
         while IFS= read -r line || [[ -n "$line" ]]; do
             # Skip empty lines and comments

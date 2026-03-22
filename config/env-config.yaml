@@ -14,7 +14,7 @@ defaults:
       name: "Mirosław Zaniewicz"
       email: "mirek@example.com"
     work:
-      email: ""
+      email: "miroslaw.zaniewicz@roche.com"
       orgs: "RIS-Navify-Data-Platform"
 
   timezone: "Europe/Warsaw"
@@ -95,9 +95,6 @@ environments:
   # devcontainer — VS Code Dev Container / GitHub Codespaces
   # ---------------------------------------------------------------------------
   devcontainer:
-    projects_path: /home/vscode/projects
-    projects_bind_mount: "/Users/mirek/Projekty"
-
     mcp_servers:
       - name: context7
         type: stdio
@@ -133,8 +130,6 @@ environments:
   # docker — self-hosted Docker container (e.g. on Raspberry Pi via Coolify)
   # ---------------------------------------------------------------------------
   docker:
-    projects_path: /home/developer/projects
-
     mcp_servers:
       - name: context7
         type: stdio
@@ -150,9 +145,3 @@ environments:
         env:
           COOLIFY_BASE_URL: "${COOLIFY_BASE_URL}"
           COOLIFY_ACCESS_TOKEN: "${COOLIFY_ACCESS_TOKEN}"
-
-  # ---------------------------------------------------------------------------
-  # local — macOS local install (setup-local.sh)
-  # ---------------------------------------------------------------------------
-  local:
-    projects_path: "~/Projekty"
