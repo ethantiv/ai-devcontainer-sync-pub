@@ -12,7 +12,7 @@ defaults:
   git:
     personal:
       name: "Mirosław Zaniewicz"
-      email: "mirek@example.com"
+      email: "mirekzaniewicz@icloud.com"
     work:
       email: "miroslaw.zaniewicz@roche.com"
       orgs: "RIS-Navify-Data-Platform"
@@ -92,7 +92,7 @@ defaults:
 environments:
 
   # ---------------------------------------------------------------------------
-  # devcontainer — VS Code Dev Container / GitHub Codespaces
+  # devcontainer — VS Code Dev Container
   # ---------------------------------------------------------------------------
   devcontainer:
     mcp_servers:
@@ -127,7 +127,7 @@ environments:
           FASTMCP_LOG_LEVEL: "ERROR"
 
   # ---------------------------------------------------------------------------
-  # docker — self-hosted Docker container (e.g. on Raspberry Pi via Coolify)
+  # docker — self-hosted Docker container
   # ---------------------------------------------------------------------------
   docker:
     mcp_servers:
