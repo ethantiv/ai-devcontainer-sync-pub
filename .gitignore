@@ -1,20 +1,22 @@
 # OS
 .DS_Store
 
-# Environment
+# Environment / secrets
 .env
 
 # Dependencies
 node_modules/
-.next/
-next-env.d.ts
 package-lock.json
 
-# Python
+# Build output
+.next/
+next-env.d.ts
 __pycache__/
 
-# Logs and Docs
+# Logs
 src/logs/
+
+# Generated docs
 docs/
 
 # Project-local (created by loop init)

@@ -85,13 +85,13 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && echo "set-option -g default-shell /bin/bash" >> ${HOME}/.tmux.conf
 
 # Copy configuration files for runtime sync to volume
-COPY .devcontainer/configuration/CLAUDE.md.memory /opt/claude-config/CLAUDE.md
-COPY .devcontainer/configuration/env-config.yaml /opt/claude-config/env-config.yaml
-COPY .devcontainer/scripts/*.sh /opt/claude-config/scripts/
-COPY .devcontainer/plugins/dev-marketplace /opt/claude-config/plugins/dev-marketplace
-COPY docker/entrypoint.sh docker/setup-claude.sh /usr/local/bin/
+COPY config/CLAUDE.md.memory /opt/claude-config/CLAUDE.md
+COPY config/env-config.yaml /opt/claude-config/env-config.yaml
+COPY config/scripts/*.sh /opt/claude-config/scripts/
+COPY config/plugins/dev-marketplace /opt/claude-config/plugins/dev-marketplace
+COPY docker/entrypoint.sh docker/setup-env.sh /usr/local/bin/
 
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/setup-claude.sh \
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/setup-env.sh \
     && chown -R ${USERNAME}:${USERNAME} /opt/claude-config
 
 VOLUME ["${HOME}/.claude", "${HOME}/.agents", "${HOME}/.gemini", "${HOME}/projects"]

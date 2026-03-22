@@ -56,7 +56,7 @@ Codespaces: add as repository secrets. Local: create `.devcontainer/.env` (copy 
 
 ### MCP Servers
 
-Declared in `env-config.yaml` (per-environment `mcp_servers` section) — single source of truth. All three setup scripts (`setup-env.sh`, `docker/setup-claude.sh`, `setup-local.sh`) use `config-parser.js` to read YAML and sync (add/remove) servers automatically.
+Declared in `config/env-config.yaml` (per-environment `mcp_servers` section) — single source of truth. All three setup scripts (`setup-env.sh`, `docker/setup-env.sh`, `setup-local.sh`) use `config-parser.js` to read YAML and sync (add/remove) servers automatically.
 
 ### Loop System
 
@@ -82,7 +82,7 @@ loop summary / cleanup  # Show run stats / kill dev server processes
 
 **Global npm tools** — 3 files: `.devcontainer/Dockerfile`, `docker/Dockerfile`, `setup-local.sh`.
 
-**Plugins/Skills** — Edit `.devcontainer/configuration/env-config.yaml` (plugins/skills sections). All three setup scripts read via config-parser. Local plugins: add to `.devcontainer/plugins/dev-marketplace/` + register in `marketplace.json`.
+**Plugins/Skills** — Edit `config/env-config.yaml` (plugins/skills sections). All three setup scripts read via config-parser. Local plugins: add to `config/plugins/dev-marketplace/` + register in `marketplace.json`.
 
 **Local plugin layout**: `plugins/dev-marketplace/<name>/.claude-plugin/plugin.json` + `commands/<cmd>.md` (YAML frontmatter: `allowed-tools`, `description`, `argument-hint`).
 
@@ -91,7 +91,7 @@ loop summary / cleanup  # Show run stats / kill dev server processes
 Setup/sync — apply across all:
 - `.devcontainer/setup-env.sh` — DevContainer/Codespaces
 - `setup-local.sh` — macOS local (plugins, skills, and MCP)
-- `docker/Dockerfile` + `docker/entrypoint.sh` + `docker/setup-claude.sh` — Docker
+- `docker/Dockerfile` + `docker/entrypoint.sh` + `docker/setup-env.sh` — Docker
 - `README.md` — docs for all deployment options
 
 Loop system: `src/` + `docker/Dockerfile` + `docker/entrypoint.sh`.
@@ -102,7 +102,7 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 
 **DevContainer**: start → `setup-env.sh` → SSH/GH auth → Claude config → sync plugins → MCP servers.
 
-**Docker**: start → `entrypoint.sh` → sync `/opt/claude-config` → first-run (`.configured` marker) → `setup-claude.sh`. Claude binary installed to `~/.claude/bin/` (volume) at first start, not during build. GH auth via `gh auth login --with-token`.
+**Docker**: start → `entrypoint.sh` → sync `/opt/claude-config` → first-run (`.configured` marker) → `setup-env.sh`. Claude binary installed to `~/.claude/bin/` (volume) at first start, not during build. GH auth via `gh auth login --with-token`.
 
 **Docker volumes** (4): `claude-code-claude-config` (~/.claude), `claude-code-agents-skills` (~/.agents), `claude-code-gemini-config` (~/.gemini), `claude-code-projects` (~/projects).
 
@@ -110,8 +110,8 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 
 | Source | Destination |
 |--------|-------------|
-| `configuration/CLAUDE.md.memory` | `~/.claude/CLAUDE.md` |
-| `plugins/dev-marketplace/` | local plugin marketplace |
+| `config/CLAUDE.md.memory` | `~/.claude/CLAUDE.md` |
+| `config/plugins/dev-marketplace/` | local plugin marketplace |
 
 ### Codebase Patterns
 
@@ -128,5 +128,5 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 - **NODE_ENV gotcha**: DevContainer sets `NODE_ENV=production` which skips `devDependencies` on `npm install`. Use `NODE_ENV=development npm install --prefix src` to install jest and other dev tools.
 - **Jest 30 CLI**: Use `--testPathPatterns` (with trailing `s`), not `--testPathPattern`. The old flag is removed in Jest 30.
 - **Skill presets**: `src/lib/skill-presets.js` defines project type → skills mapping. `loop init --type` appends to PROMPT_skills_{plan,build}.md. Type persisted in `loop/.type` for `loop update`.
-- **Config parser**: `src/lib/config-parser.js` reads `env-config.yaml`, merges defaults with environment overrides, interpolates `${VAR}` from env. Exports: `loadConfig`, `mergeConfig`, `interpolateVars`, `validateConfig`, `flattenSection`, `flattenPlugins`. CLI: `node config-parser.js --config <path> --env <env> --section <name>` (scalars→`KEY=value`, objects→JSON, `plugins_flat`→flattened plugin array) or `--all` (full JSON). YAML configs: `.devcontainer/configuration/env-config.yaml` (real data, private) and `env-config.example.yaml` (template, public). All three setup scripts fully migrated.
-- **Config parser path timing**: In `setup-env.sh`, `CONFIG_PARSER`/`CONFIG_FILE` must be set inside `detect_workspace_folder()`, not at script top-level — `WORKSPACE_FOLDER` is unset until that function runs. In `setup-local.sh`, they're set at top-level using `$SCRIPT_DIR` which is available immediately.
+- **Config parser**: `src/lib/config-parser.js` reads `env-config.yaml`, merges defaults with environment overrides, interpolates `${VAR}` from env. Exports: `loadConfig`, `mergeConfig`, `interpolateVars`, `validateConfig`, `flattenSection`, `flattenPlugins`. CLI: `node config-parser.js --config <path> --env <env> --section <name>` (scalars→`KEY=value`, objects→JSON, `plugins_flat`→flattened plugin array) or `--all` (full JSON). YAML configs: `config/env-config.yaml` (real data, private) and `config/env-config.example.yaml` (template, public). All three setup scripts fully migrated.
+- **Config parser path timing**: In `setup-env.sh`, `CONFIG_PARSER`/`CONFIG_FILE` must be set inside `detect_workspace_folder()`, not at script top-level — `WORKSPACE_FOLDER` is unset until that function runs. In `setup-local.sh`, they're set at top-level using `$CONFIG_DIR` (`$SCRIPT_DIR/config`) which is available immediately.

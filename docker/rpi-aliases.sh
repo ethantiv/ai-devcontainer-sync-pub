@@ -4,26 +4,14 @@
 #   scp docker/rpi-aliases.sh mirek@raspberrypi.local:~/.bash_aliases
 #
 # Usage:
-#   cc      — exec into production claude-code container
-#   dev-cc  — exec into dev claude-code container
+#   cc      — exec into claude-code container
 
-# Exec into production claude-code container
+# Exec into claude-code container
 cc() {
   local container
   container=$(sudo docker ps --format '{{.Names}}' | grep "^claude-code-")
   if [ -z "$container" ]; then
-    echo "Error: production claude-code container not found" >&2
-    return 1
-  fi
-  sudo docker exec -it "$container" bash
-}
-
-# Exec into dev claude-code container
-dev-cc() {
-  local container
-  container=$(sudo docker ps --format '{{.Names}}' | grep "^dev-claude-code-")
-  if [ -z "$container" ]; then
-    echo "Error: dev claude-code container not found" >&2
+    echo "Error: claude-code container not found" >&2
     return 1
   fi
   sudo docker exec -it "$container" bash

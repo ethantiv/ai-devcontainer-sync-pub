@@ -81,7 +81,7 @@ sync_config_files() {
     fi
 
     # Sync YAML configuration file
-    cp "$CONFIG_SOURCE/env-config.yaml" "$CLAUDE_DIR/env-config.yaml" 2>/dev/null && ok "env-config.yaml synced" || true
+    cp "$CONFIG_SOURCE/env-config.yaml" "$CLAUDE_DIR/env-config.yaml" 2>/dev/null && echo "  ✔︎ env-config.yaml synced" || true
 }
 
 # Always sync config files (from image to volume)
@@ -110,7 +110,7 @@ setup_gh_auth
 # =============================================================================
 
 echo "🚀 Configuring Claude Code..."
-if /usr/local/bin/setup-claude.sh; then
+if /usr/local/bin/setup-env.sh; then
     echo "✅ Configuration complete!"
 else
     echo "⚠️  Setup encountered errors (will retry on next start)"

@@ -21,7 +21,7 @@ jobs:
           git rm -rf --ignore-unmatch \
             .claude/settings.json \
             .claude/skills/ \
-            .devcontainer/configuration/env-config.yaml \
+            config/env-config.yaml \
             docs/plans/IMPLEMENTATION_PLAN_template.md
           git commit -m "chore: exclude private files from public repo"
 

@@ -68,7 +68,7 @@ setup_file_lock() {
 detect_workspace_folder() {
     WORKSPACE_FOLDER="${CODESPACE_VSCODE_FOLDER:-$PWD}"
     CONFIG_PARSER="$WORKSPACE_FOLDER/src/lib/config-parser.js"
-    CONFIG_FILE="$WORKSPACE_FOLDER/.devcontainer/configuration/env-config.yaml"
+    CONFIG_FILE="$WORKSPACE_FOLDER/config/env-config.yaml"
     local env_type="local DevContainer"
     [[ -n "${CODESPACE_VSCODE_FOLDER}" ]] && env_type="Codespaces"
     echo "🌍 Detected $env_type environment: $WORKSPACE_FOLDER"
@@ -330,12 +330,12 @@ apply_claude_settings() {
 }
 
 copy_claude_memory() {
-    local source_file="$1/.devcontainer/configuration/CLAUDE.md.memory"
+    local source_file="$1/config/CLAUDE.md.memory"
     [[ -f "$source_file" ]] && cp "$source_file" "$CLAUDE_DIR/CLAUDE.md" && ok "CLAUDE.md synced"
 }
 
 sync_claude_scripts() {
-    local source_dir="$1/.devcontainer/scripts"
+    local source_dir="$1/config/scripts"
     [[ -d "$source_dir" ]] || return 0
 
     ensure_directory "$CLAUDE_SCRIPTS_DIR"
@@ -508,7 +508,7 @@ install_all_plugins_and_skills() {
 }
 
 install_local_marketplace_plugins() {
-    local marketplace_dir="$WORKSPACE_FOLDER/.devcontainer/plugins/$LOCAL_MARKETPLACE_NAME"
+    local marketplace_dir="$WORKSPACE_FOLDER/config/plugins/$LOCAL_MARKETPLACE_NAME"
     local manifest="$marketplace_dir/.claude-plugin/marketplace.json"
 
     echo "📦 Installing local plugins..."
@@ -686,7 +686,7 @@ build_expected_plugins_list() {
     done < <(echo "$plugins_json" | jq -c '.[]')
 
     # Local marketplace plugins (auto-discovered, not from YAML)
-    local marketplace_json="$WORKSPACE_FOLDER/.devcontainer/plugins/${LOCAL_MARKETPLACE_NAME}/.claude-plugin/marketplace.json"
+    local marketplace_json="$WORKSPACE_FOLDER/config/plugins/${LOCAL_MARKETPLACE_NAME}/.claude-plugin/marketplace.json"
     if [[ -f "$marketplace_json" ]]; then
         local plugin_names
         plugin_names=$(jq -r '.plugins[].name // empty' "$marketplace_json" 2>/dev/null)

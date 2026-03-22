@@ -30,11 +30,11 @@ get_script_dir() {
 }
 
 SCRIPT_DIR="$(get_script_dir)"
-DEVCONTAINER_DIR="$SCRIPT_DIR/.devcontainer"
+CONFIG_DIR="$SCRIPT_DIR/config"
 
 # Config parser (replaces skills-plugins.txt DSL)
 CONFIG_PARSER="$SCRIPT_DIR/src/lib/config-parser.js"
-CONFIG_FILE="$SCRIPT_DIR/.devcontainer/configuration/env-config.yaml"
+CONFIG_FILE="$CONFIG_DIR/env-config.yaml"
 
 # =============================================================================
 # UTILITY FUNCTIONS
@@ -225,7 +225,7 @@ apply_claude_settings() {
 }
 
 sync_claude_scripts() {
-    local source_dir="$DEVCONTAINER_DIR/scripts"
+    local source_dir="$CONFIG_DIR/scripts"
     [[ -d "$source_dir" ]] || return 0
 
     ensure_directory "$CLAUDE_SCRIPTS_DIR"
@@ -244,7 +244,7 @@ sync_claude_scripts() {
 }
 
 copy_claude_memory() {
-    local source_file="$DEVCONTAINER_DIR/configuration/CLAUDE.md.memory"
+    local source_file="$CONFIG_DIR/CLAUDE.md.memory"
     [[ -f "$source_file" ]] && cp "$source_file" "$CLAUDE_DIR/CLAUDE.md" && ok "CLAUDE.md synced"
 }
 
@@ -450,7 +450,7 @@ install_all_plugins_and_skills() {
 install_local_marketplace_plugins() {
     print_header "Installing local plugins"
 
-    local marketplace_dir="$DEVCONTAINER_DIR/plugins/$LOCAL_MARKETPLACE_NAME"
+    local marketplace_dir="$CONFIG_DIR/plugins/$LOCAL_MARKETPLACE_NAME"
     local manifest="$marketplace_dir/.claude-plugin/marketplace.json"
 
     has_command claude || return 0
@@ -502,7 +502,7 @@ build_expected_plugins_list() {
     done < <(echo "$plugins_json" | jq -c '.[]')
 
     # Local marketplace plugins (auto-discovered, not from YAML)
-    local local_manifest="$DEVCONTAINER_DIR/plugins/$LOCAL_MARKETPLACE_NAME/.claude-plugin/marketplace.json"
+    local local_manifest="$CONFIG_DIR/plugins/$LOCAL_MARKETPLACE_NAME/.claude-plugin/marketplace.json"
     if [[ -f "$local_manifest" ]]; then
         while IFS= read -r plugin; do
             [[ -n "$plugin" ]] && _expected_plugins="${_expected_plugins}${plugin}@${LOCAL_MARKETPLACE_NAME}"$'\n'
@@ -645,7 +645,7 @@ sync_mcp_servers() {
 main() {
     echo ""
     echo "🚀 Claude Code Local Setup for macOS"
-    echo "   Source: $DEVCONTAINER_DIR"
+    echo "   Source: $CONFIG_DIR"
 
     check_requirements
     install_claude_cli
