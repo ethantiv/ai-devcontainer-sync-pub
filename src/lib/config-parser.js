@@ -105,9 +105,6 @@ function flattenPlugins(config) {
   for (const name of (plugins.lsp || [])) {
     result.push({ name, type: 'marketplace' });
   }
-  for (const ext of (plugins.external || [])) {
-    result.push({ name: ext.name, type: ext.type, source: ext.source });
-  }
   return result;
 }
 

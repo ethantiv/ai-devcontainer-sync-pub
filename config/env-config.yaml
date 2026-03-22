@@ -49,11 +49,6 @@ defaults:
       - pyright-lsp
       - rust-analyzer-lsp
       - typescript-lsp
-    external:
-      - name: dev-marketplace
-        type: dev-marketplace
-        source: ethantiv/dev-marketplace
-
   skills:
     - url: "https://github.com/anthropics/skills"
       name: docx

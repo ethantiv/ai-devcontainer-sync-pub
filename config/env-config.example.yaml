@@ -61,10 +61,6 @@ defaults:
       - typescript-lsp                   # Example — add LSP plugins you need
       # - pyright-lsp
       # - rust-analyzer-lsp
-    external:                            # Example — external marketplace repos
-      # - name: my-marketplace
-      #   type: dev-marketplace
-      #   source: your-org/your-marketplace
 
   # -------------------------------------------------------------------------
   # Skills — installed via `npx skills add`

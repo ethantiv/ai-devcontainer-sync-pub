@@ -157,12 +157,11 @@ describe('flattenSection', () => {
 });
 
 describe('flattenPlugins', () => {
-  test('flattens marketplace, lsp, and external into flat array', () => {
+  test('flattens marketplace and lsp into flat array', () => {
     const config = {
       plugins: {
         marketplace: ['plugin-a', 'plugin-b'],
         lsp: ['ts-lsp'],
-        external: [{ name: 'ext1', type: 'dev-marketplace', source: 'owner/repo' }]
       }
     };
     const result = flattenPlugins(config);
@@ -170,7 +169,6 @@ describe('flattenPlugins', () => {
       { name: 'plugin-a', type: 'marketplace' },
       { name: 'plugin-b', type: 'marketplace' },
       { name: 'ts-lsp', type: 'marketplace' },
-      { name: 'ext1', type: 'dev-marketplace', source: 'owner/repo' },
     ]);
   });
 
@@ -273,10 +271,6 @@ defaults:
       - plugin-a
     lsp:
       - ts-lsp
-    external:
-      - name: ext1
-        type: dev-marketplace
-        source: owner/repo
 environments: {}
 `);
     const output = execFileSync('node', [parserPath, '--config', configPath, '--section', 'plugins_flat'], { encoding: 'utf8' });
@@ -284,7 +278,6 @@ environments: {}
     expect(parsed).toEqual([
       { name: 'plugin-a', type: 'marketplace' },
       { name: 'ts-lsp', type: 'marketplace' },
-      { name: 'ext1', type: 'dev-marketplace', source: 'owner/repo' },
     ]);
   });
 });

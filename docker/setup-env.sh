@@ -227,25 +227,11 @@ install_all_plugins_and_skills() {
 
     # NOTE: Use process substitution (< <(...)) to avoid subshell variable scoping.
     # Piped while-loops run in subshells where counter/array mutations are lost.
-    declare -A external_marketplaces
     while IFS= read -r plugin; do
-        local name type source
+        local name
         name=$(echo "$plugin" | jq -r '.name')
-        type=$(echo "$plugin" | jq -r '.type')
-        source=$(echo "$plugin" | jq -r '.source // empty')
-
-        if [[ "$type" == "marketplace" ]]; then
-            local rc=0; install_plugin "${name}@${OFFICIAL_MARKETPLACE_NAME}" "$name" || rc=$?
-            update_plugin_counters $rc plugins_installed plugins_skipped plugins_failed
-        else
-            if [[ -n "$source" && -z "${external_marketplaces[$type]}" ]]; then
-                ensure_marketplace "$type" "$source" || continue
-                claude plugin marketplace update "$type" 2>/dev/null || true
-                external_marketplaces[$type]=1
-            fi
-            local rc=0; install_plugin "${name}@${type}" "$name" || rc=$?
-            update_plugin_counters $rc plugins_installed plugins_skipped plugins_failed
-        fi
+        local rc=0; install_plugin "${name}@${OFFICIAL_MARKETPLACE_NAME}" "$name" || rc=$?
+        update_plugin_counters $rc plugins_installed plugins_skipped plugins_failed
     done < <(echo "$plugins_json" | jq -c '.[]')
 
     # Skills
@@ -304,14 +290,9 @@ build_expected_plugins_list() {
 
     # Process substitution to preserve expected_plugins associative array
     while IFS= read -r plugin; do
-        local name type
+        local name
         name=$(echo "$plugin" | jq -r '.name')
-        type=$(echo "$plugin" | jq -r '.type')
-        if [[ "$type" == "marketplace" ]]; then
-            expected_plugins["${name}@${OFFICIAL_MARKETPLACE_NAME}"]=1
-        else
-            expected_plugins["${name}@${type}"]=1
-        fi
+        expected_plugins["${name}@${OFFICIAL_MARKETPLACE_NAME}"]=1
     done < <(echo "$plugins_json" | jq -c '.[]')
 
     # Local marketplace plugins (auto-discovered, not from YAML)

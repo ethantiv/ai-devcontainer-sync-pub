@@ -396,33 +396,15 @@ install_all_plugins_and_skills() {
         warn "Failed to parse plugin config"; return 0
     }
 
-    local _seen_ext_marketplaces=""
     while IFS= read -r plugin; do
-        local name type source
+        local name
         name=$(echo "$plugin" | jq -r '.name')
-        type=$(echo "$plugin" | jq -r '.type')
-        source=$(echo "$plugin" | jq -r '.source // empty')
-
-        if [[ "$type" == "marketplace" ]]; then
-            local rc=0; install_plugin "${name}@${OFFICIAL_MARKETPLACE_NAME}" "$name" || rc=$?
-            case $rc in
-                0) plugins_installed=$((plugins_installed + 1)) ;;
-                1) plugins_skipped=$((plugins_skipped + 1)) ;;
-                2) plugins_failed=$((plugins_failed + 1)) ;;
-            esac
-        else
-            if [[ -n "$source" && "$_seen_ext_marketplaces" != *"|$type|"* ]]; then
-                ensure_marketplace "$type" "$source" || continue
-                claude plugin marketplace update "$type" 2>/dev/null || true
-                _seen_ext_marketplaces="${_seen_ext_marketplaces}|$type|"
-            fi
-            local rc=0; install_plugin "${name}@${type}" "$name" || rc=$?
-            case $rc in
-                0) plugins_installed=$((plugins_installed + 1)) ;;
-                1) plugins_skipped=$((plugins_skipped + 1)) ;;
-                2) plugins_failed=$((plugins_failed + 1)) ;;
-            esac
-        fi
+        local rc=0; install_plugin "${name}@${OFFICIAL_MARKETPLACE_NAME}" "$name" || rc=$?
+        case $rc in
+            0) plugins_installed=$((plugins_installed + 1)) ;;
+            1) plugins_skipped=$((plugins_skipped + 1)) ;;
+            2) plugins_failed=$((plugins_failed + 1)) ;;
+        esac
     done < <(echo "$plugins_json" | jq -c '.[]')
 
     # Skills
@@ -491,14 +473,9 @@ build_expected_plugins_list() {
     plugins_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section plugins_flat) || return 0
 
     while IFS= read -r plugin; do
-        local name type
+        local name
         name=$(echo "$plugin" | jq -r '.name')
-        type=$(echo "$plugin" | jq -r '.type')
-        if [[ "$type" == "marketplace" ]]; then
-            _expected_plugins="${_expected_plugins}${name}@${OFFICIAL_MARKETPLACE_NAME}"$'\n'
-        else
-            _expected_plugins="${_expected_plugins}${name}@${type}"$'\n'
-        fi
+        _expected_plugins="${_expected_plugins}${name}@${OFFICIAL_MARKETPLACE_NAME}"$'\n'
     done < <(echo "$plugins_json" | jq -c '.[]')
 
     # Local marketplace plugins (auto-discovered, not from YAML)
