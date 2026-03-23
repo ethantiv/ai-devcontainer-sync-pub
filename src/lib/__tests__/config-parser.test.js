@@ -263,6 +263,19 @@ environments: {}
       .toThrow();
   });
 
+  test('returns empty array for missing section', () => {
+    const configPath = writeYaml('cli-missing-section.yaml', `
+defaults:
+  git:
+    personal:
+      name: T
+      email: t@t.com
+environments: {}
+`);
+    const output = execFileSync('node', [parserPath, '--config', configPath, '--env', 'devcontainer', '--section', 'mcp_servers'], { encoding: 'utf8' });
+    expect(JSON.parse(output)).toEqual([]);
+  });
+
   test('--section plugins_flat returns flattened plugin array', () => {
     const configPath = writeYaml('cli-plugins.yaml', `
 defaults:

@@ -72,9 +72,6 @@ function loadConfig(configPath, env) {
   const defaults = doc.defaults || {};
   const environments = doc.environments || {};
 
-  if (env && !environments[env]) {
-    process.stderr.write(`Warning: environment "${env}" not found in config, using bare defaults\n`);
-  }
   const envOverrides = env ? (environments[env] || {}) : {};
   const merged = mergeConfig(defaults, envOverrides);
   validateConfig(merged);
@@ -137,10 +134,8 @@ if (require.main === module) {
       } else {
         const value = config[section];
         if (value === undefined) {
-          process.stderr.write(`Error: section "${section}" not found\n`);
-          process.exit(1);
-        }
-        if (typeof value === 'object') {
+          process.stdout.write('[]\n');
+        } else if (typeof value === 'object') {
           process.stdout.write(JSON.stringify(value, null, 2) + '\n');
         } else {
           // Scalar value — flat KEY=value output
