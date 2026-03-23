@@ -1,0 +1,46 @@
+# env-config.yaml
+#
+# Vanilla configuration for ai-devcontainer-sync (no plugins, skills, or MCP).
+# Full configuration backup: env-config.full.yaml
+# See env-config.example.yaml for field documentation.
+
+# =============================================================================
+# DEFAULTS — base values shared across all environments
+# =============================================================================
+defaults:
+
+  git:
+    personal:
+      name: "Mirosław Zaniewicz"
+      email: "mirekzaniewicz@icloud.com"
+    work:
+      email: "miroslaw.zaniewicz@roche.com"
+      orgs: "RIS-Navify-Data-Platform"
+
+  timezone: "Europe/Warsaw"
+  locale: "pl_PL.UTF-8"
+
+  claude:
+    language: "Polski"
+    permissions:
+      allow: []
+      deny: []
+      ask: []
+      defaultMode: "bypassPermissions"
+
+  plugins:
+    marketplace: []
+    lsp: []
+
+  skills: []
+
+# =============================================================================
+# ENVIRONMENTS — per-environment overrides that extend defaults
+# =============================================================================
+environments:
+
+  devcontainer:
+    mcp_servers: []
+
+  docker:
+    mcp_servers: []
