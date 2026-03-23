@@ -22,3 +22,6 @@ docs/
 # Project-local (created by loop init)
 loop/
 .claude/
+
+# Encrypted volume backups
+.devcontainer/backups/
