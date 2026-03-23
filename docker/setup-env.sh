@@ -347,6 +347,48 @@ sync_plugins() {
     ((removed > 0 || failed > 0)) && echo "  📊 Sync: $removed removed, $failed failed" || ok "All plugins in sync"
 }
 
+# Sync: remove skills not in expected list
+sync_skills() {
+    echo "🔄 Synchronizing skills..."
+
+    local skills_dir="$CLAUDE_DIR/skills"
+    [[ -d "$skills_dir" ]] || return 0
+
+    # Build expected skills list from YAML
+    local expected=()
+    local skills_json
+    skills_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section skills 2>/dev/null) || return 0
+
+    while IFS= read -r skill; do
+        local name
+        name=$(echo "$skill" | jq -r '.name')
+        [[ -n "$name" ]] && expected+=("$name")
+    done < <(echo "$skills_json" | jq -c '.[]')
+
+    # Compare installed vs expected, remove stale
+    local removed=0 failed=0
+    for dir in "$skills_dir"/*/; do
+        [[ -d "$dir" ]] || continue
+        local name
+        name=$(basename "$dir")
+        local found=0
+        for exp in "${expected[@]}"; do
+            [[ "$name" == "$exp" ]] && { found=1; break; }
+        done
+        if [[ $found -eq 0 ]]; then
+            if rm -rf "$dir"; then
+                echo "  🗑️  Removed skill: $name"
+                removed=$((removed + 1))
+            else
+                warn "Failed to remove skill: $name"
+                failed=$((failed + 1))
+            fi
+        fi
+    done
+
+    ((removed > 0 || failed > 0)) && echo "  📊 Skills sync: $removed removed, $failed failed" || ok "All skills in sync"
+}
+
 # =============================================================================
 # MCP SERVERS
 # =============================================================================
@@ -452,6 +494,7 @@ main() {
     apply_claude_settings
     propagate_env_from_config
     sync_plugins
+    sync_skills
     install_all_plugins_and_skills
     install_local_marketplace_plugins
     sync_mcp_servers
