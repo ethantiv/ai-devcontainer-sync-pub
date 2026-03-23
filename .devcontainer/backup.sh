@@ -26,6 +26,9 @@ Environment:
 EOF
 }
 
+# Ensure gpg-agent is fresh (stale sockets cause "can't connect" errors in containers)
+gpgconf --kill gpg-agent 2>/dev/null || true
+
 # ── Configuration ────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
