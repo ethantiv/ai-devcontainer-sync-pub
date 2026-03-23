@@ -123,18 +123,20 @@ environments:
     expect(result.plugins.marketplace).toEqual(['plugin-a', 'plugin-b']);
   });
 
-  test('throws on unknown environment', () => {
+  test('returns defaults for unknown environment', () => {
     const configPath = writeYaml('config.yaml', `
 defaults:
   git:
     personal:
       name: Test
       email: test@test.com
+  timezone: UTC
 environments:
   devcontainer: {}
 `);
-    expect(() => loadConfig(configPath, 'unknown'))
-      .toThrow('Unknown environment');
+    const result = loadConfig(configPath, 'local');
+    expect(result.timezone).toBe('UTC');
+    expect(result.git.personal.name).toBe('Test');
   });
 
   test('throws on missing required fields', () => {
@@ -227,18 +229,20 @@ environments: {}
     expect(output.trim()).toBe('TIMEZONE=UTC');
   });
 
-  test('exits with error on unknown env', () => {
+  test('returns defaults for unknown env via CLI', () => {
     const configPath = writeYaml('cli4.yaml', `
 defaults:
   git:
     personal:
       name: T
       email: t@t.com
+  timezone: UTC
 environments:
   devcontainer: {}
 `);
-    expect(() => execFileSync('node', [parserPath, '--config', configPath, '--env', 'bad', '--all'], { encoding: 'utf8' }))
-      .toThrow();
+    const output = execFileSync('node', [parserPath, '--config', configPath, '--env', 'local', '--all'], { encoding: 'utf8' });
+    const parsed = JSON.parse(output);
+    expect(parsed.timezone).toBe('UTC');
   });
 
   test('exits with error when --config missing', () => {

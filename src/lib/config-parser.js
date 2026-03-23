@@ -73,11 +73,9 @@ function loadConfig(configPath, env) {
   const environments = doc.environments || {};
 
   if (env && !environments[env]) {
-    const valid = Object.keys(environments).join(', ');
-    throw new Error(`Unknown environment "${env}". Valid: ${valid}`);
+    process.stderr.write(`Warning: environment "${env}" not found in config, using bare defaults\n`);
   }
-
-  const envOverrides = env ? environments[env] : {};
+  const envOverrides = env ? (environments[env] || {}) : {};
   const merged = mergeConfig(defaults, envOverrides);
   validateConfig(merged);
   return interpolateVars(merged);

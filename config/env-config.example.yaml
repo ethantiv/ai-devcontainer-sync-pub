@@ -86,6 +86,7 @@ defaults:
 #                         "docker" (self-hosted Docker container),
 #                         "local" (macOS local setup via setup-local.sh).
 # Each environment section EXTENDS `defaults` — add only what differs.
+# An environment without a section here simply uses bare defaults.
 # Currently only `mcp_servers` is environment-specific.
 # =============================================================================
 environments:
