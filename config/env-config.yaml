@@ -1,7 +1,7 @@
 # env-config.yaml
 #
-# Real configuration for ai-devcontainer-sync.
-# This file contains personal data — excluded from the public mirror repo.
+# Vanilla configuration for ai-devcontainer-sync (no plugins, skills, or MCP).
+# Full configuration backup: env-config.full.yaml
 # See env-config.example.yaml for field documentation.
 
 # =============================================================================
@@ -29,114 +29,18 @@ defaults:
       defaultMode: "bypassPermissions"
 
   plugins:
-    marketplace:
-      - agent-sdk-dev
-      - atlassian
-      - claude-code-setup
-      - claude-md-management
-      - code-simplifier
-      - commit-commands
-      - explanatory-output-style
-      - feature-dev
-      - frontend-design
-      - hookify
-      - playground
-      - plugin-dev
-      - skill-creator
-      - superpowers
-    lsp:
-      - jdtls-lsp
-      - pyright-lsp
-      - rust-analyzer-lsp
-      - typescript-lsp
-  skills:
-    - url: "https://github.com/anthropics/skills"
-      name: docx
-    - url: "https://github.com/anthropics/skills"
-      name: pdf
-    - url: "https://github.com/anthropics/skills"
-      name: xlsx
-    - url: "https://github.com/hashicorp/agent-skills"
-      name: refactor-module
-    - url: "https://github.com/hashicorp/agent-skills"
-      name: terraform-style-guide
-    - url: "https://github.com/hashicorp/agent-skills"
-      name: terraform-test
-    - url: "https://github.com/intellectronica/agent-skills"
-      name: beautiful-mermaid
-    - url: "https://github.com/nicobailon/visual-explainer"
-      name: visual-explainer
-    - url: "https://github.com/softaworks/agent-toolkit"
-      name: humanizer
-    - url: "https://github.com/softaworks/agent-toolkit"
-      name: mermaid-diagrams
-    - url: "https://github.com/vercel-labs/agent-browser"
-      name: agent-browser
-    - url: "https://github.com/vercel-labs/agent-skills"
-      name: vercel-composition-patterns
-    - url: "https://github.com/vercel-labs/agent-skills"
-      name: vercel-react-best-practices
-    - url: "https://github.com/vercel-labs/agent-skills"
-      name: web-design-guidelines
-    - url: "https://github.com/vercel-labs/skills"
-      name: find-skills
+    marketplace: []
+    lsp: []
+
+  skills: []
 
 # =============================================================================
 # ENVIRONMENTS — per-environment overrides that extend defaults
 # =============================================================================
 environments:
 
-  # ---------------------------------------------------------------------------
-  # devcontainer — VS Code Dev Container
-  # ---------------------------------------------------------------------------
   devcontainer:
-    mcp_servers:
-      - name: context7
-        type: stdio
-        command: npx
-        args: ["-y", "@upstash/context7-mcp"]
-        env:
-          CONTEXT7_API_KEY: "${CONTEXT7_API_KEY}"
+    mcp_servers: []
 
-      - name: coolify
-        type: stdio
-        command: npx
-        args: ["-y", "@masonator/coolify-mcp@latest"]
-        env:
-          COOLIFY_BASE_URL: "${COOLIFY_BASE_URL}"
-          COOLIFY_ACCESS_TOKEN: "${COOLIFY_ACCESS_TOKEN}"
-
-      - name: aws-documentation
-        type: stdio
-        command: uvx
-        args: ["awslabs.aws-documentation-mcp-server@latest"]
-        env:
-          FASTMCP_LOG_LEVEL: "ERROR"
-          AWS_DOCUMENTATION_PARTITION: "aws"
-
-      - name: terraform
-        type: stdio
-        command: uvx
-        args: ["awslabs.terraform-mcp-server@latest"]
-        env:
-          FASTMCP_LOG_LEVEL: "ERROR"
-
-  # ---------------------------------------------------------------------------
-  # docker — self-hosted Docker container
-  # ---------------------------------------------------------------------------
   docker:
-    mcp_servers:
-      - name: context7
-        type: stdio
-        command: npx
-        args: ["-y", "@upstash/context7-mcp"]
-        env:
-          CONTEXT7_API_KEY: "${CONTEXT7_API_KEY}"
-
-      - name: coolify
-        type: stdio
-        command: npx
-        args: ["-y", "@masonator/coolify-mcp@latest"]
-        env:
-          COOLIFY_BASE_URL: "${COOLIFY_BASE_URL}"
-          COOLIFY_ACCESS_TOKEN: "${COOLIFY_ACCESS_TOKEN}"
+    mcp_servers: []
