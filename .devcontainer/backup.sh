@@ -15,7 +15,7 @@ Usage: .devcontainer/backup.sh <command> [options]
 
 Commands:
   create              Create encrypted backup of DevContainer volumes
-  restore <file>      Restore volumes from encrypted backup
+  restore [file]      Restore from backup (latest if no file given)
   list                List existing backups
 
 Options (restore):
@@ -95,6 +95,20 @@ cmd_create() {
     local size
     size="$(du -h "$gpg_archive" | cut -f1)"
     ok "Backup created: $gpg_archive ($size)"
+
+    # Prune old backups (keep 3 most recent)
+    local max_backups="${BACKUP_MAX_KEEP:-3}"
+    local all_backups
+    all_backups=$(ls -1t "$BACKUP_DIR"/backup-*.tar.gz.gpg 2>/dev/null) || true
+    local count=0
+    while IFS= read -r old_backup; do
+        [[ -z "$old_backup" ]] && continue
+        count=$((count + 1))
+        if [[ $count -gt $max_backups ]]; then
+            rm -f "$old_backup"
+            ok "Pruned old backup: $(basename "$old_backup")"
+        fi
+    done <<< "$all_backups"
 }
 cmd_restore() {
     local force=false
@@ -111,11 +125,14 @@ cmd_restore() {
         esac
     done
 
-    # Validate file argument
+    # Auto-select latest backup if no file given
     if [[ -z "$file" ]]; then
-        fail "Missing backup file argument"
-        usage
-        exit 1
+        file=$(ls -1t "$BACKUP_DIR"/backup-*.tar.gz.gpg 2>/dev/null | head -1) || true
+        if [[ -z "$file" ]]; then
+            fail "No backup files found in $BACKUP_DIR"
+            exit 1
+        fi
+        ok "Using latest backup: $(basename "$file")"
     fi
 
     if [[ ! -f "$file" ]]; then

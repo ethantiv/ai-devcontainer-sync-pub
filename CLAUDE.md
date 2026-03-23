@@ -22,7 +22,7 @@ bash src/scripts/tests/test_write_idea.sh          # Run shell tests (18 tests)
 bash src/scripts/tests/test_check_completion.sh    # Run completion detection tests (20 tests)
 bash src/scripts/tests/test_ensure_playwright.sh   # Run Playwright lazy-install tests (14 tests)
 bash src/scripts/tests/test_cleanup.sh             # Run cleanup.sh port tests (11 tests)
-bash src/scripts/tests/test_backup.sh              # Run backup.sh tests (18 tests)
+bash src/scripts/tests/test_backup.sh              # Run backup.sh tests (20 tests)
 ```
 
 ## Skills (dev-marketplace)

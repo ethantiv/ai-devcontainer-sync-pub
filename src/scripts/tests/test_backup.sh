@@ -156,16 +156,41 @@ if [[ -f "$extract_dir/$TEST_DIR/home/vscode/.claude/token.json" ]]; then pass "
 else fail_test "backup contains correct file content" "file not found in extracted archive"; fi
 teardown
 
+# create prunes old backups keeping max BACKUP_MAX_KEEP
+setup
+export BACKUP_PIN="testpin123"
+export BACKUP_MAX_KEEP=2
+for i in 1 2 3; do
+    bash "$BACKUP_SCRIPT" create >/dev/null 2>&1
+    sleep 1
+done
+gpg_count=$(find "$BACKUP_DIR" -name "*.tar.gz.gpg" | wc -l)
+assert_eq "2" "$(echo "$gpg_count" | tr -d ' ')" "create prunes old backups keeping max BACKUP_MAX_KEEP"
+teardown
+
 # ── Restore tests ────────────────────────────────────────
 
 echo ""
 echo "=== Restore tests ==="
 
-# restore fails without file argument
+# restore without file fails when no backups exist
 setup
 export BACKUP_PIN="testpin123"
-output=$(bash "$BACKUP_SCRIPT" restore 2>&1 || true)
-assert_contains "$output" "Missing backup file" "restore fails without file argument"
+output=$(bash "$BACKUP_SCRIPT" restore --force 2>&1 || true)
+assert_contains "$output" "No backup files" "restore without file fails when no backups exist"
+teardown
+
+# restore without file uses latest backup
+setup
+export BACKUP_PIN="testpin123"
+bash "$BACKUP_SCRIPT" create >/dev/null 2>&1
+rm -rf "$TEST_DIR/home/vscode/.claude" "$TEST_DIR/home/vscode/.gemini"
+export BACKUP_RESTORE_ROOT="$TEST_DIR"
+exit_code=0
+output=$(bash "$BACKUP_SCRIPT" restore --force 2>&1) || exit_code=$?
+TESTS_RUN=$((TESTS_RUN + 1))
+if [[ $exit_code -eq 0 && "$output" == *"Using latest"* ]]; then pass "restore without file uses latest backup"
+else fail_test "restore without file uses latest backup" "exit=$exit_code, output: $output"; fi
 teardown
 
 # restore fails with nonexistent file
