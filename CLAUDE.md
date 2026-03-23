@@ -22,6 +22,7 @@ bash src/scripts/tests/test_write_idea.sh          # Run shell tests (18 tests)
 bash src/scripts/tests/test_check_completion.sh    # Run completion detection tests (20 tests)
 bash src/scripts/tests/test_ensure_playwright.sh   # Run Playwright lazy-install tests (14 tests)
 bash src/scripts/tests/test_cleanup.sh             # Run cleanup.sh port tests (11 tests)
+bash src/scripts/tests/test_backup.sh              # Run backup.sh tests (18 tests)
 ```
 
 ## Skills (dev-marketplace)
@@ -51,6 +52,7 @@ Auto-triggered by Claude based on context (`dev-marketplace` plugins):
 | `GH_ROCHE_ORGS` | No | Pipe-separated GitHub orgs routed to Roche token (default: `RIS-Navify-Data-Platform`) |
 | `GIT_USER_NAME` / `GIT_USER_EMAIL` | No | Git global identity |
 | `GIT_USER_EMAIL_ROCHE` | No | Git email for corporate (Roche) account |
+| `BACKUP_PIN` | No | PIN for encrypting/decrypting volume backups |
 
 Codespaces: add as repository secrets. Local: create `config/.env` (copy from `config/.env.example`).
 
@@ -130,3 +132,5 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 - **Skill presets**: `src/lib/skill-presets.js` defines project type → skills mapping. `loop init --type` appends to PROMPT_skills_{plan,build}.md. Type persisted in `loop/.type` for `loop update`.
 - **Config parser**: `src/lib/config-parser.js` reads `env-config.yaml`, merges defaults with environment overrides, interpolates `${VAR}` from env. Exports: `loadConfig`, `mergeConfig`, `interpolateVars`, `validateConfig`, `flattenSection`, `flattenPlugins`. CLI: `node config-parser.js --config <path> --env <env> --section <name>` (scalars→`KEY=value`, objects→JSON, `plugins_flat`→flattened plugin array) or `--all` (full JSON). YAML configs: `config/env-config.yaml` (real data, private) and `config/env-config.example.yaml` (template, public). All three setup scripts fully migrated.
 - **Config parser path timing**: In `setup-env.sh`, `CONFIG_PARSER`/`CONFIG_FILE` must be set inside `detect_workspace_folder()`, not at script top-level — `WORKSPACE_FOLDER` is unset until that function runs. In `setup-local.sh`, they're set at top-level using `$CONFIG_DIR` (`$SCRIPT_DIR/config`) which is available immediately.
+- **GPG in container**: Use `--pinentry-mode loopback` with `--passphrase` — without it, gpg tries to launch pinentry dialog which doesn't exist.
+- **Shell test assert helpers**: `assert_eq`/`assert_contains` in `src/scripts/tests/` increment `TESTS_RUN` internally — don't also increment manually before calling them.

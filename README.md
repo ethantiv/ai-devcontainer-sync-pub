@@ -118,3 +118,16 @@ Set in `config/.env` (copy from `config/.env.example`).
 | `COOLIFY_BASE_URL` / `COOLIFY_ACCESS_TOKEN` | No | Coolify deployment management |
 | `STITCH_API_KEY` | No | Google Stitch MCP server |
 | `RESET_CLAUDE_CONFIG` / `RESET_GEMINI_CONFIG` | No | Set `true` to clear config on startup |
+| `BACKUP_PIN` | No | PIN for encrypting/decrypting volume backups |
+
+## Volume Backups
+
+Create encrypted backups of DevContainer Docker volumes (`~/.claude`, `~/.gemini`, `~/.cache/google-vscode-extension/auth`).
+
+```bash
+.devcontainer/backup.sh create              # Create encrypted backup
+.devcontainer/backup.sh restore <file>      # Restore from backup (use --force to skip confirmation)
+.devcontainer/backup.sh list                # List existing backups
+```
+
+Set `BACKUP_PIN` in `config/.env` before use. Backups are saved to `.devcontainer/backups/` (gitignored) as AES-256 encrypted `.tar.gz.gpg` files.
