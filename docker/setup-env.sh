@@ -32,13 +32,12 @@ fail() { echo -e "  \033[31m❌\033[0m $1"; }
 
 setup_github_token() {
     if [[ -n "${GH_TOKEN}" ]]; then
-        {
-            echo "export GH_TOKEN='${GH_TOKEN}'"
-            echo "alias cc='clear && claude'"
-            echo "alias ccc='clear && claude -c'"
-            echo "alias ccr='clear && claude -r'"
-        } >> ~/.bashrc 2>/dev/null && ok "GitHub token exported to ~/.bashrc" \
-            || warn "Could not write to ~/.bashrc (GH_TOKEN available from env)"
+        local env_file="$CLAUDE_DIR/env.sh"
+        if ! grep -q "^export GH_TOKEN=" "$env_file" 2>/dev/null; then
+            echo "export GH_TOKEN='${GH_TOKEN}'" >> "$env_file" \
+                && ok "GitHub token exported to env.sh" \
+                || warn "Could not write to env.sh (GH_TOKEN available from env)"
+        fi
     fi
 }
 
@@ -137,16 +136,16 @@ propagate_env_from_config() {
     work_email=$(echo "$config_json" | jq -r '.git.work.email // empty')
     work_orgs=$(echo "$config_json" | jq -r '.git.work.orgs // empty')
 
-    # Append to ~/.bashrc if not already present (idempotent)
-    local bashrc="$HOME/.bashrc"
-    [[ -n "$tz" ]] && ! grep -q "^export TZ=" "$bashrc" 2>/dev/null && echo "export TZ=\"$tz\"" >> "$bashrc"
-    [[ -n "$locale" ]] && ! grep -q "^export LC_TIME=" "$bashrc" 2>/dev/null && echo "export LC_TIME=\"$locale\"" >> "$bashrc"
-    [[ -n "$git_name" ]] && ! grep -q "^export GIT_USER_NAME=" "$bashrc" 2>/dev/null && echo "export GIT_USER_NAME=\"$git_name\"" >> "$bashrc"
-    [[ -n "$git_email" ]] && ! grep -q "^export GIT_USER_EMAIL=" "$bashrc" 2>/dev/null && echo "export GIT_USER_EMAIL=\"$git_email\"" >> "$bashrc"
-    [[ -n "$work_email" ]] && ! grep -q "^export GIT_USER_EMAIL_ROCHE=" "$bashrc" 2>/dev/null && echo "export GIT_USER_EMAIL_ROCHE=\"$work_email\"" >> "$bashrc"
-    [[ -n "$work_orgs" ]] && ! grep -q "^export GH_ROCHE_ORGS=" "$bashrc" 2>/dev/null && echo "export GH_ROCHE_ORGS=\"$work_orgs\"" >> "$bashrc"
+    # Append to env.sh in volume (not ~/.bashrc which may be read-only)
+    local env_file="$CLAUDE_DIR/env.sh"
+    [[ -n "$tz" ]] && ! grep -q "^export TZ=" "$env_file" 2>/dev/null && echo "export TZ=\"$tz\"" >> "$env_file"
+    [[ -n "$locale" ]] && ! grep -q "^export LC_TIME=" "$env_file" 2>/dev/null && echo "export LC_TIME=\"$locale\"" >> "$env_file"
+    [[ -n "$git_name" ]] && ! grep -q "^export GIT_USER_NAME=" "$env_file" 2>/dev/null && echo "export GIT_USER_NAME=\"$git_name\"" >> "$env_file"
+    [[ -n "$git_email" ]] && ! grep -q "^export GIT_USER_EMAIL=" "$env_file" 2>/dev/null && echo "export GIT_USER_EMAIL=\"$git_email\"" >> "$env_file"
+    [[ -n "$work_email" ]] && ! grep -q "^export GIT_USER_EMAIL_ROCHE=" "$env_file" 2>/dev/null && echo "export GIT_USER_EMAIL_ROCHE=\"$work_email\"" >> "$env_file"
+    [[ -n "$work_orgs" ]] && ! grep -q "^export GH_ROCHE_ORGS=" "$env_file" 2>/dev/null && echo "export GH_ROCHE_ORGS=\"$work_orgs\"" >> "$env_file"
 
-    ok "Environment variables propagated to ~/.bashrc"
+    ok "Environment variables propagated to env.sh"
 }
 
 # =============================================================================

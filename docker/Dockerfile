@@ -82,6 +82,9 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && chown -R ${USERNAME}:${USERNAME} ${HOME} \
     && echo 'export PATH="$HOME/.claude/bin:$HOME/.local/bin:$HOME/.uv/bin:$PATH"' >> ${HOME}/.bashrc \
     && echo "alias cc='clear && claude'" >> ${HOME}/.bashrc \
+    && echo "alias ccc='clear && claude -c'" >> ${HOME}/.bashrc \
+    && echo "alias ccr='clear && claude -r'" >> ${HOME}/.bashrc \
+    && echo '[ -f "$HOME/.claude/env.sh" ] && . "$HOME/.claude/env.sh"' >> ${HOME}/.bashrc \
     && echo "set-option -g default-shell /bin/bash" >> ${HOME}/.tmux.conf
 
 # Copy configuration files for runtime sync to volume
