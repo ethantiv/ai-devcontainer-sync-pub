@@ -26,9 +26,6 @@ Environment:
 EOF
 }
 
-# Ensure gpg-agent is fresh (stale sockets cause "can't connect" errors in containers)
-gpgconf --kill gpg-agent 2>/dev/null || true
-
 # ── Configuration ────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -84,9 +81,9 @@ cmd_create() {
 
     # Encrypt
     gpg --batch --yes --passphrase "$BACKUP_PIN" \
-        --pinentry-mode loopback \
+        --pinentry-mode loopback --no-symkey-cache \
         --symmetric --cipher-algo AES256 \
-        --output "$gpg_archive" "$_TMP_ARCHIVE"
+        --output "$gpg_archive" "$_TMP_ARCHIVE" 2>/dev/null
 
     # Remove temp (also handled by trap, but be explicit)
     rm -f "$_TMP_ARCHIVE"
@@ -175,7 +172,7 @@ cmd_restore() {
     local restore_root="${BACKUP_RESTORE_ROOT:-/}"
 
     # Decrypt and extract
-    if ! gpg --batch --yes --passphrase "$pin" --pinentry-mode loopback --decrypt "$file" 2>/dev/null \
+    if ! gpg --batch --yes --passphrase "$pin" --pinentry-mode loopback --no-symkey-cache --decrypt "$file" 2>/dev/null \
         | tar xzf - -C "$restore_root"; then
         fail "Restore failed — wrong PIN or corrupted backup"
         exit 1
