@@ -93,8 +93,87 @@ cmd_create() {
     size="$(du -h "$gpg_archive" | cut -f1)"
     ok "Backup created: $gpg_archive ($size)"
 }
-cmd_restore() { echo "TODO"; }
-cmd_list() { echo "TODO"; }
+cmd_restore() {
+    local force=false
+    local file=""
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --force) force=true; shift ;;
+            *)
+                if [[ -z "$file" ]]; then file="$1"; shift
+                else fail "Unknown argument: $1"; usage; exit 1; fi
+                ;;
+        esac
+    done
+
+    # Validate file argument
+    if [[ -z "$file" ]]; then
+        fail "Missing backup file argument"
+        usage
+        exit 1
+    fi
+
+    if [[ ! -f "$file" ]]; then
+        fail "Backup file not found: $file"
+        exit 1
+    fi
+
+    # Resolve PIN
+    local pin="${BACKUP_PIN:-}"
+    if [[ -z "$pin" ]]; then
+        if [[ -t 0 ]]; then
+            read -s -p "Enter backup PIN: " pin
+            echo
+        else
+            fail "BACKUP_PIN is not set and no interactive terminal available"
+            exit 1
+        fi
+    fi
+
+    if [[ -z "$pin" ]]; then
+        fail "PIN cannot be empty"
+        exit 1
+    fi
+
+    # Confirmation prompt
+    if [[ "$force" != true ]]; then
+        if [[ -t 0 ]]; then
+            read -p "Overwrite current config? [y/N] " confirm
+            if [[ "$confirm" != [yY] ]]; then
+                warn "Restore cancelled"
+                exit 0
+            fi
+        else
+            fail "Use --force to skip confirmation in non-interactive mode"
+            exit 1
+        fi
+    fi
+
+    # Restore target (overridable for testing)
+    local restore_root="${BACKUP_RESTORE_ROOT:-/}"
+
+    # Decrypt and extract
+    if ! gpg --batch --yes --passphrase "$pin" --pinentry-mode loopback --decrypt "$file" 2>/dev/null \
+        | tar xzf - -C "$restore_root"; then
+        fail "Restore failed — wrong PIN or corrupted backup"
+        exit 1
+    fi
+
+    ok "Restore completed from: $file"
+}
+
+cmd_list() {
+    if [[ ! -d "$BACKUP_DIR" ]] || [[ -z "$(ls "$BACKUP_DIR"/*.tar.gz.gpg 2>/dev/null)" ]]; then
+        warn "No backups found in $BACKUP_DIR"
+        return 0
+    fi
+
+    echo "Backups in $BACKUP_DIR:"
+    echo ""
+    ls -lh "$BACKUP_DIR"/*.tar.gz.gpg | awk '{print "  " $NF " (" $5 ", " $6 " " $7 " " $8 ")"}'
+}
 
 case "${1:-}" in
     create)  shift; cmd_create "$@" ;;

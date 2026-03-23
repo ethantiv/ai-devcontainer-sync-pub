@@ -159,6 +159,92 @@ if [[ -f "$extract_dir/$TEST_DIR/home/vscode/.claude/token.json" ]]; then pass "
 else fail_test "backup contains correct file content" "file not found in extracted archive"; fi
 teardown
 
+# ── Restore tests ────────────────────────────────────────
+
+echo ""
+echo "=== Restore tests ==="
+
+# restore fails without file argument
+setup
+export BACKUP_PIN="testpin123"
+TESTS_RUN=$((TESTS_RUN + 1))
+output=$(bash "$BACKUP_SCRIPT" restore 2>&1 || true)
+assert_contains "$output" "Missing backup file" "restore fails without file argument"
+teardown
+
+# restore fails with nonexistent file
+setup
+export BACKUP_PIN="testpin123"
+TESTS_RUN=$((TESTS_RUN + 1))
+output=$(bash "$BACKUP_SCRIPT" restore /tmp/nonexistent.gpg 2>&1 || true)
+assert_contains "$output" "not found" "restore fails with nonexistent file"
+teardown
+
+# restore fails without --force in non-interactive mode
+setup
+export BACKUP_PIN="testpin123"
+bash "$BACKUP_SCRIPT" create >/dev/null 2>&1
+gpg_file=$(find "$BACKUP_DIR" -name "*.tar.gz.gpg" | head -1)
+TESTS_RUN=$((TESTS_RUN + 1))
+output=$(bash "$BACKUP_SCRIPT" restore "$gpg_file" 2>&1 || true)
+assert_contains "$output" "--force" "restore fails without --force in non-interactive mode"
+teardown
+
+# restore roundtrip: create -> delete originals -> restore -> verify
+setup
+export BACKUP_PIN="testpin123"
+bash "$BACKUP_SCRIPT" create >/dev/null 2>&1
+gpg_file=$(find "$BACKUP_DIR" -name "*.tar.gz.gpg" | head -1)
+# Delete original data
+rm -rf "$TEST_DIR/home/vscode/.claude" "$TEST_DIR/home/vscode/.gemini"
+# Restore with --force, extract to TEST_DIR as root
+export BACKUP_RESTORE_ROOT="$TEST_DIR"
+bash "$BACKUP_SCRIPT" restore "$gpg_file" --force >/dev/null 2>&1
+TESTS_RUN=$((TESTS_RUN + 1))
+# tar strips leading / from absolute paths, so archive contains e.g. "tmp/tmp.XXX/home/vscode/.claude/..."
+# With -C $TEST_DIR, files land at $TEST_DIR/tmp/tmp.XXX/home/vscode/.claude/...
+restored_file=$(find "$TEST_DIR" -name "token.json" -path "*/.claude/*" 2>/dev/null | head -1)
+if [[ -n "$restored_file" ]]; then
+    content=$(cat "$restored_file")
+    if [[ "$content" == "secret-token-1" ]]; then pass "restore roundtrip preserves file content"
+    else fail_test "restore roundtrip preserves file content" "wrong content: $content"; fi
+else
+    fail_test "restore roundtrip preserves file content" "token.json not found after restore"
+fi
+teardown
+
+# restore fails with wrong PIN
+setup
+export BACKUP_PIN="testpin123"
+bash "$BACKUP_SCRIPT" create >/dev/null 2>&1
+gpg_file=$(find "$BACKUP_DIR" -name "*.tar.gz.gpg" | head -1)
+export BACKUP_PIN="wrongpin"
+TESTS_RUN=$((TESTS_RUN + 1))
+output=$(bash "$BACKUP_SCRIPT" restore "$gpg_file" --force 2>&1 || true)
+assert_contains "$output" "❌" "restore fails with wrong PIN"
+teardown
+
+# ── List tests ───────────────────────────────────────────
+
+echo ""
+echo "=== List tests ==="
+
+# list with no backups
+setup
+TESTS_RUN=$((TESTS_RUN + 1))
+output=$(bash "$BACKUP_SCRIPT" list 2>&1)
+assert_contains "$output" "No backups" "list shows message when no backups exist"
+teardown
+
+# list after creating backup
+setup
+export BACKUP_PIN="testpin123"
+bash "$BACKUP_SCRIPT" create >/dev/null 2>&1
+TESTS_RUN=$((TESTS_RUN + 1))
+output=$(bash "$BACKUP_SCRIPT" list 2>&1)
+assert_contains "$output" ".tar.gz.gpg" "list shows backup file after create"
+teardown
+
 # ── Summary ──────────────────────────────────────────────
 
 echo ""
