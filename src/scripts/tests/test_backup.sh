@@ -78,6 +78,87 @@ output=$(bash "$BACKUP_SCRIPT" 2>&1 || true)
 if [[ "$output" == *"Usage:"* ]]; then pass "no arguments shows usage"
 else fail_test "no arguments shows usage" "got: $output"; fi
 
+# ── Create tests ─────────────────────────────────────────
+
+echo ""
+echo "=== Create tests ==="
+
+# create fails without BACKUP_PIN (unset)
+setup
+unset BACKUP_PIN 2>/dev/null || true
+TESTS_RUN=$((TESTS_RUN + 1))
+output=$(bash "$BACKUP_SCRIPT" create 2>&1 || true)
+assert_contains "$output" "BACKUP_PIN" "create fails without BACKUP_PIN"
+teardown
+
+# create fails with empty BACKUP_PIN
+setup
+export BACKUP_PIN=""
+TESTS_RUN=$((TESTS_RUN + 1))
+output=$(bash "$BACKUP_SCRIPT" create 2>&1 || true)
+assert_contains "$output" "BACKUP_PIN" "create fails with empty BACKUP_PIN"
+teardown
+
+# create succeeds with valid PIN
+setup
+export BACKUP_PIN="testpin123"
+exit_code=0
+output=$(bash "$BACKUP_SCRIPT" create 2>&1) || exit_code=$?
+TESTS_RUN=$((TESTS_RUN + 1))
+if [[ $exit_code -eq 0 ]]; then pass "create succeeds with valid PIN"
+else fail_test "create succeeds with valid PIN" "exit code: $exit_code, output: $output"; fi
+teardown
+
+# create produces .tar.gz.gpg file
+setup
+export BACKUP_PIN="testpin123"
+bash "$BACKUP_SCRIPT" create >/dev/null 2>&1
+gpg_files=$(find "$BACKUP_DIR" -name "*.tar.gz.gpg" 2>/dev/null | wc -l)
+assert_eq "1" "$(echo "$gpg_files" | tr -d ' ')" "create produces exactly one .tar.gz.gpg file"
+teardown
+
+# create does not leave unencrypted .tar.gz
+setup
+export BACKUP_PIN="testpin123"
+bash "$BACKUP_SCRIPT" create >/dev/null 2>&1
+tar_files=$(find "$BACKUP_DIR" -name "*.tar.gz" ! -name "*.gpg" 2>/dev/null | wc -l)
+assert_eq "0" "$(echo "$tar_files" | tr -d ' ')" "create does not leave unencrypted .tar.gz"
+teardown
+
+# create skips missing source folder with warning
+setup
+export BACKUP_PIN="testpin123"
+rm -rf "$TEST_DIR/home/vscode/.gemini"
+TESTS_RUN=$((TESTS_RUN + 1))
+exit_code=0
+output=$(bash "$BACKUP_SCRIPT" create 2>&1) || exit_code=$?
+if [[ "$output" == *"⚠"* && $exit_code -eq 0 ]]; then pass "create warns on missing folder but succeeds"
+else fail_test "create warns on missing folder but succeeds" "exit=$exit_code, output: $output"; fi
+teardown
+
+# create fails when ALL source folders are missing
+setup
+export BACKUP_PIN="testpin123"
+rm -rf "$TEST_DIR/home"
+TESTS_RUN=$((TESTS_RUN + 1))
+output=$(bash "$BACKUP_SCRIPT" create 2>&1 || true)
+assert_contains "$output" "No source folders" "create fails when all source folders missing"
+teardown
+
+# backup content is valid (decrypt + extract with full paths)
+setup
+export BACKUP_PIN="testpin123"
+bash "$BACKUP_SCRIPT" create >/dev/null 2>&1
+gpg_file=$(find "$BACKUP_DIR" -name "*.tar.gz.gpg" | head -1)
+extract_dir="$TEST_DIR/extracted"
+mkdir -p "$extract_dir"
+gpg --batch --yes --passphrase "$BACKUP_PIN" --decrypt "$gpg_file" 2>/dev/null | tar xzf - -C "$extract_dir"
+TESTS_RUN=$((TESTS_RUN + 1))
+# Archive stores full paths (tar strips leading /), so extracted structure mirrors the original
+if [[ -f "$extract_dir/$TEST_DIR/home/vscode/.claude/token.json" ]]; then pass "backup contains correct file content"
+else fail_test "backup contains correct file content" "file not found in extracted archive"; fi
+teardown
+
 # ── Summary ──────────────────────────────────────────────
 
 echo ""

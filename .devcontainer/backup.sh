@@ -35,7 +35,64 @@ BACKUP_DIR="${BACKUP_DIR:-$SCRIPT_DIR/backups}"
 BACKUP_SOURCE_PATHS="${BACKUP_SOURCE_PATHS:-/home/vscode/.claude /home/vscode/.gemini /home/vscode/.cache/google-vscode-extension/auth}"
 
 # ── Command router ───────────────────────────────────────
-cmd_create() { echo "TODO"; }
+cmd_create() {
+    # Validate PIN
+    if [[ -z "${BACKUP_PIN:-}" ]]; then
+        fail "BACKUP_PIN is not set. Add it to config/.env"
+        exit 1
+    fi
+
+    # Ensure backup directory exists
+    mkdir -p "$BACKUP_DIR"
+
+    # Ensure .gitignore has backup entry (defensive)
+    local gitignore="$REPO_ROOT/.gitignore"
+    if [[ -f "$gitignore" ]] && ! grep -q '.devcontainer/backups/' "$gitignore"; then
+        echo -e "\n# Encrypted volume backups\n.devcontainer/backups/" >> "$gitignore"
+        ok "Added .devcontainer/backups/ to .gitignore"
+    fi
+
+    # Build list of existing source paths
+    local sources=()
+    for path in $BACKUP_SOURCE_PATHS; do
+        if [[ -d "$path" ]]; then
+            sources+=("$path")
+        else
+            warn "Skipping missing folder: $path"
+        fi
+    done
+
+    if [[ ${#sources[@]} -eq 0 ]]; then
+        fail "No source folders found to backup"
+        exit 1
+    fi
+
+    # Create temporary archive (global so trap can reference it)
+    local timestamp
+    timestamp="$(date +%Y-%m-%d-%H%M%S)"
+    _TMP_ARCHIVE="$BACKUP_DIR/.backup-${timestamp}.tar.gz"
+    local gpg_archive="$BACKUP_DIR/backup-${timestamp}.tar.gz.gpg"
+
+    # Trap: always remove unencrypted temp file
+    trap '[[ -n "${_TMP_ARCHIVE:-}" ]] && rm -f "$_TMP_ARCHIVE"' EXIT INT TERM
+
+    # Tar with full absolute paths (tar strips leading / automatically)
+    tar czf "$_TMP_ARCHIVE" "${sources[@]}"
+
+    # Encrypt
+    gpg --batch --yes --passphrase "$BACKUP_PIN" \
+        --pinentry-mode loopback \
+        --symmetric --cipher-algo AES256 \
+        --output "$gpg_archive" "$_TMP_ARCHIVE"
+
+    # Remove temp (also handled by trap, but be explicit)
+    rm -f "$_TMP_ARCHIVE"
+    _TMP_ARCHIVE=""
+
+    local size
+    size="$(du -h "$gpg_archive" | cut -f1)"
+    ok "Backup created: $gpg_archive ($size)"
+}
 cmd_restore() { echo "TODO"; }
 cmd_list() { echo "TODO"; }
 
