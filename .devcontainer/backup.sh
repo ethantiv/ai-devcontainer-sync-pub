@@ -77,7 +77,7 @@ cmd_create() {
     trap '[[ -n "${_TMP_ARCHIVE:-}" ]] && rm -f "$_TMP_ARCHIVE"' EXIT INT TERM
 
     # Tar with full absolute paths (tar strips leading / automatically)
-    tar czf "$_TMP_ARCHIVE" "${sources[@]}"
+    tar czf "$_TMP_ARCHIVE" "${sources[@]}" 2>/dev/null
 
     # Encrypt
     gpg --batch --yes --passphrase "$BACKUP_PIN" \

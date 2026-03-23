@@ -86,7 +86,6 @@ echo "=== Create tests ==="
 # create fails without BACKUP_PIN (unset)
 setup
 unset BACKUP_PIN 2>/dev/null || true
-TESTS_RUN=$((TESTS_RUN + 1))
 output=$(bash "$BACKUP_SCRIPT" create 2>&1 || true)
 assert_contains "$output" "BACKUP_PIN" "create fails without BACKUP_PIN"
 teardown
@@ -94,7 +93,6 @@ teardown
 # create fails with empty BACKUP_PIN
 setup
 export BACKUP_PIN=""
-TESTS_RUN=$((TESTS_RUN + 1))
 output=$(bash "$BACKUP_SCRIPT" create 2>&1 || true)
 assert_contains "$output" "BACKUP_PIN" "create fails with empty BACKUP_PIN"
 teardown
@@ -140,7 +138,6 @@ teardown
 setup
 export BACKUP_PIN="testpin123"
 rm -rf "$TEST_DIR/home"
-TESTS_RUN=$((TESTS_RUN + 1))
 output=$(bash "$BACKUP_SCRIPT" create 2>&1 || true)
 assert_contains "$output" "No source folders" "create fails when all source folders missing"
 teardown
@@ -167,7 +164,6 @@ echo "=== Restore tests ==="
 # restore fails without file argument
 setup
 export BACKUP_PIN="testpin123"
-TESTS_RUN=$((TESTS_RUN + 1))
 output=$(bash "$BACKUP_SCRIPT" restore 2>&1 || true)
 assert_contains "$output" "Missing backup file" "restore fails without file argument"
 teardown
@@ -175,7 +171,6 @@ teardown
 # restore fails with nonexistent file
 setup
 export BACKUP_PIN="testpin123"
-TESTS_RUN=$((TESTS_RUN + 1))
 output=$(bash "$BACKUP_SCRIPT" restore /tmp/nonexistent.gpg 2>&1 || true)
 assert_contains "$output" "not found" "restore fails with nonexistent file"
 teardown
@@ -185,7 +180,6 @@ setup
 export BACKUP_PIN="testpin123"
 bash "$BACKUP_SCRIPT" create >/dev/null 2>&1
 gpg_file=$(find "$BACKUP_DIR" -name "*.tar.gz.gpg" | head -1)
-TESTS_RUN=$((TESTS_RUN + 1))
 output=$(bash "$BACKUP_SCRIPT" restore "$gpg_file" 2>&1 || true)
 assert_contains "$output" "--force" "restore fails without --force in non-interactive mode"
 teardown
@@ -219,7 +213,6 @@ export BACKUP_PIN="testpin123"
 bash "$BACKUP_SCRIPT" create >/dev/null 2>&1
 gpg_file=$(find "$BACKUP_DIR" -name "*.tar.gz.gpg" | head -1)
 export BACKUP_PIN="wrongpin"
-TESTS_RUN=$((TESTS_RUN + 1))
 output=$(bash "$BACKUP_SCRIPT" restore "$gpg_file" --force 2>&1 || true)
 assert_contains "$output" "❌" "restore fails with wrong PIN"
 teardown
@@ -231,7 +224,6 @@ echo "=== List tests ==="
 
 # list with no backups
 setup
-TESTS_RUN=$((TESTS_RUN + 1))
 output=$(bash "$BACKUP_SCRIPT" list 2>&1)
 assert_contains "$output" "No backups" "list shows message when no backups exist"
 teardown
@@ -240,7 +232,6 @@ teardown
 setup
 export BACKUP_PIN="testpin123"
 bash "$BACKUP_SCRIPT" create >/dev/null 2>&1
-TESTS_RUN=$((TESTS_RUN + 1))
 output=$(bash "$BACKUP_SCRIPT" list 2>&1)
 assert_contains "$output" ".tar.gz.gpg" "list shows backup file after create"
 teardown
