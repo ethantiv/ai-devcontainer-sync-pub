@@ -738,18 +738,18 @@ sync_skills() {
         [[ -n "$name" ]] && expected+=("$name")
     done < <(echo "$skills_json" | jq -c '.[]')
 
-    # Compare installed vs expected, remove stale
+    # Compare installed vs expected, remove stale (directories and symlinks)
     local removed=0 failed=0
-    for dir in "$skills_dir"/*/; do
-        [[ -d "$dir" ]] || continue
+    for entry in "$skills_dir"/*; do
+        [[ -d "$entry" || -L "$entry" ]] || continue
         local name
-        name=$(basename "$dir")
+        name=$(basename "$entry")
         local found=0
         for exp in "${expected[@]}"; do
             [[ "$name" == "$exp" ]] && { found=1; break; }
         done
         if [[ $found -eq 0 ]]; then
-            if rm -rf "$dir"; then
+            if rm -rf "$entry"; then
                 echo "  🗑️  Removed skill: $name"
                 removed=$((removed + 1))
             else
