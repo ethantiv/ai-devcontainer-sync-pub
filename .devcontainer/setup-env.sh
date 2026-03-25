@@ -157,23 +157,25 @@ TOKENEOF
     fi
 }
 
-setup_multi_github() {
-    # Skip if no work token configured
-    [[ -n "${GH_TOKEN_WORK:-}" ]] || return 0
-
-    echo "🔐 Setting up multi-GitHub account routing..."
-
+setup_git_identity() {
     local user_name="${GIT_USER_NAME:-}"
     local user_email="${GIT_USER_EMAIL:-}"
-    local work_email="${GIT_USER_EMAIL_WORK:-$user_email}"
 
-    # Set global git identity (needed for includeIf to have a base)
     if [[ -n "$user_name" ]]; then
         git config --global user.name "$user_name"
     fi
     if [[ -n "$user_email" ]]; then
         git config --global user.email "$user_email"
     fi
+}
+
+setup_multi_github() {
+    # Skip if no work token configured
+    [[ -n "${GH_TOKEN_WORK:-}" ]] || return 0
+
+    echo "🔐 Setting up multi-GitHub account routing..."
+
+    local work_email="${GIT_USER_EMAIL_WORK:-${GIT_USER_EMAIL:-}}"
 
     # Add includeIf for work repos (idempotent — unset first, then set)
     local work_dirs="${GH_WORK_DIRS:-}"
@@ -799,6 +801,7 @@ main() {
     load_env_file
 
     propagate_env_from_config
+    setup_git_identity
     setup_ssh_authentication
     setup_github_token
     setup_multi_github
