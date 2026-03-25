@@ -16,6 +16,8 @@ defaults:
     work:
       email: "miroslaw.zaniewicz@roche.com"
       orgs: "RIS-Navify-Data-Platform"
+      dirs:
+        - "~/projects/Roche"
 
   timezone: "Europe/Warsaw"
   locale: "pl_PL.UTF-8"

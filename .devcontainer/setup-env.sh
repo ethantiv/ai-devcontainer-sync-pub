@@ -175,9 +175,25 @@ setup_multi_github() {
         git config --global user.email "$user_email"
     fi
 
-    # Add includeIf for Roche repos (idempotent — unset first, then set)
-    git config --global --unset-all 'includeIf.gitdir:~/projects/Roche/.path' 2>/dev/null || true
-    git config --global 'includeIf.gitdir:~/projects/Roche/.path' '~/.gitconfig-roche'
+    # Add includeIf for work repos (idempotent — unset first, then set)
+    local roche_dirs="${GH_ROCHE_DIRS:-}"
+    if [[ -n "$roche_dirs" ]]; then
+        # Remove all existing includeIf entries for .gitconfig-roche
+        while read -r key value; do
+            [[ "$value" == "~/.gitconfig-roche" ]] && git config --global --unset-all "$key" 2>/dev/null || true
+        done < <(git config --global --get-regexp 'includeIf\..*\.path' 2>/dev/null)
+        # Add includeIf for each configured directory
+        IFS='|' read -ra dirs <<< "$roche_dirs"
+        for dir in "${dirs[@]}"; do
+            [[ -z "$dir" ]] && continue
+            # Ensure trailing slash for gitdir matching
+            dir="${dir%/}/"
+            git config --global "includeIf.gitdir:${dir}.path" '~/.gitconfig-roche'
+        done
+    else
+        # Fallback: no dirs configured, skip includeIf
+        warn "GH_ROCHE_DIRS not set — skipping git includeIf config (set git.work.dirs in env-config.yaml)"
+    fi
 
     # Write ~/.gitconfig-roche
     cat > "$HOME/.gitconfig-roche" << EOF
@@ -240,13 +256,18 @@ for arg in "$@"; do
     fi
 done
 
-# PWD-based detection (fallback)
-if [[ "$token" == "${GH_TOKEN:-}" ]]; then
-    case "$PWD" in
-        "$HOME/projects/Roche"/*|"$HOME/projects/Roche")
-            token="${GH_TOKEN_ROCHE:-$token}"
-            ;;
-    esac
+# PWD-based detection (fallback): check configured work directories
+if [[ "$token" == "${GH_TOKEN:-}" && -n "${GH_ROCHE_DIRS:-}" ]]; then
+    IFS='|' read -ra _dirs <<< "$GH_ROCHE_DIRS"
+    for _d in "${_dirs[@]}"; do
+        _d="${_d/#\~/$HOME}"
+        case "$PWD" in
+            "${_d}"/*|"${_d}")
+                token="${GH_TOKEN_ROCHE:-$token}"
+                break
+                ;;
+        esac
+    done
 fi
 
 GH_TOKEN="$token" exec /usr/bin/gh "$@"
@@ -261,7 +282,7 @@ GHEOF
         fi
     fi
 
-    ok "Multi-GitHub setup complete (ethantiv + zaniewim_roche)"
+    ok "Multi-GitHub setup complete (personal + work account)"
 }
 
 # =============================================================================
@@ -353,13 +374,14 @@ propagate_env_from_config() {
     local config_json
     config_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --all 2>/dev/null) || return 0
 
-    local tz locale git_name git_email work_email work_orgs
+    local tz locale git_name git_email work_email work_orgs work_dirs
     tz=$(echo "$config_json" | jq -r '.timezone // empty')
     locale=$(echo "$config_json" | jq -r '.locale // empty')
     git_name=$(echo "$config_json" | jq -r '.git.personal.name // empty')
     git_email=$(echo "$config_json" | jq -r '.git.personal.email // empty')
     work_email=$(echo "$config_json" | jq -r '.git.work.email // empty')
     work_orgs=$(echo "$config_json" | jq -r '.git.work.orgs // empty')
+    work_dirs=$(echo "$config_json" | jq -r '(.git.work.dirs // []) | join("|")')
 
     # Append to ~/.bashrc if not already present (idempotent)
     local bashrc="$HOME/.bashrc"
@@ -369,6 +391,10 @@ propagate_env_from_config() {
     [[ -n "$git_email" ]] && ! grep -q "^export GIT_USER_EMAIL=" "$bashrc" 2>/dev/null && echo "export GIT_USER_EMAIL=\"$git_email\"" >> "$bashrc"
     [[ -n "$work_email" ]] && ! grep -q "^export GIT_USER_EMAIL_ROCHE=" "$bashrc" 2>/dev/null && echo "export GIT_USER_EMAIL_ROCHE=\"$work_email\"" >> "$bashrc"
     [[ -n "$work_orgs" ]] && ! grep -q "^export GH_ROCHE_ORGS=" "$bashrc" 2>/dev/null && echo "export GH_ROCHE_ORGS=\"$work_orgs\"" >> "$bashrc"
+    if [[ -n "$work_dirs" ]]; then
+        export GH_ROCHE_DIRS="$work_dirs"
+        ! grep -q "^export GH_ROCHE_DIRS=" "$bashrc" 2>/dev/null && echo "export GH_ROCHE_DIRS=\"$work_dirs\"" >> "$bashrc"
+    fi
 
     ok "Environment variables propagated to ~/.bashrc"
 }

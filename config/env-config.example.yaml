@@ -25,6 +25,8 @@ defaults:
     work:
       email: "your.work@company.com"      # Used for commits inside work org repos
       orgs: "YourOrg"                     # Pipe-separated GitHub org names routed to work token
+      dirs:                               # Directories routed to work account (~ expanded)
+        - "~/projects/Work"
 
   # -------------------------------------------------------------------------
   # Locale & timezone
