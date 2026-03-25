@@ -4,3 +4,4 @@
 - `superpowers:systematic-debugging`
 - `superpowers:dispatching-parallel-agents`
 - `agent-browser`
+- `auto-revise-claude-md`
