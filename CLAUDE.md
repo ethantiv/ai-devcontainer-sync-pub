@@ -48,10 +48,10 @@ Auto-triggered by Claude based on context (`dev-marketplace` plugins):
 | `COOLIFY_BASE_URL` | No | URL of Coolify instance |
 | `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |
 | `STITCH_API_KEY` | No | Google Stitch API key for Stitch MCP server |
-| `GH_TOKEN_ROCHE` | No | GitHub PAT (classic) with SSO for corporate account |
-| `GH_ROCHE_ORGS` | No | Pipe-separated GitHub orgs routed to Roche token (default: `RIS-Navify-Data-Platform`) |
+| `GH_TOKEN_WORK` | No | GitHub PAT (classic) with SSO for corporate/work account |
+| `GH_WORK_ORGS` | No | Pipe-separated GitHub orgs routed to work token (default: `RIS-Navify-Data-Platform`) |
 | `GIT_USER_NAME` / `GIT_USER_EMAIL` | No | Git global identity |
-| `GIT_USER_EMAIL_ROCHE` | No | Git email for corporate (Roche) account |
+| `GIT_USER_EMAIL_WORK` | No | Git email for corporate/work account |
 | `BACKUP_PIN` | No | PIN for encrypting/decrypting volume backups |
 
 Codespaces: add as repository secrets. Local: create `config/.env` (copy from `config/.env.example`).

@@ -265,8 +265,8 @@ propagate_env_from_config() {
     [[ -n "$locale" ]] && ! grep -q "^export LC_TIME=" "$bashrc" 2>/dev/null && echo "export LC_TIME=\"$locale\"" >> "$bashrc"
     [[ -n "$git_name" ]] && ! grep -q "^export GIT_USER_NAME=" "$bashrc" 2>/dev/null && echo "export GIT_USER_NAME=\"$git_name\"" >> "$bashrc"
     [[ -n "$git_email" ]] && ! grep -q "^export GIT_USER_EMAIL=" "$bashrc" 2>/dev/null && echo "export GIT_USER_EMAIL=\"$git_email\"" >> "$bashrc"
-    [[ -n "$work_email" ]] && ! grep -q "^export GIT_USER_EMAIL_ROCHE=" "$bashrc" 2>/dev/null && echo "export GIT_USER_EMAIL_ROCHE=\"$work_email\"" >> "$bashrc"
-    [[ -n "$work_orgs" ]] && ! grep -q "^export GH_ROCHE_ORGS=" "$bashrc" 2>/dev/null && echo "export GH_ROCHE_ORGS=\"$work_orgs\"" >> "$bashrc"
+    [[ -n "$work_email" ]] && ! grep -q "^export GIT_USER_EMAIL_WORK=" "$bashrc" 2>/dev/null && echo "export GIT_USER_EMAIL_WORK=\"$work_email\"" >> "$bashrc"
+    [[ -n "$work_orgs" ]] && ! grep -q "^export GH_WORK_ORGS=" "$bashrc" 2>/dev/null && echo "export GH_WORK_ORGS=\"$work_orgs\"" >> "$bashrc"
 
     ok "Environment variables propagated to ~/.bashrc"
 }

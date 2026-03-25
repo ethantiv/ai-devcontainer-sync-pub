@@ -2,6 +2,15 @@
 
 Ready-to-use development environment with Claude Code, Gemini CLI, autonomous development loops, and pre-configured AI tools.
 
+## Table of Contents
+
+- [What's Inside](#whats-inside)
+- [Getting Started](#getting-started)
+- [Using the Loop System](#using-the-loop-system)
+- [Environment Variables](#environment-variables)
+- [Multi-GitHub Accounts](#multi-github-accounts)
+- [Volume Backups](#volume-backups)
+
 ## What's Inside
 
 - **Claude Code** and **Gemini CLI** — pre-installed and configured
@@ -119,6 +128,26 @@ Set in `config/.env` (copy from `config/.env.example`).
 | `STITCH_API_KEY` | No | Google Stitch MCP server |
 | `RESET_CLAUDE_CONFIG` / `RESET_GEMINI_CONFIG` | No | Set `true` to clear config on startup |
 | `BACKUP_PIN` | No | PIN for encrypting/decrypting volume backups |
+
+## Multi-GitHub Accounts
+
+If you use a separate GitHub account for work (e.g., corporate SSO), the environment auto-routes `gh` CLI and git credentials based on org URLs and working directories.
+
+1. Set `GH_TOKEN_WORK` in `config/.env` (PAT classic with `repo`, `read:user`, `read:org`, `workflow`)
+2. Configure the `git.work` section in `config/env-config.yaml`:
+
+   ```yaml
+   git:
+     work:
+       email: "your.work@company.com"
+       orgs: "YourOrg|AnotherOrg"    # GitHub orgs routed to work token
+       dirs:                          # Directories routed to work account
+         - "~/projects/Work"
+   ```
+
+3. Rebuild the container (or re-run `setup-env.sh`)
+
+The `gh` CLI shim at `~/.local/bin/gh` detects org URLs in arguments first, then falls back to checking if your `PWD` is inside a configured work directory.
 
 ## Volume Backups
 

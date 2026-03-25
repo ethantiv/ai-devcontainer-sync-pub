@@ -158,14 +158,14 @@ TOKENEOF
 }
 
 setup_multi_github() {
-    # Skip if no Roche token configured
-    [[ -n "${GH_TOKEN_ROCHE:-}" ]] || return 0
+    # Skip if no work token configured
+    [[ -n "${GH_TOKEN_WORK:-}" ]] || return 0
 
     echo "🔐 Setting up multi-GitHub account routing..."
 
     local user_name="${GIT_USER_NAME:-}"
     local user_email="${GIT_USER_EMAIL:-}"
-    local roche_email="${GIT_USER_EMAIL_ROCHE:-$user_email}"
+    local work_email="${GIT_USER_EMAIL_WORK:-$user_email}"
 
     # Set global git identity (needed for includeIf to have a base)
     if [[ -n "$user_name" ]]; then
@@ -176,29 +176,29 @@ setup_multi_github() {
     fi
 
     # Add includeIf for work repos (idempotent — unset first, then set)
-    local roche_dirs="${GH_ROCHE_DIRS:-}"
-    if [[ -n "$roche_dirs" ]]; then
-        # Remove all existing includeIf entries for .gitconfig-roche
+    local work_dirs="${GH_WORK_DIRS:-}"
+    if [[ -n "$work_dirs" ]]; then
+        # Remove all existing includeIf entries for .gitconfig-work
         while read -r key value; do
-            [[ "$value" == "~/.gitconfig-roche" ]] && git config --global --unset-all "$key" 2>/dev/null || true
+            [[ "$value" == "~/.gitconfig-work" ]] && git config --global --unset-all "$key" 2>/dev/null || true
         done < <(git config --global --get-regexp 'includeIf\..*\.path' 2>/dev/null)
         # Add includeIf for each configured directory
-        IFS='|' read -ra dirs <<< "$roche_dirs"
+        IFS='|' read -ra dirs <<< "$work_dirs"
         for dir in "${dirs[@]}"; do
             [[ -z "$dir" ]] && continue
             # Ensure trailing slash for gitdir matching
             dir="${dir%/}/"
-            git config --global "includeIf.gitdir:${dir}.path" '~/.gitconfig-roche'
+            git config --global "includeIf.gitdir:${dir}.path" '~/.gitconfig-work'
         done
     else
         # Fallback: no dirs configured, skip includeIf
-        warn "GH_ROCHE_DIRS not set — skipping git includeIf config (set git.work.dirs in env-config.yaml)"
+        warn "GH_WORK_DIRS not set — skipping git includeIf config (set git.work.dirs in env-config.yaml)"
     fi
 
-    # Write ~/.gitconfig-roche
-    cat > "$HOME/.gitconfig-roche" << EOF
+    # Write ~/.gitconfig-work
+    cat > "$HOME/.gitconfig-work" << EOF
 [user]
-    email = ${roche_email}
+    email = ${work_email}
 
 [credential "https://github.com"]
     helper =
@@ -210,9 +210,9 @@ EOF
     ensure_directory "$HOME/.local/bin"
     cat > "$HOME/.local/bin/git-credential-github-multi" << 'CREDEOF'
 #!/bin/bash
-# Credential helper for Roche GitHub account
+# Credential helper for work GitHub account
 [ "$1" != "get" ] && exit 0
-if [[ -z "$GH_TOKEN_ROCHE" ]]; then
+if [[ -z "$GH_TOKEN_WORK" ]]; then
     echo "quit=true"
     exit 0
 fi
@@ -220,7 +220,7 @@ while IFS= read -r line; do
     [[ -z "$line" ]] && break
 done
 echo "username=x-access-token"
-echo "password=${GH_TOKEN_ROCHE}"
+echo "password=${GH_TOKEN_WORK}"
 CREDEOF
     chmod +x "$HOME/.local/bin/git-credential-github-multi"
     ok "Credential helper installed"
@@ -228,15 +228,15 @@ CREDEOF
     # Remove legacy gh() wrapper from bashrc (replaced by shim)
     if grep -q '^gh()' "$HOME/.bashrc" 2>/dev/null; then
         sed -i '/^gh()/,/^}/d' "$HOME/.bashrc"
-        sed -i '/# Multi-GitHub: Roche account routing/d' "$HOME/.bashrc"
+        sed -i '/# Multi-GitHub: .* account routing/d' "$HOME/.bashrc"
     fi
 
-    # Export GH_TOKEN_ROCHE for child processes (idempotent guard)
-    if ! grep -q "GH_TOKEN_ROCHE" "$HOME/.bashrc" 2>/dev/null; then
+    # Export GH_TOKEN_WORK for child processes (idempotent guard)
+    if ! grep -q "GH_TOKEN_WORK" "$HOME/.bashrc" 2>/dev/null; then
         cat >> "$HOME/.bashrc" << BASHEOF
 
-# Multi-GitHub: Roche account token
-export GH_TOKEN_ROCHE='${GH_TOKEN_ROCHE}'
+# Multi-GitHub: work account token
+export GH_TOKEN_WORK='${GH_TOKEN_WORK}'
 BASHEOF
     fi
 
@@ -246,24 +246,24 @@ BASHEOF
 # Multi-GitHub account router — shadows /usr/bin/gh
 # Routes GH_TOKEN based on URL arguments and PWD
 token="${GH_TOKEN:-}"
-roche_orgs="${GH_ROCHE_ORGS:-RIS-Navify-Data-Platform}"
+work_orgs="${GH_WORK_ORGS:-RIS-Navify-Data-Platform}"
 
-# URL-based detection: scan args for Roche org URLs
+# URL-based detection: scan args for work org URLs
 for arg in "$@"; do
-    if [[ "$arg" =~ github\.com[:/](${roche_orgs})(/|$) ]]; then
-        token="${GH_TOKEN_ROCHE:-$token}"
+    if [[ "$arg" =~ github\.com[:/](${work_orgs})(/|$) ]]; then
+        token="${GH_TOKEN_WORK:-$token}"
         break
     fi
 done
 
 # PWD-based detection (fallback): check configured work directories
-if [[ "$token" == "${GH_TOKEN:-}" && -n "${GH_ROCHE_DIRS:-}" ]]; then
-    IFS='|' read -ra _dirs <<< "$GH_ROCHE_DIRS"
+if [[ "$token" == "${GH_TOKEN:-}" && -n "${GH_WORK_DIRS:-}" ]]; then
+    IFS='|' read -ra _dirs <<< "$GH_WORK_DIRS"
     for _d in "${_dirs[@]}"; do
         _d="${_d/#\~/$HOME}"
         case "$PWD" in
             "${_d}"/*|"${_d}")
-                token="${GH_TOKEN_ROCHE:-$token}"
+                token="${GH_TOKEN_WORK:-$token}"
                 break
                 ;;
         esac
@@ -277,8 +277,8 @@ GHEOF
 
     # Warn about missing token scopes (non-fatal)
     if command -v /usr/bin/gh &>/dev/null; then
-        if GH_TOKEN="$GH_TOKEN_ROCHE" /usr/bin/gh auth status 2>&1 | grep -q "Missing required token scopes"; then
-            warn "GH_TOKEN_ROCHE may be missing required scopes (e.g., read:org). Run: GH_TOKEN=\$GH_TOKEN_ROCHE gh auth status"
+        if GH_TOKEN="$GH_TOKEN_WORK" /usr/bin/gh auth status 2>&1 | grep -q "Missing required token scopes"; then
+            warn "GH_TOKEN_WORK may be missing required scopes (e.g., read:org). Run: GH_TOKEN=\$GH_TOKEN_WORK gh auth status"
         fi
     fi
 
@@ -389,11 +389,11 @@ propagate_env_from_config() {
     [[ -n "$locale" ]] && ! grep -q "^export LC_TIME=" "$bashrc" 2>/dev/null && echo "export LC_TIME=\"$locale\"" >> "$bashrc"
     [[ -n "$git_name" ]] && ! grep -q "^export GIT_USER_NAME=" "$bashrc" 2>/dev/null && echo "export GIT_USER_NAME=\"$git_name\"" >> "$bashrc"
     [[ -n "$git_email" ]] && ! grep -q "^export GIT_USER_EMAIL=" "$bashrc" 2>/dev/null && echo "export GIT_USER_EMAIL=\"$git_email\"" >> "$bashrc"
-    [[ -n "$work_email" ]] && ! grep -q "^export GIT_USER_EMAIL_ROCHE=" "$bashrc" 2>/dev/null && echo "export GIT_USER_EMAIL_ROCHE=\"$work_email\"" >> "$bashrc"
-    [[ -n "$work_orgs" ]] && ! grep -q "^export GH_ROCHE_ORGS=" "$bashrc" 2>/dev/null && echo "export GH_ROCHE_ORGS=\"$work_orgs\"" >> "$bashrc"
+    [[ -n "$work_email" ]] && ! grep -q "^export GIT_USER_EMAIL_WORK=" "$bashrc" 2>/dev/null && echo "export GIT_USER_EMAIL_WORK=\"$work_email\"" >> "$bashrc"
+    [[ -n "$work_orgs" ]] && ! grep -q "^export GH_WORK_ORGS=" "$bashrc" 2>/dev/null && echo "export GH_WORK_ORGS=\"$work_orgs\"" >> "$bashrc"
     if [[ -n "$work_dirs" ]]; then
-        export GH_ROCHE_DIRS="$work_dirs"
-        ! grep -q "^export GH_ROCHE_DIRS=" "$bashrc" 2>/dev/null && echo "export GH_ROCHE_DIRS=\"$work_dirs\"" >> "$bashrc"
+        export GH_WORK_DIRS="$work_dirs"
+        ! grep -q "^export GH_WORK_DIRS=" "$bashrc" 2>/dev/null && echo "export GH_WORK_DIRS=\"$work_dirs\"" >> "$bashrc"
     fi
 
     ok "Environment variables propagated to ~/.bashrc"
@@ -407,7 +407,6 @@ setup_claude_configuration() {
     export TMPDIR="$CLAUDE_DIR/tmp"
 
     apply_claude_settings
-    propagate_env_from_config
     copy_claude_memory "$WORKSPACE_FOLDER"
     sync_claude_scripts "$WORKSPACE_FOLDER"
 }
@@ -799,6 +798,7 @@ main() {
     detect_workspace_folder
     load_env_file
 
+    propagate_env_from_config
     setup_ssh_authentication
     setup_github_token
     setup_multi_github

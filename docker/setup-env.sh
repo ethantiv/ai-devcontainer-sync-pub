@@ -142,8 +142,8 @@ propagate_env_from_config() {
     [[ -n "$locale" ]] && ! grep -q "^export LC_TIME=" "$env_file" 2>/dev/null && echo "export LC_TIME=\"$locale\"" >> "$env_file"
     [[ -n "$git_name" ]] && ! grep -q "^export GIT_USER_NAME=" "$env_file" 2>/dev/null && echo "export GIT_USER_NAME=\"$git_name\"" >> "$env_file"
     [[ -n "$git_email" ]] && ! grep -q "^export GIT_USER_EMAIL=" "$env_file" 2>/dev/null && echo "export GIT_USER_EMAIL=\"$git_email\"" >> "$env_file"
-    [[ -n "$work_email" ]] && ! grep -q "^export GIT_USER_EMAIL_ROCHE=" "$env_file" 2>/dev/null && echo "export GIT_USER_EMAIL_ROCHE=\"$work_email\"" >> "$env_file"
-    [[ -n "$work_orgs" ]] && ! grep -q "^export GH_ROCHE_ORGS=" "$env_file" 2>/dev/null && echo "export GH_ROCHE_ORGS=\"$work_orgs\"" >> "$env_file"
+    [[ -n "$work_email" ]] && ! grep -q "^export GIT_USER_EMAIL_WORK=" "$env_file" 2>/dev/null && echo "export GIT_USER_EMAIL_WORK=\"$work_email\"" >> "$env_file"
+    [[ -n "$work_orgs" ]] && ! grep -q "^export GH_WORK_ORGS=" "$env_file" 2>/dev/null && echo "export GH_WORK_ORGS=\"$work_orgs\"" >> "$env_file"
 
     ok "Environment variables propagated to env.sh"
 }
