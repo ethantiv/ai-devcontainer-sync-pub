@@ -4,7 +4,7 @@
 
 0c. Read any existing design docs in @docs/plans/ to avoid duplicating past work.
 
-1. **Explore**: Launch up to 4 `feature-dev:code-explorer` subagents via **Task** tool to map the codebase architecture. Focus on: existing patterns, module boundaries, testing conventions, tech stack. Summarize findings.
+1. **Explore**: Launch up to 10 `feature-dev:code-explorer` subagents via **Task** tool to map the codebase architecture. Focus on: existing patterns, module boundaries, testing conventions, tech stack. Summarize findings.
 
 2. **Brainstorm**: Invoke **Skill** tool: `Skill(skill="superpowers:brainstorming")` with the ROADMAP goal and exploration findings. Follow the brainstorming skill workflow exactly:
    - Ask clarifying questions (one at a time)
