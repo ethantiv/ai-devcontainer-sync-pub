@@ -116,13 +116,6 @@ environments:
           FASTMCP_LOG_LEVEL: "ERROR"
           AWS_DOCUMENTATION_PARTITION: "aws"
 
-      - name: terraform
-        type: stdio
-        command: uvx
-        args: ["awslabs.terraform-mcp-server@latest"]
-        env:
-          FASTMCP_LOG_LEVEL: "ERROR"
-
   # ---------------------------------------------------------------------------
   # docker — self-hosted Docker container
   # ---------------------------------------------------------------------------
