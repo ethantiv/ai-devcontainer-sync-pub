@@ -23,6 +23,7 @@ bash src/scripts/tests/test_check_completion.sh    # Run completion detection te
 bash src/scripts/tests/test_ensure_playwright.sh   # Run Playwright lazy-install tests (14 tests)
 bash src/scripts/tests/test_cleanup.sh             # Run cleanup.sh port tests (11 tests)
 bash src/scripts/tests/test_backup.sh              # Run backup.sh tests (20 tests)
+bash src/scripts/tests/test_setup_common.sh        # Run setup-common.sh tests (48 tests)
 ```
 
 ## Skills (dev-marketplace)
@@ -117,6 +118,7 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 
 ### Codebase Patterns
 
+- **Setup scripts architecture**: Shared functions in `config/scripts/setup-common.sh`, sourced by three adapters (`.devcontainer/setup-env.sh`, `docker/setup-env.sh`, `setup-local.sh`). Each adapter sets required variables (see contract at top of `setup-common.sh`), sources the library, defines env-specific functions, and runs `main()`. Edit only `setup-common.sh` for plugin/skill/MCP changes. Requires Bash 4+.
 - **EXDEV gotcha**: `~/.claude` is ext4 volume, `/tmp` is tmpfs — `rename()` fails cross-device. Scripts export `TMPDIR="$CLAUDE_DIR/tmp"`.
 - **Claude binary in Docker**: Scripts use `CLAUDE_CMD="${CLAUDE_DIR}/bin/claude"; claude() { "$CLAUDE_CMD" "$@"; }` to ensure correct binary.
 - **Claude config persistence**: `CLAUDE_CONFIG_DIR=~/.claude` keeps `.claude.json` inside the volume. Set in `devcontainer.json` and `Dockerfile`.
