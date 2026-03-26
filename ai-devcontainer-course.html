@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI DevContainer — Przewodnik</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg-deep: #0a0a0f;
+  --bg-surface: #111118;
+  --bg-card: #16161f;
+  --bg-card-hover: #1c1c28;
+  --bg-code: #0d0d14;
+  --border: #2a2a3a;
+  --border-active: #d4a030;
+  --text: #c8c8d8;
+  --text-dim: #7a7a90;
+  --text-bright: #eeeef4;
+  --accent: #d4a030;
+  --accent-dim: #a07820;
+  --accent-glow: rgba(212, 160, 48, 0.15);
+  --green: #4ade80;
+  --green-dim: rgba(74, 222, 128, 0.15);
+  --blue: #60a5fa;
+  --blue-dim: rgba(96, 165, 250, 0.15);
+  --red: #f87171;
+  --purple: #a78bfa;
+  --cyan: #22d3ee;
+  --font-body: 'Source Serif 4', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', 'Menlo', monospace;
+  --radius: 6px;
+  --transition: 0.2s ease;
+}
+
+html { font-size: 16px; scroll-behavior: smooth }
+body {
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: var(--font-body);
+  line-height: 1.7;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  padding: 24px 0;
+  overflow-y: auto;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
+
+.sidebar-logo {
+  padding: 0 20px 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.sidebar-logo h1 {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.sidebar-logo p {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  font-family: var(--font-mono);
+}
+
+.nav-section {
+  padding: 8px 20px 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: all var(--transition);
+  border-left: 3px solid transparent;
+  font-size: 13.5px;
+  color: var(--text-dim);
+  font-family: var(--font-body);
+  text-decoration: none;
+}
+
+.nav-item:hover { background: var(--bg-card); color: var(--text) }
+.nav-item.active { border-left-color: var(--accent); background: var(--accent-glow); color: var(--text-bright) }
+
+.nav-item .num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-dim);
+  min-width: 20px;
+}
+
+.nav-item.completed .num { color: var(--green) }
+.nav-item.completed .num::after { content: ' \2713' }
+
+.progress-bar { margin: 16px 20px; background: var(--bg-card); border-radius: 4px; height: 4px; overflow: hidden }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); border-radius: 4px; transition: width 0.5s ease; width: 0% }
+.progress-text { padding: 4px 20px 12px; font-family: var(--font-mono); font-size: 11px; color: var(--text-dim) }
+
+.main { overflow-y: auto; height: 100vh; scroll-behavior: smooth }
+.content { max-width: 800px; margin: 0 auto; padding: 48px 40px 120px }
+
+.module { display: none; animation: fadeIn 0.4s ease }
+.module.active { display: block }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: translateY(0) } }
+
+.module-header { margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--border) }
+.module-badge { display: inline-block; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 8px }
+.module h2 { font-size: 28px; font-weight: 700; color: var(--text-bright); line-height: 1.3; margin-bottom: 12px }
+.module h2 .thin { font-weight: 300; color: var(--text-dim) }
+.module-intro { font-size: 17px; color: var(--text); line-height: 1.8 }
+
+.section { margin-bottom: 36px }
+.section h3 { font-family: var(--font-mono); font-size: 15px; font-weight: 500; color: var(--text-bright); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border) }
+.section p, .section li { font-size: 15.5px; line-height: 1.8; color: var(--text) }
+.section ul, .section ol { padding-left: 20px; margin-top: 8px }
+.section li { margin-bottom: 6px }
+.section li::marker { color: var(--accent-dim) }
+
+pre { background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; overflow-x: auto; margin: 12px 0 16px; position: relative }
+pre code { font-family: var(--font-mono); font-size: 13px; line-height: 1.6; color: var(--text) }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--bg-card); padding: 2px 6px; border-radius: 3px; color: var(--accent) }
+pre code { background: none; padding: 0; color: var(--text) }
+
+.code-wrap { position: relative }
+.copy-btn { position: absolute; top: 8px; right: 8px; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-dim); font-family: var(--font-mono); font-size: 11px; padding: 3px 8px; border-radius: 4px; cursor: pointer; transition: all var(--transition); z-index: 2 }
+.copy-btn:hover { border-color: var(--accent); color: var(--accent) }
+.copy-btn.copied { color: var(--green); border-color: var(--green) }
+
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin: 14px 0; transition: border-color var(--transition) }
+.card:hover { border-color: var(--border-active) }
+.card-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px }
+.card-label.tip { color: var(--green) }
+.card-label.warn { color: var(--red) }
+.card-label.info { color: var(--blue) }
+.card-label.note { color: var(--purple) }
+.card p { font-size: 14px; line-height: 1.7 }
+
+.flow { display: flex; align-items: center; gap: 0; flex-wrap: wrap; justify-content: center; margin: 16px 0 }
+.flow-step { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; font-family: var(--font-mono); font-size: 12px; color: var(--text); text-align: center; min-width: 100px; transition: all var(--transition) }
+.flow-step:hover { border-color: var(--accent); background: var(--accent-glow) }
+.flow-step.highlight { border-color: var(--accent); color: var(--accent) }
+.flow-arrow { color: var(--text-dim); font-size: 18px; padding: 0 6px; font-family: var(--font-mono) }
+
+table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px }
+th { text-align: left; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); padding: 8px 12px; border-bottom: 1px solid var(--border) }
+td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top }
+td code { font-size: 12px }
+tr:hover td { background: var(--bg-card) }
+
+.expandable { border: 1px solid var(--border); border-radius: var(--radius); margin: 12px 0; overflow: hidden }
+.expandable-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; background: var(--bg-card); font-family: var(--font-mono); font-size: 13px; color: var(--text); transition: all var(--transition); user-select: none }
+.expandable-header:hover { background: var(--bg-card-hover) }
+.expandable-header .chevron { color: var(--text-dim); transition: transform 0.2s; font-size: 12px }
+.expandable.open .chevron { transform: rotate(90deg) }
+.expandable-body { display: none; padding: 16px; border-top: 1px solid var(--border); background: var(--bg-surface) }
+.expandable.open .expandable-body { display: block }
+
+.tag { display: inline-block; font-family: var(--font-mono); font-size: 11px; padding: 2px 8px; border-radius: 3px; margin: 2px 2px }
+.tag.required { background: rgba(248,113,113,0.15); color: var(--red) }
+.tag.optional { background: rgba(122,122,144,0.15); color: var(--text-dim) }
+
+.nav-buttons { display: flex; justify-content: space-between; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border) }
+.nav-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: var(--font-mono); font-size: 13px; cursor: pointer; transition: all var(--transition); text-decoration: none }
+.nav-btn:hover { border-color: var(--accent); color: var(--accent) }
+.nav-btn.primary { background: var(--accent-dim); border-color: var(--accent); color: var(--text-bright) }
+.nav-btn.primary:hover { background: var(--accent); color: var(--bg-deep) }
+
+.file-tree { font-family: var(--font-mono); font-size: 13px; line-height: 1.8; padding: 16px; background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius); margin: 12px 0 }
+.file-tree .dir { color: var(--blue) }
+.file-tree .file { color: var(--text-dim) }
+.file-tree .file.important { color: var(--accent) }
+.file-tree .indent { padding-left: 20px; display: block }
+.file-tree .indent-2 { padding-left: 40px; display: block }
+.file-tree .comment { color: #555; font-style: italic }
+
+.env-table td:first-child { font-family: var(--font-mono); font-size: 12px; color: var(--cyan); white-space: nowrap }
+
+.vol-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 14px 0 }
+.vol-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; text-align: center; transition: all var(--transition) }
+.vol-card:hover { border-color: var(--accent) }
+.vol-icon { font-size: 24px; margin-bottom: 6px }
+.vol-name { font-family: var(--font-mono); font-size: 12px; color: var(--cyan); margin-bottom: 4px }
+.vol-desc { font-size: 12px; color: var(--text-dim) }
+
+.phase-flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0 }
+.phase-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; position: relative; transition: all var(--transition) }
+.phase-card:hover { border-color: var(--accent) }
+.phase-card::after { content: '\2192'; position: absolute; right: -18px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 18px }
+.phase-card:last-child::after { display: none }
+.phase-num { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-dim) }
+.phase-name { font-family: var(--font-mono); font-size: 14px; color: var(--text-bright); margin: 6px 0 4px }
+.phase-desc { font-size: 12px; color: var(--text-dim) }
+
+.anno { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-glow); border: 1px solid var(--accent-dim); border-radius: 4px; padding: 1px 8px; font-family: var(--font-mono); font-size: 12px; color: var(--accent) }
+
+.kw { color: var(--accent) }
+.cm { color: #666 }
+.str { color: var(--green) }
+.flag { color: var(--cyan) }
+.cmd { color: var(--blue) }
+
+@media (max-width: 900px) {
+  body { grid-template-columns: 1fr }
+  .sidebar { position: fixed; left: -300px; z-index: 100; width: 280px; transition: left 0.3s }
+  .sidebar.open { left: 0 }
+  .mobile-toggle { display: flex !important }
+  .content { padding: 24px 20px 120px }
+}
+
+.mobile-toggle { display: none; position: fixed; top: 12px; left: 12px; z-index: 101; background: var(--bg-card); border: 1px solid var(--border); color: var(--accent); width: 40px; height: 40px; border-radius: 6px; align-items: center; justify-content: center; cursor: pointer; font-size: 18px }
+</style>
+</head>
+<body>
+
+<button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <h1>AI DevContainer</h1>
+    <p>Przewodnik dla nowych u&#380;ytkownik&#243;w</p>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-text" id="progressText">0 / 7 uko&#324;czone</div>
+
+  <div class="nav-section">Start</div>
+  <div class="nav-item active" data-module="intro"><span class="num">01</span> O co tu chodzi</div>
+  <div class="nav-item" data-module="start"><span class="num">02</span> Jak uruchomi&#263;</div>
+
+  <div class="nav-section">Praca codzienna</div>
+  <div class="nav-item" data-module="loop"><span class="num">03</span> Komenda loop</div>
+  <div class="nav-item" data-module="workflow"><span class="num">04</span> Design &rarr; Plan &rarr; Build</div>
+  <div class="nav-item" data-module="tools"><span class="num">05</span> Pluginy i skills</div>
+
+  <div class="nav-section">Konfiguracja</div>
+  <div class="nav-item" data-module="config"><span class="num">06</span> Pliki konfiguracyjne</div>
+  <div class="nav-item" data-module="reference"><span class="num">07</span> &#346;ci&#261;gawka</div>
+</nav>
+
+<main class="main" id="main">
+<div class="content">
+
+<!-- ===== MODULE 1: INTRO ===== -->
+<div class="module active" id="mod-intro">
+  <div class="module-header">
+    <div class="module-badge">Modu&#322; 01</div>
+    <h2>O co <span class="thin">tu chodzi</span></h2>
+    <p class="module-intro">Otwierasz kontener &mdash; wszystko jest gotowe. Claude Code, pluginy, serwery MCP, system autonomicznych p&#281;tli. Nie musisz niczego instalowa&#263; r&#281;cznie.</p>
+  </div>
+
+  <div class="section">
+    <h3>Tw&#243;j zestaw narz&#281;dzi</h3>
+    <p>Po uruchomieniu &#347;rodowiska masz dost&#281;p do:</p>
+    <ul>
+      <li><strong>Claude Code</strong> &mdash; agent AI do programowania w terminalu</li>
+      <li><strong><code>loop</code></strong> &mdash; komenda uruchamiaj&#261;ca Claude w autonomicznych cyklach (projektuj &rarr; planuj &rarr; buduj)</li>
+      <li><strong>Pluginy i skills</strong> &mdash; gotowe umiej&#281;tno&#347;ci: tworzenie commit&#243;w, review kodu, praca z PDF/DOCX, diagramy, i wi&#281;cej</li>
+      <li><strong>Serwery MCP</strong> &mdash; Claude &#322;&#261;czy si&#281; z zewn&#281;trznymi serwisami (dokumentacja bibliotek, Coolify, AWS)</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h3>Struktura repozytorium</h3>
+    <div class="file-tree">
+      <span class="dir">ai-devcontainer-sync/</span>
+      <span class="indent"><span class="file important">config/env-config.yaml</span> <span class="comment">&larr; g&#322;&#243;wna konfiguracja</span></span>
+      <span class="indent"><span class="file important">config/.env</span> <span class="comment">&larr; Twoje tokeny (nie commitowane)</span></span>
+      <span class="indent"><span class="dir">src/</span> <span class="comment">&larr; system loop (komenda <code style="background:none;padding:0;color:#666">loop</code>)</span></span>
+      <span class="indent"><span class="dir">docker/</span> <span class="comment">&larr; Docker / Raspberry Pi</span></span>
+      <span class="indent"><span class="file">setup-local.sh</span> <span class="comment">&larr; instalacja na macOS</span></span>
+    </div>
+    <div class="card">
+      <div class="card-label tip">Kluczowa zasada</div>
+      <p>Zmieniasz <strong>jeden plik</strong> (<code>config/env-config.yaml</code>) &mdash; reszta synchronizuje si&#281; automatycznie. Pluginy, skills, serwery MCP, to&#380;samo&#347;&#263; Git &mdash; wszystko jest tam zdefiniowane.</p>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <span></span>
+    <button class="nav-btn primary" onclick="goTo('start')">Dalej: Jak uruchomi&#263; &rarr;</button>
+  </div>
+</div>
+
+<!-- ===== MODULE 2: START ===== -->
+<div class="module" id="mod-start">
+  <div class="module-header">
+    <div class="module-badge">Modu&#322; 02</div>
+    <h2>Jak <span class="thin">uruchomi&#263;</span></h2>
+    <p class="module-intro">Trzy kroki do dzia&#322;aj&#261;cego &#347;rodowiska &mdash; niezale&#380;nie od wybranej opcji.</p>
+  </div>
+
+  <div class="section">
+    <h3>Krok 1: Stw&#243;rz plik .env</h3>
+    <p>Skopiuj przyk&#322;ad i wpisz sw&#243;j token GitHub. To jedyna wymagana zmienna.</p>
+    <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    <pre><code>cp config/.env.example config/.env
+# Edytuj config/.env &mdash; ustaw GH_TOKEN</code></pre></div>
+  </div>
+
+  <div class="section">
+    <h3>Krok 2: Uruchom &#347;rodowisko</h3>
+
+    <div class="expandable" onclick="this.classList.toggle('open')">
+      <div class="expandable-header">
+        <span class="chevron">&#9654;</span>
+        <span>VS Code / Codespaces (DevContainer)</span>
+      </div>
+      <div class="expandable-body">
+        <p>Otw&#243;rz repozytorium w VS Code i kliknij <strong>Reopen in Container</strong>. Gotowe.</p>
+      </div>
+    </div>
+
+    <div class="expandable" onclick="this.classList.toggle('open')">
+      <div class="expandable-header">
+        <span class="chevron">&#9654;</span>
+        <span>Docker (RPi / standalone)</span>
+      </div>
+      <div class="expandable-body">
+        <pre><code>docker compose -f docker/docker-compose.yml up -d
+docker exec -it claude-code bash</code></pre>
+      </div>
+    </div>
+
+    <div class="expandable" onclick="this.classList.toggle('open')">
+      <div class="expandable-header">
+        <span class="chevron">&#9654;</span>
+        <span>macOS (bez Dockera)</span>
+      </div>
+      <div class="expandable-body">
+        <pre><code>./setup-local.sh</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Krok 3: Sprawd&#378;, czy dzia&#322;a</h3>
+    <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    <pre><code>claude mcp list               # czy serwery MCP s&#261; podpi&#281;te
+claude plugin marketplace list # czy pluginy si&#281; zainstalowa&#322;y</code></pre></div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="nav-btn" onclick="goTo('intro')">&larr; Wst&#281;p</button>
+    <button class="nav-btn primary" onclick="goTo('loop')">Dalej: Komenda loop &rarr;</button>
+  </div>
+</div>
+
+<!-- ===== MODULE 3: LOOP ===== -->
+<div class="module" id="mod-loop">
+  <div class="module-header">
+    <div class="module-badge">Modu&#322; 03</div>
+    <h2>Komenda <span class="thin">loop</span></h2>
+    <p class="module-intro"><code>loop</code> to g&#322;&#243;wne narz&#281;dzie. Uruchamia Claude w autonomicznych cyklach &mdash; Ty podajesz pomys&#322;, Claude planuje i buduje.</p>
+  </div>
+
+  <div class="section">
+    <h3>Inicjalizacja w projekcie</h3>
+    <p>Wejd&#378; do swojego projektu i uruchom <code>loop init</code>. Stworzy katalog <code>loop/</code> z promptami i konfiguracj&#261;.</p>
+    <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    <pre><code>cd ~/projects/m&#243;j-projekt
+loop init                     # podstawowa inicjalizacja
+loop init --type web          # + skills do React/Next.js
+loop init --type devops       # + skills do Terraform
+loop init --type fullstack    # web + feature-dev
+loop init --list-types        # poka&#380; dost&#281;pne typy</code></pre></div>
+  </div>
+
+  <div class="section">
+    <h3>G&#322;&#243;wne komendy</h3>
+    <table>
+      <thead><tr><th>Co chcesz zrobi&#263;</th><th>Komenda</th></tr></thead>
+      <tbody>
+        <tr><td>Przemy&#347;le&#263; rozwi&#261;zanie z Claude (interaktywnie)</td><td><code>loop design</code></td></tr>
+        <tr><td>Stworzy&#263; plan implementacji</td><td><code>loop plan</code></td></tr>
+        <tr><td>Zrealizowa&#263; plan (autonomicznie)</td><td><code>loop build</code></td></tr>
+        <tr><td>Planowanie + budowanie od razu</td><td><code>loop run</code></td></tr>
+        <tr><td>Sprawdzi&#263; zdrowie instalacji</td><td><code>loop doctor</code></td></tr>
+        <tr><td>Statystyki ostatniego uruchomienia</td><td><code>loop summary</code></td></tr>
+        <tr><td>Zbi&#263; procesy na portach dev (3000, 5173...)</td><td><code>loop cleanup</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h3>Podpowiadanie pomys&#322;&#243;w (<code>-I</code>)</h3>
+    <p>Przekazujesz Claude pomys&#322; na feature &mdash; tekst, plik, lub URL do GitHub issue:</p>
+    <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    <pre><code>loop run -I "Dodaj autentykacj&#281; JWT"
+loop plan -I @docs/specyfikacja.md
+loop plan -I https://github.com/org/repo/issues/42</code></pre></div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="nav-btn" onclick="goTo('start')">&larr; Uruchomienie</button>
+    <button class="nav-btn primary" onclick="goTo('workflow')">Dalej: Cykl pracy &rarr;</button>
+  </div>
+</div>
+
+<!-- ===== MODULE 4: WORKFLOW ===== -->
+<div class="module" id="mod-workflow">
+  <div class="module-header">
+    <div class="module-badge">Modu&#322; 04</div>
+    <h2>Design <span class="thin">&rarr; Plan &rarr; Build</span></h2>
+    <p class="module-intro">Trzy fazy autonomicznego programowania. Mo&#380;esz u&#380;y&#263; wszystkich trzech lub przeskoczy&#263; od razu do <code>loop run</code>.</p>
+  </div>
+
+  <div class="section">
+    <h3>Trzy fazy</h3>
+    <div class="phase-flow">
+      <div class="phase-card">
+        <div class="phase-num">Faza 1</div>
+        <div class="phase-name">Design</div>
+        <div class="phase-desc">Rozmowa z Claude o wymaganiach i architekturze</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Faza 2</div>
+        <div class="phase-name">Plan</div>
+        <div class="phase-desc">Claude tworzy plan z taskami i checkboxami</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Faza 3</div>
+        <div class="phase-name">Build</div>
+        <div class="phase-desc">Claude realizuje plan, testuje i commituje</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Kiedy czego u&#380;ywa&#263;</h3>
+    <table>
+      <thead><tr><th>Sytuacja</th><th>Co uruchomi&#263;</th></tr></thead>
+      <tbody>
+        <tr><td>Prosty feature, wiesz czego chcesz</td><td><code>loop run -I "opis"</code></td></tr>
+        <tr><td>Chcesz najpierw przemy&#347;le&#263; podej&#347;cie</td><td><code>loop design</code> &rarr; <code>loop plan</code> &rarr; <code>loop build</code></td></tr>
+        <tr><td>Masz spec w pliku</td><td><code>loop run -I @docs/spec.md</code></td></tr>
+        <tr><td>Feature z GitHub issue</td><td><code>loop run -I https://github.com/.../issues/42</code></td></tr>
+        <tr><td>Poprzedni plan uko&#324;czony, nowy cykl</td><td><code>loop plan --new -I "nast&#281;pny feature"</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h3>Co robi Build w ka&#380;dej iteracji</h3>
+    <ol>
+      <li>Bierze pierwsz&#261; niezako&#324;czon&#261; faz&#281; z planu</li>
+      <li>Pisze testy &rarr; implementuje &rarr; sprawdza testy</li>
+      <li>Odhacza checkboxy w planie</li>
+      <li>Commituje i pushuje</li>
+      <li>Jak plan jest w 100% zrobiony &mdash; ko&#324;czy</li>
+    </ol>
+    <div class="card">
+      <div class="card-label tip">Przydatne flagi</div>
+      <p>
+        <code>-i 20</code> &mdash; ogranicza liczb&#281; iteracji build<br>
+        <code>--no-early-exit</code> &mdash; nie ko&#324;czy po zako&#324;czeniu planu<br>
+        <code>--interactive</code> &mdash; tryb r&#281;czny (Claude czeka na Tw&#243;j input)
+      </p>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="nav-btn" onclick="goTo('loop')">&larr; Komenda loop</button>
+    <button class="nav-btn primary" onclick="goTo('tools')">Dalej: Pluginy i skills &rarr;</button>
+  </div>
+</div>
+
+<!-- ===== MODULE 5: TOOLS ===== -->
+<div class="module" id="mod-tools">
+  <div class="module-header">
+    <div class="module-badge">Modu&#322; 05</div>
+    <h2>Pluginy <span class="thin">i skills</span></h2>
+    <p class="module-intro">Pluginy i skills to umiej&#281;tno&#347;ci, kt&#243;re Claude &#322;aduje automatycznie gdy ich potrzebuje. Nie musisz ich wywo&#322;ywa&#263; r&#281;cznie &mdash; z wyj&#261;tkiem slash commands.</p>
+  </div>
+
+  <div class="section">
+    <h3>Slash commands (wpisujesz Ty)</h3>
+    <p>Te komendy wpisujesz bezpo&#347;rednio w rozmowie z Claude:</p>
+    <table>
+      <thead><tr><th>Komenda</th><th>Co robi</th></tr></thead>
+      <tbody>
+        <tr><td><code>/commit</code></td><td>Tworzy commit z opisem zmian</td></tr>
+        <tr><td><code>/commit-push-pr</code></td><td>Commit + push + otw&#243;rz Pull Request</td></tr>
+        <tr><td><code>/roadmap</code></td><td>Generuje lub aktualizuje plan projektu</td></tr>
+        <tr><td><code>/git-worktree:create</code></td><td>Nowy branch w odizolowanym katalogu</td></tr>
+        <tr><td><code>/dependency-update</code></td><td>Aktualizuje zale&#380;no&#347;ci projektu</td></tr>
+        <tr><td><code>/read-arxiv-paper</code></td><td>Streszcza artyku&#322; naukowy z arXiv</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h3>Pluginy (Claude u&#380;ywa sam)</h3>
+    <p>Claude automatycznie &#322;aduje odpowiedni plugin gdy tego potrzebuje:</p>
+    <table>
+      <thead><tr><th>Plugin</th><th>Kiedy si&#281; w&#322;&#261;cza</th></tr></thead>
+      <tbody>
+        <tr><td><code>superpowers</code></td><td>Planowanie, TDD, debugging, code review</td></tr>
+        <tr><td><code>feature-dev</code></td><td>Rozbudowa feature&#243;w z eksploracj&#261; kodu</td></tr>
+        <tr><td><code>frontend-design</code></td><td>Tworzenie interfejs&#243;w UI</td></tr>
+        <tr><td><code>code-simplifier</code></td><td>Upraszczanie i refaktoryzacja</td></tr>
+        <tr><td><code>hookify</code></td><td>Tworzenie regu&#322; automatyzacji</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h3>Skills (specjalistyczne umiej&#281;tno&#347;ci)</h3>
+    <p>Instalowane z zewn&#281;trznych repozytori&#243;w. Przyk&#322;ady:</p>
+    <ul>
+      <li><code>pdf</code>, <code>docx</code>, <code>xlsx</code> &mdash; praca z plikami biurowymi</li>
+      <li><code>agent-browser</code> &mdash; Claude otwiera i obs&#322;uguje przegl&#261;dark&#281;</li>
+      <li><code>beautiful-mermaid</code> &mdash; renderowanie diagram&#243;w</li>
+      <li><code>terraform-*</code> &mdash; styl, testy i refaktoryzacja Terraform</li>
+      <li><code>humanizer</code> &mdash; usuwanie stylu AI z tekstu</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h3>Serwery MCP (po&#322;&#261;czenia z serwisami)</h3>
+    <p>Claude &#322;&#261;czy si&#281; z zewn&#281;trznymi serwisami przez protok&#243;&#322; MCP:</p>
+    <div class="flow">
+      <div class="flow-step">Claude Code</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step highlight">serwer MCP</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">zewn&#281;trzny serwis</div>
+    </div>
+    <table style="margin-top:14px">
+      <thead><tr><th>Serwer</th><th>Do czego s&#322;u&#380;y</th></tr></thead>
+      <tbody>
+        <tr><td><code>context7</code></td><td>Aktualna dokumentacja bibliotek (lepsza ni&#380; czytanie HTML)</td></tr>
+        <tr><td><code>coolify</code></td><td>Zarz&#261;dzanie deployami na Coolify</td></tr>
+        <tr><td><code>aws-documentation</code></td><td>Dokumentacja AWS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="nav-btn" onclick="goTo('workflow')">&larr; Cykl pracy</button>
+    <button class="nav-btn primary" onclick="goTo('config')">Dalej: Konfiguracja &rarr;</button>
+  </div>
+</div>
+
+<!-- ===== MODULE 6: CONFIG ===== -->
+<div class="module" id="mod-config">
+  <div class="module-header">
+    <div class="module-badge">Modu&#322; 06</div>
+    <h2>Pliki <span class="thin">konfiguracyjne</span></h2>
+    <p class="module-intro">Dwa pliki definiuj&#261; ca&#322;e &#347;rodowisko. Nie musisz tu zagl&#261;da&#263; codziennie &mdash; ale warto wiedzie&#263; gdzie co zmieni&#263;.</p>
+  </div>
+
+  <div class="section">
+    <h3>config/.env &mdash; Twoje sekrety</h3>
+    <p>Tokeny i klucze API. Nigdy nie jest commitowany.</p>
+    <table class="env-table">
+      <thead><tr><th>Zmienna</th><th></th><th>Opis</th></tr></thead>
+      <tbody>
+        <tr><td>GH_TOKEN</td><td><span class="tag required">wymagany</span></td><td>Token GitHub (<code>repo</code> + <code>workflow</code>)</td></tr>
+        <tr><td>CONTEXT7_API_KEY</td><td><span class="tag optional">opcja</span></td><td>Dokumentacja bibliotek przez MCP</td></tr>
+        <tr><td>COOLIFY_BASE_URL</td><td><span class="tag optional">opcja</span></td><td>URL instancji Coolify</td></tr>
+        <tr><td>COOLIFY_ACCESS_TOKEN</td><td><span class="tag optional">opcja</span></td><td>Token Coolify</td></tr>
+        <tr><td>GH_TOKEN_WORK</td><td><span class="tag optional">opcja</span></td><td>Token do konta firmowego GitHub</td></tr>
+        <tr><td>BACKUP_PIN</td><td><span class="tag optional">opcja</span></td><td>PIN do szyfrowania backup&#243;w</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h3>config/env-config.yaml &mdash; ca&#322;a reszta</h3>
+    <p>Tu definiujesz: to&#380;samo&#347;&#263; Git, list&#281; plugin&#243;w, skills, serwery MCP. Podzielony na <code>defaults</code> (wsp&#243;lne) i <code>environments</code> (per &#347;rodowisko).</p>
+
+    <div class="expandable" onclick="this.classList.toggle('open')">
+      <div class="expandable-header">
+        <span class="chevron">&#9654;</span>
+        <span>Dodaj plugin</span>
+      </div>
+      <div class="expandable-body">
+        <p>Dopisz nazw&#281; do listy <code>plugins.marketplace</code>:</p>
+        <pre><code><span class="kw">plugins:</span>
+  <span class="kw">marketplace:</span>
+    - superpowers
+    - commit-commands
+    - <span class="str">nowy-plugin</span>        <span class="cm"># &larr; dopisz tutaj</span></code></pre>
+        <p style="margin-top:8px;font-size:13px;color:var(--text-dim)">Po zmianie: przebuduj kontener lub uruchom <code>setup-env.sh</code>.</p>
+      </div>
+    </div>
+
+    <div class="expandable" onclick="this.classList.toggle('open')">
+      <div class="expandable-header">
+        <span class="chevron">&#9654;</span>
+        <span>Dodaj skill</span>
+      </div>
+      <div class="expandable-body">
+        <p>Dopisz wpis do listy <code>skills</code>:</p>
+        <pre><code><span class="kw">skills:</span>
+  - url: <span class="str">"https://github.com/autor/repo"</span>
+    name: <span class="str">nazwa-skill</span></code></pre>
+      </div>
+    </div>
+
+    <div class="expandable" onclick="this.classList.toggle('open')">
+      <div class="expandable-header">
+        <span class="chevron">&#9654;</span>
+        <span>Dodaj serwer MCP</span>
+      </div>
+      <div class="expandable-body">
+        <p>Dopisz w sekcji <code>environments.&lt;tw&#243;j-env&gt;.mcp_servers</code>:</p>
+        <pre><code><span class="kw">mcp_servers:</span>
+  - name: m&#243;j-serwer
+    type: stdio
+    command: npx
+    args: [<span class="str">"-y"</span>, <span class="str">"@org/serwer@latest"</span>]
+    env:
+      API_KEY: <span class="str">"${M&#211;J_KLUCZ}"</span></code></pre>
+        <div class="card" style="margin-top:10px">
+          <div class="card-label warn">Uwaga</div>
+          <p>Dla zdalnych serwer&#243;w u&#380;ywaj <code>type: "http"</code>, nie <code>"url"</code> &mdash; <code>"url"</code> cicho nie dzia&#322;a.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="expandable" onclick="this.classList.toggle('open')">
+      <div class="expandable-header">
+        <span class="chevron">&#9654;</span>
+        <span>Konto firmowe GitHub</span>
+      </div>
+      <div class="expandable-body">
+        <p>Je&#347;li masz oddzielne konto GitHub do pracy (SSO), &#347;rodowisko automatycznie routuje tokeny:</p>
+        <pre><code><span class="kw">git:</span>
+  <span class="kw">work:</span>
+    email: <span class="str">"imie@firma.com"</span>
+    orgs: <span class="str">"TwojaOrg|InnaOrg"</span>
+    dirs:
+      - <span class="str">"~/projects/Praca"</span></code></pre>
+        <p style="margin-top:8px;font-size:13px;color:var(--text-dim)">+ ustaw <code>GH_TOKEN_WORK</code> w <code>.env</code>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Wolumeny Docker</h3>
+    <p>Dane przetrwaj&#261; restart kontenera dzi&#281;ki 4 wolumenom:</p>
+    <div class="vol-grid">
+      <div class="vol-card">
+        <div class="vol-icon" style="color:var(--accent)">&#128274;</div>
+        <div class="vol-name">claude-config</div>
+        <div class="vol-desc">~/.claude</div>
+      </div>
+      <div class="vol-card">
+        <div class="vol-icon" style="color:var(--green)">&#128161;</div>
+        <div class="vol-name">agents-skills</div>
+        <div class="vol-desc">~/.agents</div>
+      </div>
+      <div class="vol-card">
+        <div class="vol-icon" style="color:var(--blue)">&#9830;</div>
+        <div class="vol-name">gemini-config</div>
+        <div class="vol-desc">~/.gemini</div>
+      </div>
+      <div class="vol-card">
+        <div class="vol-icon" style="color:var(--purple)">&#128193;</div>
+        <div class="vol-name">projects</div>
+        <div class="vol-desc">~/projects</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="nav-btn" onclick="goTo('tools')">&larr; Pluginy i skills</button>
+    <button class="nav-btn primary" onclick="goTo('reference')">Dalej: &#346;ci&#261;gawka &rarr;</button>
+  </div>
+</div>
+
+<!-- ===== MODULE 7: REFERENCE ===== -->
+<div class="module" id="mod-reference">
+  <div class="module-header">
+    <div class="module-badge">Modu&#322; 07</div>
+    <h2>&#346;ci&#261;gawka <span class="thin">komend</span></h2>
+    <p class="module-intro">Wszystko w jednym miejscu. Kliknij Copy i wklej do terminala.</p>
+  </div>
+
+  <div class="section">
+    <h3>Pierwsze uruchomienie</h3>
+    <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    <pre><code>cp config/.env.example config/.env    # stw&#243;rz plik z tokenami
+# edytuj config/.env &mdash; ustaw GH_TOKEN
+claude mcp list                       # czy serwery MCP dzia&#322;aj&#261;
+claude plugin marketplace list        # czy pluginy si&#281; zainstalowa&#322;y</code></pre></div>
+  </div>
+
+  <div class="section">
+    <h3>Nowy projekt z loop</h3>
+    <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    <pre><code>cd ~/projects/m&#243;j-projekt
+loop init                             # zainicjalizuj loop
+loop init --type web                  # z webowymi skills
+loop doctor                           # sprawd&#378; instalacj&#281;</code></pre></div>
+  </div>
+
+  <div class="section">
+    <h3>Codzienna praca</h3>
+    <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    <pre><code>loop run -I "Dodaj autoryzacj&#281; JWT"    # pomys&#322; &rarr; plan &rarr; build
+loop design                           # interaktywny brainstorming
+loop plan                             # tylko planowanie
+loop build                            # tylko budowanie
+loop build -i 20                      # max 20 iteracji
+loop build --interactive              # tryb r&#281;czny
+loop plan --new -I "Nast&#281;pna rzecz"    # nowy cykl
+loop summary                          # statystyki
+loop cleanup                          # zbi&#263; dev serwery</code></pre></div>
+  </div>
+
+  <div class="section">
+    <h3>Po zmianach w konfiguracji</h3>
+    <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    <pre><code>./.devcontainer/setup-env.sh           # re-synchronizuj &#347;rodowisko
+loop update                           # od&#347;wie&#380; symlinki loop</code></pre></div>
+  </div>
+
+  <div class="section">
+    <h3>Backupy</h3>
+    <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    <pre><code>.devcontainer/backup.sh create         # zaszyfrowany backup
+.devcontainer/backup.sh restore plik   # przywr&#243;&#263; z backupu
+.devcontainer/backup.sh list           # lista backup&#243;w</code></pre></div>
+  </div>
+
+  <div class="section" style="margin-top:48px">
+    <div class="card" style="text-align:center;border-color:var(--accent-dim)">
+      <p style="font-size:16px;color:var(--text-bright)">Kurs uko&#324;czony! Teraz mo&#380;esz pracowa&#263; z AI DevContainer.</p>
+      <p style="font-size:13px;color:var(--text-dim);margin-top:8px">Wracaj do poszczeg&#243;lnych modu&#322;&#243;w gdy potrzebujesz od&#347;wie&#380;y&#263; wiedz&#281;.</p>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="nav-btn" onclick="goTo('config')">&larr; Konfiguracja</button>
+    <button class="nav-btn" onclick="goTo('intro')">Wr&#243;&#263; na pocz&#261;tek</button>
+  </div>
+</div>
+
+</div>
+</main>
+
+<script>
+const modules = ['intro','start','loop','workflow','tools','config','reference'];
+const completed = new Set();
+let current = 'intro';
+
+function goTo(id) {
+  if (current !== id) completed.add(current);
+  current = id;
+
+  document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+  document.getElementById('mod-' + id).classList.add('active');
+
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.remove('active');
+    const mod = item.dataset.module;
+    if (mod === id) item.classList.add('active');
+    if (completed.has(mod)) item.classList.add('completed');
+  });
+
+  const pct = Math.round((completed.size / modules.length) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = completed.size + ' / ' + modules.length + ' uko\u0144czone';
+
+  document.getElementById('main').scrollTo({ top: 0, behavior: 'smooth' });
+  document.querySelector('.sidebar').classList.remove('open');
+}
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => goTo(item.dataset.module));
+});
+
+function copyCode(btn) {
+  const code = btn.parentElement.querySelector('code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'Skopiowano!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+document.addEventListener('keydown', (e) => {
+  const idx = modules.indexOf(current);
+  if (e.key === 'ArrowRight' && idx < modules.length - 1) goTo(modules[idx + 1]);
+  else if (e.key === 'ArrowLeft' && idx > 0) goTo(modules[idx - 1]);
+});
+</script>
+</body>
+</html>
