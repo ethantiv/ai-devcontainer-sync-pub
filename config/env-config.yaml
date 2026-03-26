@@ -66,8 +66,6 @@ defaults:
       name: terraform-test
     - url: "https://github.com/intellectronica/agent-skills"
       name: beautiful-mermaid
-    - url: "https://github.com/nicobailon/visual-explainer"
-      name: visual-explainer
     - url: "https://github.com/softaworks/agent-toolkit"
       name: humanizer
     - url: "https://github.com/softaworks/agent-toolkit"
