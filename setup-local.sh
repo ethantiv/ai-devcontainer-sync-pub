@@ -5,9 +5,14 @@
 set -e
 
 # Require Bash 4+ for associative arrays (macOS default is 3.2)
+# Auto-re-exec with Homebrew bash if available
 if [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+    for brew_bash in /opt/homebrew/bin/bash /usr/local/bin/bash; do
+        if [[ -x "$brew_bash" ]] && "$brew_bash" -c '[[ ${BASH_VERSINFO[0]} -ge 4 ]]' 2>/dev/null; then
+            exec "$brew_bash" "$0" "$@"
+        fi
+    done
     echo "❌ Bash 4+ required (found ${BASH_VERSION}). Install with: brew install bash"
-    echo "   Then re-run with: /opt/homebrew/bin/bash $0"
     exit 1
 fi
 
