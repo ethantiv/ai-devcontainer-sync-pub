@@ -13,7 +13,8 @@ function addLoopOptions(cmd) {
     .option('-i, --iterations <n>', 'Number of iterations')
     .option('-I, --idea <text>', 'Seed idea written to docs/ROADMAP.md before start')
     .option('-n, --new', 'Archive completed plan and start fresh')
-    .option('--interactive', 'Run interactively instead of autonomous');
+    .option('--interactive', 'Run interactively instead of autonomous')
+    .option('--tmux', 'Run in a detached tmux session');
 }
 
 function addBuildOptions(cmd) {
@@ -111,6 +112,7 @@ Examples:
   $ loop build -i 20        Build mode with 20 iterations
   $ loop run                Plan then build (3+99 iterations)
   $ loop run -I "Add auth"  Plan with seed idea, then build
+  $ loop build --tmux       Build in a detached tmux session
   $ loop summary            Show summary of last loop run
   $ loop cleanup            Kill dev server processes
   $ loop doctor             Check loop installation health

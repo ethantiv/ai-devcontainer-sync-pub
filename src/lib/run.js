@@ -49,9 +49,41 @@ function buildArgs(opts, mode) {
   return args;
 }
 
+function shellEscape(arg) {
+  return `'${arg.replace(/'/g, "'\\''")}'`;
+}
+
+function buildShellCommand(loopScript, args) {
+  return [loopScript, ...args].map(shellEscape).join(' ');
+}
+
+function spawnTmux(sessionName, shellCommand) {
+  return new Promise((resolve) => {
+    const child = spawn('tmux', ['new-session', '-d', '-s', sessionName, 'bash', '-c', shellCommand], {
+      stdio: 'inherit',
+      cwd: process.cwd(),
+    });
+    child.on('close', (code, signal) => {
+      const exitCode = signal ? 1 : (code ?? 0);
+      if (exitCode === 0) {
+        console.log(`tmux session '${sessionName}' started. Attach: tmux attach -t ${sessionName}`);
+      } else {
+        console.error(`Error: failed to start tmux session '${sessionName}' (exit code ${exitCode}). Session may already exist.`);
+      }
+      resolve(exitCode);
+    });
+  });
+}
+
 function spawnLoop(opts, mode) {
   const loopScript = checkLoopScript();
   const args = buildArgs(opts, mode);
+
+  if (opts.tmux) {
+    const sessionName = `loop-${mode}`;
+    const cmd = `cd ${shellEscape(process.cwd())} && ${buildShellCommand(loopScript, args)}`;
+    return spawnTmux(sessionName, cmd);
+  }
 
   return new Promise((resolve) => {
     const child = spawn(loopScript, args, {
@@ -87,12 +119,6 @@ async function runCombined(opts) {
     new: opts.new,
   };
 
-  const planCode = await spawnLoop(planOpts, 'plan');
-  if (planCode !== 0) {
-    console.error(`Plan phase exited with code ${planCode}, skipping build.`);
-    process.exit(planCode);
-  }
-
   // Build phase: uses -i if given, no --idea (plan already wrote it to ROADMAP)
   const buildOpts = {
     interactive: opts.interactive,
@@ -100,8 +126,22 @@ async function runCombined(opts) {
     iterations: opts.iterations,
   };
 
+  if (opts.tmux) {
+    const loopScript = checkLoopScript();
+    const planCmd = buildShellCommand(loopScript, buildArgs(planOpts, 'plan'));
+    const buildCmd = buildShellCommand(loopScript, buildArgs(buildOpts, 'build'));
+    const code = await spawnTmux('loop-run', `cd ${shellEscape(process.cwd())} && ${planCmd} && ${buildCmd}`);
+    process.exit(code);
+  }
+
+  const planCode = await spawnLoop(planOpts, 'plan');
+  if (planCode !== 0) {
+    console.error(`Plan phase exited with code ${planCode}, skipping build.`);
+    process.exit(planCode);
+  }
+
   const buildCode = await spawnLoop(buildOpts, 'build');
   process.exit(buildCode);
 }
 
-module.exports = { runPlan, runBuild, runCombined, runDesign, buildArgs, checkLoopScript, checkVersionMismatch, PKG_VERSION };
+module.exports = { runPlan, runBuild, runCombined, runDesign, buildArgs, buildShellCommand, checkLoopScript, checkVersionMismatch, PKG_VERSION };

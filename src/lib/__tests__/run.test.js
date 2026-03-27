@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { runDesign, buildArgs, checkLoopScript } = require('../run');
+const { runDesign, buildArgs, buildShellCommand, checkLoopScript } = require('../run');
 
 describe('runDesign', () => {
   test('is exported as a function', () => {
@@ -64,6 +64,29 @@ describe('buildArgs', () => {
       earlyExit: false,
     }, 'build');
     expect(args).toEqual(['-i', '5', '-I', 'Fix bug', '-n', '-e']);
+  });
+
+  test('tmux flag is not included in shell args', () => {
+    const args = buildArgs({ tmux: true }, 'build');
+    expect(args).not.toContain('--tmux');
+    expect(args).toEqual(['-a', '-i', '99']);
+  });
+});
+
+describe('buildShellCommand', () => {
+  test('builds escaped shell command from script and args', () => {
+    const cmd = buildShellCommand('./loop/loop.sh', ['-a', '-i', '99']);
+    expect(cmd).toBe("'./loop/loop.sh' '-a' '-i' '99'");
+  });
+
+  test('escapes single quotes in arguments', () => {
+    const cmd = buildShellCommand('./loop/loop.sh', ['-I', "it's a test"]);
+    expect(cmd).toBe("'./loop/loop.sh' '-I' 'it'\\''s a test'");
+  });
+
+  test('handles arguments with spaces', () => {
+    const cmd = buildShellCommand('./loop/loop.sh', ['-I', 'Add auth module']);
+    expect(cmd).toBe("'./loop/loop.sh' '-I' 'Add auth module'");
   });
 });
 
