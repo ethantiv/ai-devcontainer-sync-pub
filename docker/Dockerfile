@@ -39,10 +39,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH="/home/${USERNAME}/.claude/bin:/home/${USERNAME}/.local/bin:/home/${USERNAME}/.uv/bin:/usr/local/bin:${PATH}" \
     NODE_OPTIONS="--max-old-space-size=512"
 
-# Core packages (Playwright deps installed lazily by ensure-playwright.sh)
+# Core packages + chromium for ARM64 (Chrome for Testing lacks ARM64 builds)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl ca-certificates gnupg git jq unzip openssh-client procps python3 python3-pip \
-    tmux locales sudo \
+    tmux locales sudo chromium \
     && rm -rf /var/lib/apt/lists/*
 
 # Generate UTF-8 locale
@@ -103,7 +103,8 @@ USER ${USERNAME}
 WORKDIR ${HOME}/projects
 
 ENV CLAUDE_CONFIG_DIR=${HOME}/.claude \
-    PLAYWRIGHT_BROWSERS_PATH=${HOME}/.cache/ms-playwright
+    PLAYWRIGHT_BROWSERS_PATH=${HOME}/.cache/ms-playwright \
+    AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["bash"]

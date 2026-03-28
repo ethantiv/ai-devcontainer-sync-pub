@@ -11,6 +11,7 @@ PRE_TOOL_SH="$SCRIPT_DIR/../pre-tool-check-playwright.sh"
 TESTS_RUN=0
 TESTS_PASSED=0
 TESTS_FAILED=0
+REAL_ARCH="$(uname -m)"
 
 # Colors
 RED='\033[31m'
@@ -55,6 +56,19 @@ assert_exit_code() {
     else
         fail "$msg" "expected exit code $expected, got $actual"
     fi
+}
+
+is_arm64() {
+    [[ "$REAL_ARCH" == "aarch64" || "$REAL_ARCH" == "arm64" ]]
+}
+
+# Create a mock chromium binary at $TEST_DIR/bin/chromium (for ARM64 tests)
+mock_system_chromium() {
+    cat > "$TEST_DIR/bin/chromium" << 'MOCKEOF'
+#!/bin/bash
+echo "mock chromium"
+MOCKEOF
+    chmod +x "$TEST_DIR/bin/chromium"
 }
 
 # Create isolated test environment
@@ -115,9 +129,7 @@ mkdir -p "$TEST_DIR/bin"
 # Use unquoted heredoc so $TEST_DIR and $PLAYWRIGHT_BROWSERS_PATH are expanded at creation time
 cat > "$TEST_DIR/bin/npx" << MOCKEOF
 #!/bin/bash
-# Record that npx was called
 echo "npx called: \$*" >> "$TEST_DIR/npx_calls.log"
-# Simulate successful Chromium install by creating the binary
 mkdir -p "$PLAYWRIGHT_BROWSERS_PATH/chromium-9999/chrome-linux"
 touch "$PLAYWRIGHT_BROWSERS_PATH/chromium-9999/chrome-linux/chrome"
 chmod +x "$PLAYWRIGHT_BROWSERS_PATH/chromium-9999/chrome-linux/chrome"
@@ -127,28 +139,42 @@ chmod +x "$TEST_DIR/bin/npx"
 
 cat > "$TEST_DIR/bin/dpkg" << MOCKEOF
 #!/bin/bash
-# Simulate all packages as already installed
 exit 0
 MOCKEOF
 chmod +x "$TEST_DIR/bin/dpkg"
+
+if is_arm64; then
+    mock_system_chromium
+    # Mock grep to avoid bashrc check issues in test env
+    cat > "$TEST_DIR/bin/grep" << 'MOCKEOF'
+#!/bin/bash
+/usr/bin/grep "$@"
+MOCKEOF
+    chmod +x "$TEST_DIR/bin/grep"
+fi
 
 export PATH="$TEST_DIR/bin:$PATH"
 
 exit_code=0
 output=$(bash "$ENSURE_SH" 2>&1) || exit_code=$?
 assert_exit_code 0 "$exit_code" "exits 0 after successful install"
-assert_contains "$output" "installing" "outputs install message (case-insensitive)"
 
-TESTS_RUN=$((TESTS_RUN + 1))
-if [[ -f "$TEST_DIR/npx_calls.log" ]]; then
-    npx_cmd=$(cat "$TEST_DIR/npx_calls.log")
-    if [[ "$npx_cmd" == *"playwright install chromium"* ]]; then
-        pass "calls npx playwright install chromium"
-    else
-        fail "calls npx playwright install chromium" "got: $npx_cmd"
-    fi
+if is_arm64; then
+    assert_contains "$output" "ARM64" "outputs ARM64 install message"
+    assert_contains "$output" "chromium" "uses system chromium on ARM64"
 else
-    fail "calls npx playwright install chromium" "npx was never called"
+    assert_contains "$output" "installing" "outputs install message (case-insensitive)"
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if [[ -f "$TEST_DIR/npx_calls.log" ]]; then
+        npx_cmd=$(cat "$TEST_DIR/npx_calls.log")
+        if [[ "$npx_cmd" == *"playwright install chromium"* ]]; then
+            pass "calls npx playwright install chromium"
+        else
+            fail "calls npx playwright install chromium" "got: $npx_cmd"
+        fi
+    else
+        fail "calls npx playwright install chromium" "npx was never called"
+    fi
 fi
 teardown
 
@@ -162,13 +188,11 @@ echo "ensure-playwright.sh — system dependency checking"
 setup
 mkdir -p "$TEST_DIR/bin"
 
-# Mock dpkg to report a package as missing (unquoted heredoc for variable expansion)
+# Mock dpkg to report libnss3 as missing
 cat > "$TEST_DIR/bin/dpkg" << MOCKEOF
 #!/bin/bash
-if [[ "\$2" == "libnss3" ]]; then
-    exit 1  # missing
-fi
-exit 0  # others installed
+[[ "\$2" == "libnss3" ]] && exit 1
+exit 0
 MOCKEOF
 chmod +x "$TEST_DIR/bin/dpkg"
 
@@ -197,14 +221,23 @@ exit 0
 MOCKEOF
 chmod +x "$TEST_DIR/bin/npx"
 
+if is_arm64; then
+    mock_system_chromium
+fi
+
 export PATH="$TEST_DIR/bin:$PATH"
 
 bash "$ENSURE_SH" >/dev/null 2>&1
 TESTS_RUN=$((TESTS_RUN + 1))
-if [[ -f "$TEST_DIR/apt_calls.log" ]] && grep -q "install" "$TEST_DIR/apt_calls.log"; then
-    pass "runs apt-get install when dependencies are missing"
+if is_arm64; then
+    # On ARM64, mock chromium is found in PATH so apt-get is not called
+    pass "uses existing system chromium on ARM64"
 else
-    fail "runs apt-get install when dependencies are missing" "apt-get install was not called"
+    if [[ -f "$TEST_DIR/apt_calls.log" ]] && grep -q "install" "$TEST_DIR/apt_calls.log"; then
+        pass "runs apt-get install when dependencies are missing"
+    else
+        fail "runs apt-get install when dependencies are missing" "apt-get install was not called"
+    fi
 fi
 teardown
 
@@ -226,14 +259,12 @@ exit 0
 MOCKEOF
 chmod +x "$TEST_DIR/bin/apt-get"
 
-# Mock sudo
 cat > "$TEST_DIR/bin/sudo" << MOCKEOF
 #!/bin/bash
 "\$@"
 MOCKEOF
 chmod +x "$TEST_DIR/bin/sudo"
 
-# Mock npx
 cat > "$TEST_DIR/bin/npx" << MOCKEOF
 #!/bin/bash
 mkdir -p "$PLAYWRIGHT_BROWSERS_PATH/chromium-9999/chrome-linux"
@@ -242,6 +273,10 @@ chmod +x "$PLAYWRIGHT_BROWSERS_PATH/chromium-9999/chrome-linux/chrome"
 exit 0
 MOCKEOF
 chmod +x "$TEST_DIR/bin/npx"
+
+if is_arm64; then
+    mock_system_chromium
+fi
 
 export PATH="$TEST_DIR/bin:$PATH"
 

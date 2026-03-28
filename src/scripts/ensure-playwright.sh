@@ -5,23 +5,70 @@
 # Designed to run as a PreToolUse hook before agent-browser invocations.
 set -euo pipefail
 
+# Fast exit: if AGENT_BROWSER_EXECUTABLE_PATH already points to a valid binary, nothing to do.
+if [ -n "${AGENT_BROWSER_EXECUTABLE_PATH:-}" ] && [ -x "$AGENT_BROWSER_EXECUTABLE_PATH" ]; then
+    exit 0
+fi
+
 BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"
 
 # Check if Chromium is already installed by looking for any chromium-* directory
-# with the actual browser binary inside.
+# with the actual browser binary inside (chrome on x86_64, headless_shell on ARM64).
 chromium_ready() {
-    local chrome_bin
     for dir in "$BROWSERS_PATH"/chromium-*/; do
-        chrome_bin="$dir/chrome-linux/chrome"
-        [ -x "$chrome_bin" ] && return 0
-        # ARM64 uses a different path
-        chrome_bin="$dir/chrome-linux/headless_shell"
-        [ -x "$chrome_bin" ] && return 0
+        for bin in chrome headless_shell; do
+            [ -x "$dir/chrome-linux/$bin" ] && return 0
+        done
     done
     return 1
 }
 
 if chromium_ready; then
+    exit 0
+fi
+
+# On ARM64 Linux, Playwright and Chrome for Testing lack prebuilt binaries.
+# Fall back to system chromium package and point agent-browser at it.
+ARCH="$(uname -m)"
+
+# Find system chromium binary from known paths.
+find_system_chromium() {
+    for candidate in /usr/bin/chromium /usr/bin/chromium-browser; do
+        if [ -x "$candidate" ]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+    echo "[ensure-playwright] ARM64 detected — using system chromium package..."
+
+    CHROMIUM_BIN="$(find_system_chromium || true)"
+
+    # Install if not present
+    if [ -z "$CHROMIUM_BIN" ] && command -v apt-get &>/dev/null; then
+        echo "[ensure-playwright] Installing chromium via apt..."
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends chromium
+        sudo rm -rf /var/lib/apt/lists/* 2>/dev/null || true
+        CHROMIUM_BIN="$(find_system_chromium || true)"
+    fi
+
+    if [ -z "$CHROMIUM_BIN" ]; then
+        echo "[ensure-playwright] ERROR: Could not find or install chromium on ARM64."
+        exit 1
+    fi
+
+    # Persist for agent-browser (current session + future shells)
+    export AGENT_BROWSER_EXECUTABLE_PATH="$CHROMIUM_BIN"
+    BASHRC="$HOME/.bashrc"
+    if ! grep -q 'AGENT_BROWSER_EXECUTABLE_PATH' "$BASHRC" 2>/dev/null; then
+        echo "export AGENT_BROWSER_EXECUTABLE_PATH=\"$CHROMIUM_BIN\"" >> "$BASHRC"
+    fi
+
+    echo "[ensure-playwright] Using system chromium: $CHROMIUM_BIN"
     exit 0
 fi
 
