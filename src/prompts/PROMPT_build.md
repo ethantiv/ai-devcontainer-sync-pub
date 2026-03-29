@@ -14,16 +14,16 @@
    b. **Execute with subagent-driven-development**: Invoke **Skill** tool: `Skill(skill="superpowers:subagent-driven-development")`. Follow the skill workflow exactly for each task in the phase:
       - Dispatch implementer subagent with full task text and codebase context
       - Implementer follows `superpowers:test-driven-development` (Red-Green-Refactor): write failing test → verify fails → implement → verify passes → refactor
-      - On errors or unexpected behavior: use `superpowers:systematic-debugging` to diagnose root cause before attempting fixes
-      - For independent failures across different subsystems: use `superpowers:dispatching-parallel-agents`
-      - After implementation: dispatch spec compliance reviewer subagent (does code match task spec?)
-      - After spec review: dispatch code quality reviewer subagent
+      - On errors or unexpected behavior: implementer invokes `superpowers:systematic-debugging` to diagnose root cause (do NOT pre-load — load on-demand only when needed)
+      - After implementation: dispatch ONE reviewer subagent that checks BOTH spec compliance AND code quality (single combined review, not two separate agents)
+      - Reviewer does NOT re-run tests or validation — implementer already verified. Reviewer only reads the diff, checks spec match, and reviews code quality. Exception: if reviewer makes code changes, then run affected tests only.
+      - For trivial tasks (pure deletions, < 10 lines changed): skip reviewer entirely — orchestrator validates via diff inspection
       - Each task ends with a commit from the implementer subagent
 
    c. Complete one phase per iteration. After finishing the current phase, proceed to steps 2-5 and stop — the next phase runs in a fresh iteration with clean context.
 
-2. **Update the plan** in @docs/plans/IMPLEMENTATION_PLAN.md:
-   - Mark completed task checkboxes: `- [ ]` → `- [x]`
+2. **Update the plan** in @docs/plans/IMPLEMENTATION_PLAN.md (orchestrator only — subagents must NOT read or edit this file):
+   - Mark ALL completed task checkboxes at once: `- [ ]` → `- [x]` (single batch edit after phase completes)
    - Change current phase status: `**Status:** pending` → `**Status:** complete` (lowercase)
    - If ALL phases are now `complete`: add `**Status:** COMPLETE` (UPPERCASE) at the top of the document, below the header
    - If the file exceeds 800 lines, trim completed content: remove `[x]` tasks, phases with status `complete`. Keep pending tasks, active phases, Findings & Decisions. Git history = full audit trail.
