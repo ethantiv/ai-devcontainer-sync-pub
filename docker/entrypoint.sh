@@ -106,6 +106,43 @@ setup_gh_auth() {
 setup_gh_auth
 
 # =============================================================================
+# SSH KEY SETUP
+# =============================================================================
+
+setup_ssh_key() {
+    local ssh_dir="$HOME/.ssh"
+    local ssh_key="$ssh_dir/id_rsa"
+    local known_hosts="$ssh_dir/known_hosts"
+
+    if [[ -f "$ssh_key" ]]; then
+        chmod 600 "$ssh_key" 2>/dev/null || true
+        echo "  ✔︎ Using existing SSH key"
+        return 0
+    fi
+
+    if [[ -z "${SSH_PRIVATE_KEY}" ]]; then
+        return 0
+    fi
+
+    mkdir -p "$ssh_dir" && chmod 700 "$ssh_dir"
+
+    if echo "${SSH_PRIVATE_KEY}" | base64 --decode > "$ssh_key" 2>/dev/null; then
+        chmod 600 "$ssh_key"
+        echo "  ✔︎ SSH key configured from SSH_PRIVATE_KEY"
+        # Add GitHub to known_hosts
+        if ! grep -q "github.com" "$known_hosts" 2>/dev/null; then
+            ssh-keyscan github.com >> "$known_hosts" 2>/dev/null
+            chmod 644 "$known_hosts"
+        fi
+    else
+        echo "  ⚠️  Failed to decode SSH_PRIVATE_KEY (invalid base64)"
+    fi
+}
+
+# Set up SSH key from SSH_PRIVATE_KEY env var (base64-encoded)
+setup_ssh_key
+
+# =============================================================================
 # SETUP (MCP servers, settings, plugins — runs every startup, idempotent)
 # =============================================================================
 
