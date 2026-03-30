@@ -105,6 +105,19 @@ apply_claude_settings() {
         echo "$default_settings" | jq '.' > "$CLAUDE_SETTINGS_FILE"
     fi
     ok "Settings configured"
+
+    # Apply remoteControlAtStartup to .claude.json (global config, not settings.json)
+    local remote_control
+    remote_control=$(echo "$claude_config" | jq -r '.remoteControl // empty')
+    if [[ -n "$remote_control" ]]; then
+        local claude_json="$CLAUDE_DIR/.claude.json"
+        if [[ -f "$claude_json" ]]; then
+            local updated
+            updated=$(jq --argjson rc "$remote_control" '.remoteControlAtStartup = $rc' "$claude_json" 2>/dev/null)
+            [[ -n "$updated" ]] && echo "$updated" > "$claude_json"
+            ok "Remote Control: $remote_control"
+        fi
+    fi
 }
 
 # Propagate timezone, locale, and git identity from config to $ENV_EXPORT_FILE

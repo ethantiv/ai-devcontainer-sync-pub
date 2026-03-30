@@ -39,6 +39,7 @@ defaults:
   # -------------------------------------------------------------------------
   claude:
     language: "English"                   # Language for Claude responses
+    remoteControl: false                  # Enable Remote Control for all sessions (claude.ai/code)
     permissions:
       allow: []                           # Tool patterns always allowed (e.g. "Bash(*)")
       deny: []                            # Tool patterns always denied
