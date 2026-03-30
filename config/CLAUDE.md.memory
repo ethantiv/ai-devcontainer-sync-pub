@@ -10,7 +10,6 @@ Wait for explicit user permission before executing Git or GitHub commands (git a
 
 Use English for all code, comments, documentation, commit messages, and PR descriptions.
 Use Polish (Polski) for all user-facing output: chat conversations, plan titles and descriptions, task names, and commit/PR summaries shown to the user.
-When spawning subagents (Plan, Explore, etc.) that produce user-facing output, explicitly include in the prompt: "Write output in Polish (Polski). Code, paths, and identifiers stay as-is."
 Always use proper Polish diacritics (ą, ć, ę, ł, ń, ó, ś, ź, ż) in all Polish text — never skip them.
 Use Mermaid for diagrams (avoid Polish diacritics and quotes in node labels). Use `beautiful-mermaid` skill to generate Mermaid diagrams in documents.
 
