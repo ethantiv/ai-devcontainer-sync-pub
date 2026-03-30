@@ -1,3 +1,7 @@
+## Remote Access
+
+When the user says "log in", "debug", "check on raspberry pi/rpi", or equivalent Polish phrases ("zaloguj się", "zrób debug", "sprawdź na rpi"), connect via SSH: `ssh mirek@raspberrypi.local`.
+
 ## Git Operations
 
 Wait for explicit user permission before executing Git or GitHub commands (git add, commit, push, pull, merge, rebase, gh pr create/merge). Execute Git commands only when user explicitly requests it in their message or user invokes a slash command (e.g., /commit).

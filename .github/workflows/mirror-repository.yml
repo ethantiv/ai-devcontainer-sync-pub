@@ -22,6 +22,8 @@ jobs:
             .claude/settings.json \
             .claude/skills/ \
             config/env-config.yaml
+          echo "" > config/CLAUDE.md.memory
+          git add config/CLAUDE.md.memory
           git commit -m "chore: exclude private files from public repo"
 
       - name: Push mirror
