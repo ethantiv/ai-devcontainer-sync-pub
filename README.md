@@ -73,7 +73,7 @@ The `loop` command runs Claude CLI in autonomous plan/build cycles against any p
 cd ~/projects/my-project
 loop init                          # Set up loop in your project
 loop init --type web               # Init with web-specific skills
-loop init --list-types             # Show available project types (web/devops/docs/fullstack)
+loop init --list-types             # Show available project types (web/devops)
 
 loop design                        # Interactive brainstorming / design session
 loop plan                          # Planning phase (3 iterations)

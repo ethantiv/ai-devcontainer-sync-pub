@@ -8,15 +8,6 @@ const PRESETS = {
     description: 'Infrastructure & DevOps (Terraform, cloud)',
     skills: ['terraform-style-guide', 'terraform-test', 'refactor-module'],
   },
-  docs: {
-    description: 'Documentation & technical writing',
-    skills: ['beautiful-mermaid', 'mermaid-diagrams', 'visual-explainer',
-             'humanizer', 'docx', 'pdf'],
-  },
-  fullstack: {
-    description: 'Full-stack web application',
-    get skills() { return [...PRESETS.web.skills, 'feature-dev:feature-dev']; },
-  },
 };
 
 function resolveTypes(commaString) {

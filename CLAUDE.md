@@ -58,7 +58,7 @@ Source at `src/`. Docker: `COPY src /opt/loop` + `npm install`, symlinked as `/u
 
 ```bash
 loop init / update      # Initialize/refresh symlinks in project
-loop init --type web    # Init with domain-specific skills (web/devops/docs/fullstack)
+loop init --type web    # Init with domain-specific skills (web/devops)
 loop init --list-types  # Show available project types
 loop design             # Interactive brainstorming / design session
 loop plan / build / run # Run planning (3 iter), build (99 iter), or both

@@ -11,17 +11,6 @@ describe('resolveTypes', () => {
     expect(result.plan).toBe(result.build);
   });
 
-  test('merges and deduplicates multiple types', () => {
-    const result = resolveTypes('web,fullstack');
-    // web-design-guidelines appears in both web and fullstack plan
-    expect(result.plan.filter(s => s === 'web-design-guidelines')).toHaveLength(1);
-    // build should have union of both without duplicates
-    const uniqueCheck = new Set(result.build);
-    expect(uniqueCheck.size).toBe(result.build.length);
-    // fullstack adds feature-dev:feature-dev which web doesn't have
-    expect(result.build).toContain('feature-dev:feature-dev');
-  });
-
   test('merges web,devops without overlap', () => {
     const result = resolveTypes('web,devops');
     expect(result.plan).toEqual([
@@ -69,8 +58,6 @@ describe('listPresets', () => {
     const names = listPresets().map(p => p.name);
     expect(names).toContain('web');
     expect(names).toContain('devops');
-    expect(names).toContain('docs');
-    expect(names).toContain('fullstack');
   });
 });
 
