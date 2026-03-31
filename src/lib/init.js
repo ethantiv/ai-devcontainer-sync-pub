@@ -20,6 +20,7 @@ const TEMPLATES = [
   { src: 'templates/CLAUDE_template.md', dest: 'loop/CLAUDE_template.md' },
   { src: '.claude/settings.json', dest: '.claude/settings.json' },
   { src: '.claude/skills/auto-revise-claude-md/SKILL.md', dest: '.claude/skills/auto-revise-claude-md/SKILL.md' },
+  { src: 'prompts/PROMPT_skills_design.md', dest: 'loop/PROMPT_skills_design.md' },
   { src: 'prompts/PROMPT_skills_plan.md', dest: 'loop/PROMPT_skills_plan.md' },
   { src: 'prompts/PROMPT_skills_build.md', dest: 'loop/PROMPT_skills_build.md' },
 ];
@@ -146,8 +147,10 @@ function init({ force = false, types } = {}) {
 
   if (effectiveTypes) {
     const resolved = resolveTypes(effectiveTypes);
+    const designPath = path.join(projectRoot, 'loop/PROMPT_skills_design.md');
     const planPath = path.join(projectRoot, 'loop/PROMPT_skills_plan.md');
     const buildPath = path.join(projectRoot, 'loop/PROMPT_skills_build.md');
+    if (fs.existsSync(designPath)) appendSkills(designPath, resolved.design);
     if (fs.existsSync(planPath)) appendSkills(planPath, resolved.plan);
     if (fs.existsSync(buildPath)) appendSkills(buildPath, resolved.build);
     console.log(`  applied skills for type: ${effectiveTypes}`);

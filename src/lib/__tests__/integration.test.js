@@ -52,6 +52,7 @@ const EXPECTED_TEMPLATES = [
   'loop/CLAUDE_template.md',
   '.claude/settings.json',
   '.claude/skills/auto-revise-claude-md/SKILL.md',
+  'loop/PROMPT_skills_design.md',
   'loop/PROMPT_skills_plan.md',
   'loop/PROMPT_skills_build.md',
 ];
@@ -396,6 +397,7 @@ function templateSrcPath(destRel) {
     'loop/CLAUDE_template.md': 'templates/CLAUDE_template.md',
     '.claude/settings.json': '.claude/settings.json',
     '.claude/skills/auto-revise-claude-md/SKILL.md': '.claude/skills/auto-revise-claude-md/SKILL.md',
+    'loop/PROMPT_skills_design.md': 'prompts/PROMPT_skills_design.md',
     'loop/PROMPT_skills_plan.md': 'prompts/PROMPT_skills_plan.md',
     'loop/PROMPT_skills_build.md': 'prompts/PROMPT_skills_build.md',
   };

@@ -19,7 +19,7 @@ function resolveTypes(commaString) {
   }
 
   const skills = [...new Set(types.flatMap(t => PRESETS[t].skills))];
-  return { plan: skills, build: skills };
+  return { design: skills, plan: skills, build: skills };
 }
 
 function listPresets() {

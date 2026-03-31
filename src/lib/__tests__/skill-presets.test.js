@@ -4,10 +4,12 @@ const os = require('os');
 const { resolveTypes, listPresets, PRESETS } = require('../skill-presets');
 
 describe('resolveTypes', () => {
-  test('returns same skills for plan and build', () => {
+  test('returns same skills for design, plan and build', () => {
     const result = resolveTypes('web');
+    expect(result.design).toEqual(PRESETS.web.skills);
     expect(result.plan).toEqual(PRESETS.web.skills);
     expect(result.build).toEqual(PRESETS.web.skills);
+    expect(result.design).toBe(result.plan);
     expect(result.plan).toBe(result.build);
   });
 
@@ -17,6 +19,7 @@ describe('resolveTypes', () => {
       ...PRESETS.web.skills,
       ...PRESETS.devops.skills,
     ]);
+    expect(result.design).toBe(result.plan);
     expect(result.plan).toBe(result.build);
   });
 
@@ -35,9 +38,10 @@ describe('resolveTypes', () => {
     expect(result.plan).toEqual([...PRESETS.web.skills, ...PRESETS.devops.skills]);
   });
 
-  test('devops returns same skills for plan and build', () => {
+  test('devops returns same skills for design, plan and build', () => {
     const result = resolveTypes('devops');
-    expect(result.plan).toEqual(PRESETS.devops.skills);
+    expect(result.design).toEqual(PRESETS.devops.skills);
+    expect(result.design).toBe(result.plan);
     expect(result.plan).toBe(result.build);
   });
 });

@@ -1,4 +1,4 @@
-0a. For each skill listed in @loop/PROMPT_skills_plan.md, invoke the **Skill** tool. Load all skills in parallel in a single message.
+0a. For each skill listed in @loop/PROMPT_skills_design.md, invoke the **Skill** tool. Load all skills in parallel in a single message.
 
 0b. Read @docs/ROADMAP.md — this defines the scope and goal.
 

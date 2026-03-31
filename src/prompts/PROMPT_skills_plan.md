@@ -1,2 +1,1 @@
-- `superpowers:brainstorming`
 - `superpowers:writing-plans`
