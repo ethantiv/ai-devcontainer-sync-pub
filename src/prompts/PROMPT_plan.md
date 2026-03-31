@@ -18,6 +18,22 @@
 
 <format_rationale>The loop's `check_completion()` function parses the plan file with regex. Deviating from this format breaks automated completion detection and early exit.</format_rationale>
 
+### Document header
+
+Every plan must start with:
+
+```markdown
+# [Feature Name] Implementation Plan
+
+**Goal:** [One sentence describing what this builds]
+
+**Architecture:** [2-3 sentences about approach]
+
+**Tech Stack:** [Key technologies/libraries]
+
+---
+```
+
 ### Phase headers with Status
 
 Each phase needs a status line. Use lowercase for active states:
