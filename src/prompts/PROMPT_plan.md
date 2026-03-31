@@ -1,6 +1,6 @@
 0a. <autonomous_mode>You are running in a fully autonomous pipeline with no human available to respond. When information is ambiguous or missing, resolve it yourself using available context (files, git history, existing docs) and choose the most reasonable option. Commit to your decision and proceed without interruption.</autonomous_mode>
 
-0b. Load all skills listed in @loop/PROMPT_skills_plan.md.
+0b. For each skill listed in @loop/PROMPT_skills_plan.md, invoke the **Skill** tool. Load all skills in parallel in a single message.
 
 0c. Read @docs/ROADMAP.md — this defines the scope for planning.
 
@@ -8,9 +8,9 @@
 
 0e. Search @docs/plans/ for any design docs (YYYY-MM-DD-*-design.md). If found, read the most recent one — it provides architecture decisions and constraints.
 
-1. **Explore**: Launch up to 15 `feature-dev:code-explorer` subagents to map @src/ architecture and compare against @docs/. Look for: TODO, placeholders, minimal implementations, missing tests, skipped/flaky tests, inconsistent patterns.
+1. **Explore**: Launch up to 15 `feature-dev:code-explorer` subagents via **Task** tool to map @src/ architecture and compare against @docs/. Look for: TODO, placeholders, minimal implementations, missing tests, skipped/flaky tests, inconsistent patterns.
 
-2. **Create plan**: Load `superpowers:writing-plans`. The plan will be saved to @docs/plans/IMPLEMENTATION_PLAN.md.
+2. **Create plan**: Invoke **Skill** tool: `Skill(skill="superpowers:writing-plans")`. Follow the writing-plans skill workflow to populate @docs/plans/IMPLEMENTATION_PLAN.md.
 
 3. **Commit and push**: After updating the plan: `git add -A && git commit` then `git push`. The build loop reads the plan from the remote, so pushing is essential.
 
@@ -100,6 +100,8 @@ The build loop adds `**Status:** COMPLETE` (uppercase) automatically when all ph
 
 ## Important Rules
 
+- This session produces a plan only — implementation happens in `loop build`.
 - Before adding a task, search the code to confirm the functionality doesn't already exist.
 - Scope comes from @docs/ROADMAP.md and @docs/specs/. Stay within that scope.
+- Tasks should be granular enough to complete in 2-5 minutes each, with explicit test commands and expected output.
 - @src/lib = project's standard library, prefer consolidated implementations there over ad-hoc copies.
