@@ -119,7 +119,7 @@ async function runCombined(opts) {
     new: opts.new,
   };
 
-  // Build phase: uses -i if given, no --idea (plan already wrote it to ROADMAP)
+  // Build phase: uses -i if given, no --idea (plan already wrote it to IDEA)
   const buildOpts = {
     interactive: opts.interactive,
     earlyExit: opts.earlyExit,

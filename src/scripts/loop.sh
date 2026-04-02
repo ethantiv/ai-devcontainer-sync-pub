@@ -56,7 +56,7 @@ usage() {
     echo "  -i iterations   Number of iterations (default: 99 build, 3 plan)"
     echo "  -e              Disable early exit (run all iterations)"
     echo "  -n              Archive completed plan and start fresh"
-    echo "  -I text         Seed idea written to docs/ROADMAP.md"
+    echo "  -I text         Seed idea written to docs/IDEA.md"
     echo "  -h              Show this help"
     echo ""
     echo "Note: When called via 'loop run', autonomous mode (-a) is the default."
@@ -69,6 +69,17 @@ usage() {
     exit 0
 }
 
+# Find the current (most recent) plan file in docs/plans/
+# Glob sorts lexicographically; YYYY-MM-DD prefix means last = newest.
+find_current_plan() {
+    local latest=""
+    for f in docs/plans/*-plan.md; do
+        [[ -f "$f" ]] || continue
+        latest="$f"
+    done
+    echo "$latest"
+}
+
 # Check if plan is complete (dual-signal: checkboxes + phase statuses)
 #
 # Signals tracked:
@@ -78,8 +89,9 @@ usage() {
 #
 # Complete when: no unchecked items AND no pending phases AND has completion marker.
 check_completion() {
-    local plan="docs/plans/IMPLEMENTATION_PLAN.md"
-    [[ ! -f "$plan" ]] && return 1
+    local plan
+    plan=$(find_current_plan)
+    [[ -z "$plan" || ! -f "$plan" ]] && return 1
 
     local unchecked pending_phases complete_marker
 
@@ -97,8 +109,9 @@ check_completion() {
 
 # Archive a completed plan to docs/plans/archive/
 archive_completed_plan() {
-    local plan="docs/plans/IMPLEMENTATION_PLAN.md"
-    [[ ! -f "$plan" ]] && { echo "[NEW] No plan to archive."; return 0; }
+    local plan
+    plan=$(find_current_plan)
+    [[ -z "$plan" || ! -f "$plan" ]] && { echo "[NEW] No plan to archive."; return 0; }
 
     if ! check_completion; then
         echo "[NEW] Plan is not complete — cannot archive. Continue with current plan."
@@ -107,10 +120,8 @@ archive_completed_plan() {
 
     local archive_dir="docs/plans/archive"
     mkdir -p "$archive_dir"
-    local timestamp
-    timestamp=$(date +%Y-%m-%d_%H%M%S)
-    mv "$plan" "$archive_dir/IMPLEMENTATION_PLAN_${timestamp}.md"
-    echo "[NEW] Archived completed plan to $archive_dir/IMPLEMENTATION_PLAN_${timestamp}.md"
+    mv "$plan" "$archive_dir/"
+    echo "[NEW] Archived completed plan to $archive_dir/$(basename "$plan")"
 
     # Archive associated design docs
     for doc in docs/plans/*-design.md; do
@@ -289,24 +300,24 @@ resolve_idea() {
     echo "$idea"
 }
 
-# Write idea to docs/ROADMAP.md if provided
+# Write idea to docs/IDEA.md if provided
 write_idea() {
     [[ -z "$IDEA" ]] && return
 
     local content
     content=$(resolve_idea "$IDEA")
     if [[ $? -ne 0 ]]; then
-        echo "[WARN] Could not resolve idea, skipping ROADMAP write" >&2
+        echo "[WARN] Could not resolve idea, skipping IDEA write" >&2
         return 1
     fi
 
     mkdir -p docs
-    cat > docs/ROADMAP.md << 'IDEA_EOF'
-# Roadmap
+    cat > docs/IDEA.md << 'IDEA_EOF'
+# Idea
 
 IDEA_EOF
-    echo "$content" >> docs/ROADMAP.md
-    echo "Idea written to: docs/ROADMAP.md"
+    echo "$content" >> docs/IDEA.md
+    echo "Idea written to: docs/IDEA.md"
 }
 
 # Pre-process long options

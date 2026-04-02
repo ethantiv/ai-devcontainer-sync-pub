@@ -1,6 +1,6 @@
 0a. For each skill listed in @loop/PROMPT_skills_design.md, invoke the **Skill** tool. Load all skills in parallel in a single message.
 
-0b. Read @docs/ROADMAP.md — this defines the scope and goal.
+0b. Read @docs/IDEA.md — this defines the scope and goal.
 
 0c. Read any existing design docs in @docs/plans/ to avoid duplicating past work.
 
@@ -14,5 +14,5 @@
 
 - This session produces a design doc only — implementation plans come from `loop plan`.
 - This is an interactive session — ask questions, wait for answers, iterate.
-- Scope comes from @docs/ROADMAP.md. Stay within that scope.
+- Scope comes from @docs/IDEA.md. Stay within that scope.
 - After design is approved, the user runs `loop plan` separately to create the implementation plan.

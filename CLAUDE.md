@@ -14,10 +14,10 @@ Re-sync configuration after changes:
 ```bash
 claude mcp list                    # Verify MCP servers
 claude plugin marketplace list     # List installed plugins
-npm install --prefix src && npm test --prefix src  # Run JS tests (120 tests, requires install)
+npm install --prefix src && npm test --prefix src  # Run JS tests (123 tests, requires install)
 npm run test:integration --prefix src              # Run only integration tests (17 tests)
 bash src/scripts/tests/test_write_idea.sh          # Run shell tests (18 tests)
-bash src/scripts/tests/test_check_completion.sh    # Run completion detection tests (20 tests)
+bash src/scripts/tests/test_check_completion.sh    # Run completion detection tests (26 tests)
 bash src/scripts/tests/test_ensure_playwright.sh   # Run Playwright lazy-install tests (14 tests)
 bash src/scripts/tests/test_cleanup.sh             # Run cleanup.sh port tests (11 tests)
 bash src/scripts/tests/test_backup.sh              # Run backup.sh tests (20 tests)
@@ -136,3 +136,4 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 
 **Loop system:**
 - **Skill presets**: `src/lib/skill-presets.js` defines project type → skills mapping. `loop init --type` appends to PROMPT_skills_{plan,build}.md. Type persisted in `loop/.type` for `loop update`.
+- **Loop file naming**: `docs/IDEA.md` (seed), `docs/plans/YYYY-MM-DD-<topic>-plan.md`, `docs/plans/YYYY-MM-DD-<topic>-design.md`. Dynamic plan discovery via `find_current_plan()` in `loop.sh` — glob for `*-plan.md`, not hardcoded paths.

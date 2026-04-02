@@ -11,7 +11,7 @@ const { doctor } = require('../lib/doctor');
 function addLoopOptions(cmd) {
   return cmd
     .option('-i, --iterations <n>', 'Number of iterations')
-    .option('-I, --idea <text>', 'Seed idea written to docs/ROADMAP.md before start')
+    .option('-I, --idea <text>', 'Seed idea written to docs/IDEA.md before start')
     .option('-n, --new', 'Archive completed plan and start fresh')
     .option('--interactive', 'Run interactively instead of autonomous')
     .option('--tmux', 'Run in a detached tmux session');
@@ -46,7 +46,7 @@ program
 program
   .command('design')
   .description('Run interactive design/brainstorming phase')
-  .option('-I, --idea <text>', 'Seed idea written to docs/ROADMAP.md before start')
+  .option('-I, --idea <text>', 'Seed idea written to docs/IDEA.md before start')
   .option('-n, --new', 'Archive completed plan and start fresh')
   .action((opts) => runDesign(opts));
 

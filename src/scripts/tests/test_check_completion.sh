@@ -307,6 +307,61 @@ EOF
 assert_complete "no checkboxes, no phases, just COMPLETE marker → complete"
 
 echo ""
+echo "=== find_current_plan() tests ==="
+echo ""
+
+# Extract find_current_plan from loop.sh
+extract_find_current_plan() {
+    sed -n '/^# Find the current (most recent) plan file/,/^}/p' "$LOOP_SH"
+}
+eval "$(extract_find_current_plan)"
+
+# Helper to assert find_current_plan result
+assert_plan_eq() {
+    local expected="$1" msg="$2"
+    TESTS_RUN=$((TESTS_RUN + 1))
+    local actual
+    actual=$(find_current_plan)
+    if [[ "$expected" == "$actual" ]]; then
+        pass "$msg"
+    else
+        fail "$msg" "expected '$expected', got '$actual'"
+    fi
+}
+
+# Test in a temp directory with docs/plans/ structure
+PLAN_TMPDIR=$(mktemp -d)
+ORIG_DIR=$(pwd)
+cd "$PLAN_TMPDIR"
+
+# Test 21: No docs/plans/ directory
+assert_plan_eq "" "no docs/plans/ directory → empty string"
+
+# Test 22: Empty docs/plans/ directory
+mkdir -p docs/plans
+assert_plan_eq "" "empty docs/plans/ → empty string"
+
+# Test 23: Only design docs, no plans
+touch docs/plans/2026-01-15-auth-design.md
+assert_plan_eq "" "only design docs, no *-plan.md → empty string"
+
+# Test 24: Single plan file
+touch docs/plans/2026-03-10-login-plan.md
+assert_plan_eq "docs/plans/2026-03-10-login-plan.md" "single plan file → returns it"
+
+# Test 25: Multiple plan files — returns most recent (lexicographic last)
+touch docs/plans/2026-01-05-setup-plan.md
+touch docs/plans/2026-04-01-api-plan.md
+assert_plan_eq "docs/plans/2026-04-01-api-plan.md" "multiple plans → returns most recent"
+
+# Test 26: Ignores design docs when plans exist
+touch docs/plans/2026-05-01-future-design.md
+assert_plan_eq "docs/plans/2026-04-01-api-plan.md" "ignores *-design.md files"
+
+cd "$ORIG_DIR"
+rm -rf "$PLAN_TMPDIR"
+
+echo ""
 echo "=== Results ==="
 echo "  Total:  $TESTS_RUN"
 echo "  Passed: $TESTS_PASSED"

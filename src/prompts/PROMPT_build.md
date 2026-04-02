@@ -2,19 +2,19 @@
 
 0b. For each skill listed in @loop/PROMPT_skills_build.md, invoke the **Skill** tool. Load all skills in parallel in a single message.
 
-0c. Study @docs/plans/IMPLEMENTATION_PLAN.md — check completion:
+0c. Find the current plan in @docs/plans/ (most recent *-plan.md) and study it — check completion:
    - If `**Status:** COMPLETE` (uppercase) exists at document level → output "BUILD COMPLETE" and EXIT.
    - If no `- [ ]` unchecked tasks remain AND no phases with `**Status:** pending` or `**Status:** in_progress` → output "BUILD COMPLETE" and EXIT.
    - Otherwise → continue to step 1.
 
 1. **Pick ONE PHASE and execute it.**
 
-   a. Open @docs/plans/IMPLEMENTATION_PLAN.md and find the **first phase** with `**Status:** pending` or `**Status:** in_progress` (not `complete`). This is your target for this iteration.
+   a. Open the current plan file and find the **first phase** with `**Status:** pending` or `**Status:** in_progress` (not `complete`). This is your target for this iteration.
 
    b. **Execute with subagent-driven-development**: Invoke **Skill** tool: `Skill(skill="superpowers:subagent-driven-development")`.
    c. Complete one phase per iteration. After finishing the current phase, proceed to steps 2-5 and stop — the next phase runs in a fresh iteration with clean context.
 
-2. **Update the plan** in @docs/plans/IMPLEMENTATION_PLAN.md (orchestrator only — subagents must NOT read or edit this file):
+2. **Update the plan** in the current plan file (orchestrator only — subagents must NOT read or edit this file):
    - Mark ALL completed task checkboxes at once: `- [ ]` → `- [x]` (single batch edit after phase completes)
    - Change current phase status: `**Status:** pending` → `**Status:** complete` (lowercase)
    - If ALL phases are now `complete`: add `**Status:** COMPLETE` (UPPERCASE) at the top of the document, below the header
@@ -30,8 +30,8 @@
 
 - Document "why" in tests and implementations.
 - Single sources of truth, no migrations/adapters. If tests unrelated to your work fail, resolve them as part of the increment.
-- Keep @docs/plans/IMPLEMENTATION_PLAN.md current — future iterations depend on this.
+- Keep the current plan file current — future iterations depend on this.
 - On inconsistencies in @docs/ — update specifications directly.
-- @CLAUDE.md = operational ONLY. Status/progress → @docs/plans/IMPLEMENTATION_PLAN.md.
+- @CLAUDE.md = operational ONLY. Status/progress → the current plan file in @docs/plans/.
 - @src/lib = project's standard library, prefer consolidated implementations there over ad-hoc copies.
 - Subagents handle commits per task. The loop orchestrator does NOT auto-commit in build mode.

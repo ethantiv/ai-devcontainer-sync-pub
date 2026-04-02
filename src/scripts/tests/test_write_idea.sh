@@ -244,15 +244,15 @@ echo "write_idea() — integration"
 setup
 IDEA="Simple inline idea"
 write_idea > /dev/null
-assert_file_contains "docs/ROADMAP.md" "# Roadmap" "creates ROADMAP.md with header"
-assert_file_contains "docs/ROADMAP.md" "Simple inline idea" "writes inline idea to ROADMAP.md"
+assert_file_contains "docs/IDEA.md" "# Idea" "creates IDEA.md with header"
+assert_file_contains "docs/IDEA.md" "Simple inline idea" "writes inline idea to IDEA.md"
 teardown
 
 setup
 echo "Content from file source" > "$TEST_DIR/seed.txt"
 IDEA="@$TEST_DIR/seed.txt"
 write_idea > /dev/null
-assert_file_contains "docs/ROADMAP.md" "Content from file source" "writes @file content to ROADMAP.md"
+assert_file_contains "docs/IDEA.md" "Content from file source" "writes @file content to IDEA.md"
 teardown
 
 setup
@@ -261,18 +261,18 @@ Use $PATH and `command` in config
 TESTEOF
 IDEA="@$TEST_DIR/special.md"
 write_idea > /dev/null
-assert_file_contains 'docs/ROADMAP.md' '$PATH' "preserves dollar signs in ROADMAP.md (quoted heredoc)"
-assert_file_contains 'docs/ROADMAP.md' '`command`' "preserves backticks in ROADMAP.md"
+assert_file_contains 'docs/IDEA.md' '$PATH' "preserves dollar signs in IDEA.md (quoted heredoc)"
+assert_file_contains 'docs/IDEA.md' '`command`' "preserves backticks in IDEA.md"
 teardown
 
 setup
 IDEA=""
 write_idea > /dev/null 2>&1
 ((TESTS_RUN++))
-if [[ ! -f "docs/ROADMAP.md" ]]; then
-    pass "does not create ROADMAP.md when IDEA is empty"
+if [[ ! -f "docs/IDEA.md" ]]; then
+    pass "does not create IDEA.md when IDEA is empty"
 else
-    fail "does not create ROADMAP.md when IDEA is empty" "file was created"
+    fail "does not create IDEA.md when IDEA is empty" "file was created"
 fi
 teardown
 

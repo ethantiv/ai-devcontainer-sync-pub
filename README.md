@@ -106,11 +106,11 @@ loop plan -I https://github.com/org/repo/pull/15              # GitHub PR body (
 loop plan -I https://example.com/spec.html                    # Any URL (via curl, HTML stripped)
 ```
 
-The resolved content is written to `docs/ROADMAP.md`, which Claude reads as context during planning.
+The resolved content is written to `docs/IDEA.md`, which Claude reads as context during planning.
 
 ### Early Exit and New Cycles
 
-In build mode, loop automatically stops when `docs/plans/IMPLEMENTATION_PLAN.md` is 100% complete (all checkboxes checked, no pending phases, completion marker present). Use `--no-early-exit` to override this.
+In build mode, loop automatically stops when the current plan file (`docs/plans/YYYY-MM-DD-<topic>-plan.md`) is 100% complete (all checkboxes checked, no pending phases, completion marker present). Use `--no-early-exit` to override this.
 
 When a plan is complete and you want to start a new one, use `--new` to archive the finished plan to `docs/plans/archive/` before planning begins.
 
