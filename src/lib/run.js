@@ -32,19 +32,11 @@ function checkLoopScript() {
 function buildArgs(opts, mode) {
   const args = [];
 
-  if (mode === 'plan') args.push('-p');
   if (mode === 'design') args.push('-d');
   if (!opts.interactive) args.push('-a');
 
-  if (mode !== 'design') {
-    const defaultIter = mode === 'build' ? '99' : '3';
-    const iterations = opts.iterations || defaultIter;
-    args.push('-i', iterations);
-  }
-
   if (opts.idea) args.push('-I', opts.idea);
   if (opts.new) args.push('-n');
-  if (opts.earlyExit === false) args.push('-e');
 
   return args;
 }
@@ -96,52 +88,14 @@ function spawnLoop(opts, mode) {
   });
 }
 
-async function runPlan(opts) {
-  const code = await spawnLoop(opts, 'plan');
-  process.exit(code);
-}
-
-async function runBuild(opts) {
-  const code = await spawnLoop(opts, 'build');
-  process.exit(code);
-}
-
 async function runDesign(opts) {
   const code = await spawnLoop({ ...opts, interactive: true }, 'design');
   process.exit(code);
 }
 
-async function runCombined(opts) {
-  // Plan phase: default iterations, pass --idea, ignore -i override
-  const planOpts = {
-    interactive: opts.interactive,
-    idea: opts.idea,
-    new: opts.new,
-  };
-
-  // Build phase: uses -i if given, no --idea (plan already wrote it to IDEA)
-  const buildOpts = {
-    interactive: opts.interactive,
-    earlyExit: opts.earlyExit,
-    iterations: opts.iterations,
-  };
-
-  if (opts.tmux) {
-    const loopScript = checkLoopScript();
-    const planCmd = buildShellCommand(loopScript, buildArgs(planOpts, 'plan'));
-    const buildCmd = buildShellCommand(loopScript, buildArgs(buildOpts, 'build'));
-    const code = await spawnTmux('loop-run', `cd ${shellEscape(process.cwd())} && ${planCmd} && ${buildCmd}`);
-    process.exit(code);
-  }
-
-  const planCode = await spawnLoop(planOpts, 'plan');
-  if (planCode !== 0) {
-    console.error(`Plan phase exited with code ${planCode}, skipping build.`);
-    process.exit(planCode);
-  }
-
-  const buildCode = await spawnLoop(buildOpts, 'build');
-  process.exit(buildCode);
+async function runRun(opts) {
+  const code = await spawnLoop(opts, 'run');
+  process.exit(code);
 }
 
-module.exports = { runPlan, runBuild, runCombined, runDesign, buildArgs, buildShellCommand, checkLoopScript, checkVersionMismatch, PKG_VERSION };
+module.exports = { runRun, runDesign, buildArgs, buildShellCommand, checkLoopScript, checkVersionMismatch, PKG_VERSION };
