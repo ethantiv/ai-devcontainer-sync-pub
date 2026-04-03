@@ -13,33 +13,23 @@ CLAUDE_CMD="${HOME}/.claude/bin/claude"
 [[ -x "$CLAUDE_CMD" ]] || { echo "[ERROR] Claude CLI not found" >&2; exit 1; }
 claude() { "$CLAUDE_CMD" "$@"; }
 
-# Tracking variables for notifications
+# Tracking variables
 START_TIME=$(date +%s)
-COMPLETED_ITERATIONS=0
 EXIT_STATUS="interrupted"
 
 # Cleanup function - called on exit
 cleanup() {
-    local duration=$(($(date +%s) - START_TIME))
-
-    # Generate run summary to file (best-effort, uses Node.js JSONL parser)
-    node -e "require('$LOOP_ROOT/lib/summary').generateSummary('$LOG_DIR').then(s => process.stdout.write(s))" \
-        > "$LOG_DIR/summary-latest.txt" 2>/dev/null || true
-
     echo ""
-    echo "[CLEANUP] Cleaning up background processes..."
-    "$LOOP_SCRIPTS_DIR/cleanup.sh" 2>/dev/null || true
+    echo "[CLEANUP] Done."
 }
 
-# Trap handlers - defense in depth (layer 1)
+# Trap handlers
 trap cleanup EXIT SIGINT SIGTERM SIGHUP
 
 # Default values
-ITERATIONS=""
-AUTONOMOUS=false
 LOG_DIR="loop/logs"
-SCRIPT_NAME="build"
-EARLY_EXIT=true
+SCRIPT_NAME="run"
+AUTONOMOUS=false
 IDEA=""
 NEW_CYCLE=false
 CONTEXT_WINDOW=200000
@@ -47,30 +37,18 @@ CTX_FILE=""
 
 # Help function
 usage() {
-    echo "Usage: $0 [-p] [-d] [-a] [-i iterations] [-e] [-I idea]"
+    echo "Usage: $0 [-d] [-a] [-n] [-I idea]"
     echo ""
     echo "Options:"
-    echo "  -p              Plan mode (default: build)"
     echo "  -d              Design mode (interactive brainstorming)"
     echo "  -a              Autonomous mode (default: interactive)"
-    echo "  -i iterations   Number of iterations (default: 99 build, 3 plan)"
-    echo "  -e              Disable early exit (run all iterations)"
     echo "  -n              Archive completed plan and start fresh"
     echo "  -I text         Seed idea written to docs/IDEA.md"
     echo "  -h              Show this help"
-    echo ""
-    echo "Note: When called via 'loop run', autonomous mode (-a) is the default."
-    echo ""
-    echo "Examples:"
-    echo "  $0 -a              Build, 99 autonomous iterations"
-    echo "  $0 -p -a           Plan, 3 autonomous iterations"
-    echo "  $0 -p -a -i 1     Single planning iteration"
-    echo "  $0 -a -e           Build, all iterations (no early exit)"
     exit 0
 }
 
 # Find the current (most recent) plan file in docs/plans/
-# Glob sorts lexicographically; YYYY-MM-DD prefix means last = newest.
 find_current_plan() {
     local latest=""
     for f in docs/plans/*-plan.md; do
@@ -80,28 +58,15 @@ find_current_plan() {
     echo "$latest"
 }
 
-# Check if plan is complete (dual-signal: checkboxes + phase statuses)
-#
-# Signals tracked:
-#   1. Unchecked checkboxes:  - [ ]  (must be zero)
-#   2. Pending/active phases: **Status:** pending|in_progress  (must be zero)
-#   3. Completion marker:     **Status:** COMPLETE (uppercase) or BUILD/PLAN COMPLETE  (must exist)
-#
-# Complete when: no unchecked items AND no pending phases AND has completion marker.
+# Check if plan is complete (for archive_completed_plan)
 check_completion() {
     local plan
     plan=$(find_current_plan)
     [[ -z "$plan" || ! -f "$plan" ]] && return 1
 
     local unchecked pending_phases complete_marker
-
-    # Unchecked task checkboxes: - [ ]
     unchecked=$(grep -cE '^[[:space:]]*-[[:space:]]*\[[[:space:]]\]' "$plan" 2>/dev/null) || unchecked=0
-
-    # Phases still pending or in_progress (case-insensitive)
     pending_phases=$(grep -ciE '\*{0,2}Status\*{0,2}:\*{0,2}\s*(pending|in.progress)' "$plan" 2>/dev/null) || pending_phases=0
-
-    # Completion markers — uppercase COMPLETE/DONE only (phase-level "complete" lowercase won't match)
     complete_marker=$(grep -cE '\*{0,2}Status\*{0,2}:\*{0,2}\s*(COMPLETE|DONE)|BUILD COMPLETE|PLAN COMPLETE' "$plan" 2>/dev/null) || complete_marker=0
 
     [[ "$unchecked" -eq 0 && "$pending_phases" -eq 0 && "$complete_marker" -gt 0 ]]
@@ -123,7 +88,6 @@ archive_completed_plan() {
     mv "$plan" "$archive_dir/"
     echo "[NEW] Archived completed plan to $archive_dir/$(basename "$plan")"
 
-    # Archive associated design docs
     for doc in docs/plans/*-design.md; do
         [[ -f "$doc" ]] || continue
         mv "$doc" "$archive_dir/"
@@ -133,21 +97,21 @@ archive_completed_plan() {
     return 0
 }
 
-# Post-iteration git safety net — auto-commit if agent skipped git
+# Post-run git safety net — auto-commit if agent skipped git
 ensure_committed() {
     git rev-parse --is-inside-work-tree &>/dev/null || return 0
     if ! git diff --quiet HEAD 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
-        echo -e "\n[LOOP] Uncommitted changes detected after iteration — auto-committing..."
+        echo -e "\n[LOOP] Uncommitted changes detected — auto-committing..."
         git add -A
-        git commit -m "chore(loop): auto-commit after iteration (agent skipped commit)" || true
+        git commit -m "chore(loop): auto-commit after run (agent skipped commit)" || true
         git push 2>/dev/null || true
     fi
     local untracked
     untracked=$(git ls-files --others --exclude-standard 2>/dev/null | head -1)
     if [[ -n "$untracked" ]]; then
-        echo -e "\n[LOOP] Untracked files detected after iteration — auto-committing..."
+        echo -e "\n[LOOP] Untracked files detected — auto-committing..."
         git add -A
-        git commit -m "chore(loop): auto-commit untracked files after iteration" || true
+        git commit -m "chore(loop): auto-commit untracked files after run" || true
         git push 2>/dev/null || true
     fi
 }
@@ -191,7 +155,7 @@ format_tool_use() {
         [[ "$tokens" -gt 0 ]] && ctx="${C_DIM} | Ctx: $((tokens * 100 / CONTEXT_WINDOW))%"
     fi
 
-    echo -e "\n${C_BOLD}${color}[${SCRIPT_NAME^}-${i}] Tool Use: ${name}${ctx}${C_RESET}"
+    echo -e "\n${C_BOLD}${color}[${SCRIPT_NAME^}] Tool Use: ${name}${ctx}${C_RESET}"
     echo -e "${C_DIM}Tool ID: ${id}${C_RESET}"
     echo "$params" | jq -C . 2>/dev/null || echo -e "${C_YELLOW}${params}${C_RESET}"
 }
@@ -208,7 +172,6 @@ format_stream() {
         case "$msg_type" in
             assistant)
                 if [[ -n "$CTX_FILE" ]]; then
-                    # Skip subagent/sidechain messages (they have parent_tool_use_id set)
                     local is_subagent
                     is_subagent=$(echo "$line" | jq -r '.parent_tool_use_id // empty' 2>/dev/null)
                     if [[ -z "$is_subagent" ]]; then
@@ -291,7 +254,6 @@ resolve_idea() {
             echo "[WARN] Failed to fetch URL: $idea" >&2
             return 1
         fi
-        # Strip HTML tags for basic content extraction
         echo "$content" | sed -e 's/<[^>]*>//g' -e '/^[[:space:]]*$/d' | head -200
         return 0
     fi
@@ -332,13 +294,10 @@ done
 set -- "${ARGS[@]}"
 
 # Parse arguments
-while getopts "pdai:enhI:" opt; do
+while getopts "danhI:" opt; do
     case $opt in
-        p) SCRIPT_NAME="plan" ;;
         d) SCRIPT_NAME="design" ;;
         a) AUTONOMOUS=true ;;
-        i) ITERATIONS=$OPTARG ;;
-        e) EARLY_EXIT=false ;;
         n) NEW_CYCLE=true ;;
         I) IDEA=$OPTARG ;;
         h) usage ;;
@@ -349,15 +308,6 @@ done
 # Design mode is always interactive
 if [[ "$SCRIPT_NAME" == "design" ]]; then
     AUTONOMOUS=false
-fi
-
-# Default iterations: 3 for plan, 99 for build
-if [[ -z "$ITERATIONS" ]]; then
-    if [[ "$SCRIPT_NAME" == "plan" ]]; then
-        ITERATIONS=3
-    else
-        ITERATIONS=99
-    fi
 fi
 
 # Select prompt file — use project-local symlink if available, else built-in
@@ -375,71 +325,27 @@ fi
 # Write idea file if provided
 write_idea
 
-# Check if early exit conditions are met (skip for plan mode)
-should_exit_early() {
-    [[ "$EARLY_EXIT" == true && "$SCRIPT_NAME" != "plan" ]] && check_completion
-}
-
 # Print configuration
-print_config() {
-    echo "Mode: $SCRIPT_NAME${1:+ ($1)}"
-    [[ "$AUTONOMOUS" == true ]] && echo "Autonomous mode: $ITERATIONS iterations"
-    [[ "$AUTONOMOUS" == true && "$SCRIPT_NAME" != "plan" ]] && echo "Early exit: $EARLY_EXIT"
-    [[ -n "$IDEA" ]] && echo "Idea: $IDEA"
-}
+echo "Mode: $SCRIPT_NAME"
+[[ "$AUTONOMOUS" == true ]] && echo "Autonomous mode"
+[[ -n "$IDEA" ]] && echo "Idea: $IDEA"
 
 if [[ "$AUTONOMOUS" == true ]]; then
     mkdir -p "$LOG_DIR"
     LOG_FILE="$LOG_DIR/${SCRIPT_NAME}_$(date +%Y%m%d_%H%M%S).jsonl"
     CTX_FILE="$LOG_DIR/.ctx_tokens"
     echo "0" > "$CTX_FILE"
-
-    print_config
     echo "Log file: $LOG_FILE"
 
-    for ((i=1; i<=ITERATIONS; i++)); do
-        if should_exit_early; then
-            echo -e "\n[EARLY EXIT] Plan 100% complete before iteration $i."
-            EXIT_STATUS="success"
-            break
-        fi
+    claude -p --verbose --output-format stream-json --disallowedTools "AskUserQuestion" < "$PROMPT_FILE" \
+        | tee -a "$LOG_FILE" | format_stream
 
-        echo -e "\n=============================\n  Iteration $i/$ITERATIONS\n============================="
-        echo "$i" > "$LOG_DIR/.progress"
-
-        claude -p --verbose --output-format stream-json --disallowedTools "AskUserQuestion" < "$PROMPT_FILE" | tee -a "$LOG_FILE" | format_stream
-        ((COMPLETED_ITERATIONS++))
-        [[ "$SCRIPT_NAME" != "build" ]] && ensure_committed
-
-        [[ $i -lt $ITERATIONS ]] && sleep 10
-    done
-
-    [[ "$EXIT_STATUS" == "interrupted" ]] && EXIT_STATUS="completed"
-
-    echo -e "\nCompleted iterations (may have exited early)"
+    ensure_committed
+    EXIT_STATUS="completed"
+    echo -e "\nCompleted"
     echo "Logs saved to: $LOG_FILE"
 else
-    print_config "interactive"
-
-    if [[ "$SCRIPT_NAME" == "design" ]]; then
-        # Design mode: single interactive session
-        claude < "$PROMPT_FILE"
-        COMPLETED_ITERATIONS=1
-        ensure_committed
-    else
-        while :; do
-            if should_exit_early; then
-                echo "[EARLY EXIT] Plan 100% complete."
-                EXIT_STATUS="success"
-                break
-            fi
-
-            clear
-            claude < "$PROMPT_FILE"
-            ((COMPLETED_ITERATIONS++))
-            [[ "$SCRIPT_NAME" != "build" ]] && ensure_committed
-            [[ $COMPLETED_ITERATIONS -ge $ITERATIONS ]] && break
-            sleep 10
-        done
-    fi
+    # Design mode: single interactive session
+    claude < "$PROMPT_FILE"
+    ensure_committed
 fi
