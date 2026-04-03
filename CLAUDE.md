@@ -14,12 +14,12 @@ Re-sync configuration after changes:
 ```bash
 claude mcp list                    # Verify MCP servers
 claude plugin marketplace list     # List installed plugins
-npm install --prefix src && npm test --prefix src  # Run JS tests (60 tests, requires install)
-npm run test:integration --prefix src              # Run only integration tests (17 tests)
-bash src/scripts/tests/test_write_idea.sh          # Run shell tests (18 tests)
-bash src/scripts/tests/test_ensure_playwright.sh   # Run Playwright lazy-install tests (14 tests)
-bash src/scripts/tests/test_backup.sh              # Run backup.sh tests (20 tests)
-bash src/scripts/tests/test_setup_common.sh        # Run setup-common.sh tests (48 tests)
+npm install --prefix src && npm test --prefix src  # Run JS tests (requires install)
+npm run test:integration --prefix src              # Run only integration tests
+bash src/scripts/tests/test_write_idea.sh          # Run shell tests
+bash src/scripts/tests/test_ensure_playwright.sh   # Run Playwright lazy-install tests
+bash src/scripts/tests/test_backup.sh              # Run backup.sh tests
+bash src/scripts/tests/test_setup_common.sh        # Run setup-common.sh tests
 ```
 
 No typecheck (pure JS/Bash project). No linter configured.
