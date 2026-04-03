@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { runDesign, buildArgs, buildShellCommand, checkLoopScript } = require('../run');
+const { runDesign, runRun, buildArgs, buildShellCommand, checkLoopScript } = require('../run');
 
 describe('runDesign', () => {
   test('is exported as a function', () => {
@@ -9,74 +9,57 @@ describe('runDesign', () => {
   });
 });
 
+describe('runRun', () => {
+  test('is exported as a function', () => {
+    expect(typeof runRun).toBe('function');
+  });
+});
+
 describe('buildArgs', () => {
-  test('plan mode adds -p and -a with default 3 iterations', () => {
-    const args = buildArgs({}, 'plan');
-    expect(args).toEqual(['-p', '-a', '-i', '3']);
+  test('run mode adds -a flag', () => {
+    const args = buildArgs({}, 'run');
+    expect(args).toEqual(['-a']);
   });
 
-  test('build mode adds -a with default 99 iterations', () => {
-    const args = buildArgs({}, 'build');
-    expect(args).toEqual(['-a', '-i', '99']);
-  });
-
-  test('design mode adds -d, no -a, no -i', () => {
+  test('design mode adds -d, no -a', () => {
     const args = buildArgs({ interactive: true }, 'design');
     expect(args).toEqual(['-d']);
   });
 
   test('interactive mode omits -a flag', () => {
-    const args = buildArgs({ interactive: true }, 'plan');
-    expect(args).toEqual(['-p', '-i', '3']);
-  });
-
-  test('custom iterations overrides default', () => {
-    const args = buildArgs({ iterations: '10' }, 'build');
-    expect(args).toEqual(['-a', '-i', '10']);
+    const args = buildArgs({ interactive: true }, 'run');
+    expect(args).toEqual([]);
   });
 
   test('idea flag adds -I with text', () => {
-    const args = buildArgs({ idea: 'Add auth' }, 'plan');
-    expect(args).toEqual(['-p', '-a', '-i', '3', '-I', 'Add auth']);
+    const args = buildArgs({ idea: 'Add auth' }, 'run');
+    expect(args).toEqual(['-a', '-I', 'Add auth']);
   });
 
   test('new flag adds -n', () => {
-    const args = buildArgs({ new: true }, 'plan');
-    expect(args).toEqual(['-p', '-a', '-i', '3', '-n']);
-  });
-
-  test('earlyExit false adds -e flag', () => {
-    const args = buildArgs({ earlyExit: false }, 'build');
-    expect(args).toEqual(['-a', '-i', '99', '-e']);
-  });
-
-  test('earlyExit undefined does not add -e', () => {
-    const args = buildArgs({}, 'build');
-    expect(args).not.toContain('-e');
+    const args = buildArgs({ new: true }, 'run');
+    expect(args).toEqual(['-a', '-n']);
   });
 
   test('all flags combined', () => {
     const args = buildArgs({
-      interactive: true,
-      iterations: '5',
       idea: 'Fix bug',
       new: true,
-      earlyExit: false,
-    }, 'build');
-    expect(args).toEqual(['-i', '5', '-I', 'Fix bug', '-n', '-e']);
+    }, 'run');
+    expect(args).toEqual(['-a', '-I', 'Fix bug', '-n']);
   });
 
   test('tmux flag is not included in shell args', () => {
-    const args = buildArgs({ tmux: true }, 'build');
+    const args = buildArgs({ tmux: true }, 'run');
     expect(args).not.toContain('--tmux');
-    expect(args).toEqual(['-a', '-i', '99']);
+    expect(args).toEqual(['-a']);
   });
 });
 
 describe('buildShellCommand', () => {
   test('builds escaped shell command from script and args', () => {
-    const cmd = buildShellCommand('./loop/loop.sh', ['-a', '-i', '99']);
-    expect(cmd).toBe("'./loop/loop.sh' '-a' '-i' '99'");
+    const cmd = buildShellCommand('./loop/loop.sh', ['-a']);
+    expect(cmd).toBe("'./loop/loop.sh' '-a'");
   });
 
   test('escapes single quotes in arguments', () => {
