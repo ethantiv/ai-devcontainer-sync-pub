@@ -8,7 +8,6 @@
 # DEFAULTS — base values shared across all environments
 # =============================================================================
 defaults:
-
   git:
     personal:
       name: "Mirosław Zaniewicz"
@@ -35,10 +34,13 @@ defaults:
     marketplace:
       - agent-sdk-dev
       - atlassian
+      - aws-serverless
       - claude-code-setup
       - claude-md-management
       - code-simplifier
       - commit-commands
+      - context7
+      - deploy-on-aws
       - feature-dev
       - frontend-design
       - playground
@@ -48,7 +50,6 @@ defaults:
     lsp:
       - jdtls-lsp
       - pyright-lsp
-      - rust-analyzer-lsp
       - typescript-lsp
   skills:
     - url: "https://github.com/anthropics/skills"
@@ -84,51 +85,11 @@ defaults:
 # ENVIRONMENTS — per-environment overrides that extend defaults
 # =============================================================================
 environments:
-
-  # ---------------------------------------------------------------------------
-  # devcontainer — VS Code Dev Container
-  # ---------------------------------------------------------------------------
   devcontainer:
-    mcp_servers:
-      - name: context7
-        type: stdio
-        command: npx
-        args: ["-y", "@upstash/context7-mcp"]
-        env:
-          CONTEXT7_API_KEY: "${CONTEXT7_API_KEY}"
+    mcp_servers: []
 
-      - name: coolify
-        type: stdio
-        command: npx
-        args: ["-y", "@masonator/coolify-mcp@latest"]
-        env:
-          COOLIFY_BASE_URL: "${COOLIFY_BASE_URL}"
-          COOLIFY_ACCESS_TOKEN: "${COOLIFY_ACCESS_TOKEN}"
-
-      - name: aws-documentation
-        type: stdio
-        command: uvx
-        args: ["awslabs.aws-documentation-mcp-server@latest"]
-        env:
-          FASTMCP_LOG_LEVEL: "ERROR"
-          AWS_DOCUMENTATION_PARTITION: "aws"
-
-  # ---------------------------------------------------------------------------
-  # docker — self-hosted Docker container
-  # ---------------------------------------------------------------------------
   docker:
-    mcp_servers:
-      - name: context7
-        type: stdio
-        command: npx
-        args: ["-y", "@upstash/context7-mcp"]
-        env:
-          CONTEXT7_API_KEY: "${CONTEXT7_API_KEY}"
+    mcp_servers: []
 
-      - name: coolify
-        type: stdio
-        command: npx
-        args: ["-y", "@masonator/coolify-mcp@latest"]
-        env:
-          COOLIFY_BASE_URL: "${COOLIFY_BASE_URL}"
-          COOLIFY_ACCESS_TOKEN: "${COOLIFY_ACCESS_TOKEN}"
+  local:
+    mcp_servers: []

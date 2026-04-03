@@ -14,18 +14,17 @@
 # DEFAULTS — base values shared across all environments
 # =============================================================================
 defaults:
-
   # -------------------------------------------------------------------------
   # Git identity
   # -------------------------------------------------------------------------
   git:
     personal:
-      name: "Your Name"                   # Required — git commit author name
-      email: "your@email.com"             # Required — git commit author email
+      name: "Your Name" # Required — git commit author name
+      email: "your@email.com" # Required — git commit author email
     work:
-      email: "your.work@company.com"      # Used for commits inside work org repos
-      orgs: "YourOrg"                     # Pipe-separated GitHub org names routed to work token
-      dirs:                               # Directories routed to work account (~ expanded)
+      email: "your.work@company.com" # Used for commits inside work org repos
+      orgs: "YourOrg" # Pipe-separated GitHub org names routed to work token
+      dirs: # Directories routed to work account (~ expanded)
         - "~/projects/Work"
 
   # -------------------------------------------------------------------------
@@ -38,13 +37,13 @@ defaults:
   # Claude settings
   # -------------------------------------------------------------------------
   claude:
-    language: "English"                   # Language for Claude responses
-    remoteControl: false                  # Enable Remote Control for all sessions (claude.ai/code)
+    language: "English" # Language for Claude responses
+    remoteControl: false # Enable Remote Control for all sessions (claude.ai/code)
     permissions:
-      allow: []                           # Tool patterns always allowed (e.g. "Bash(*)")
-      deny: []                            # Tool patterns always denied
-      ask: []                             # Tool patterns that require confirmation
-      defaultMode: "bypassPermissions"    # "bypassPermissions" | "default"
+      allow: [] # Tool patterns always allowed (e.g. "Bash(*)")
+      deny: [] # Tool patterns always denied
+      ask: [] # Tool patterns that require confirmation
+      defaultMode: "bypassPermissions" # "bypassPermissions" | "default"
 
   # -------------------------------------------------------------------------
   # Plugins — installed from the official marketplace or external sources
@@ -57,11 +56,11 @@ defaults:
   # -------------------------------------------------------------------------
   plugins:
     marketplace:
-      - superpowers                      # Example — add plugin names from the official marketplace
+      - superpowers # Example — add plugin names from the official marketplace
       # - commit-commands
       # - feature-dev
     lsp:
-      - typescript-lsp                   # Example — add LSP plugins you need
+      - typescript-lsp # Example — add LSP plugins you need
       # - pyright-lsp
       # - rust-analyzer-lsp
 
@@ -75,7 +74,7 @@ defaults:
   # Merge: appended and deduplicated by `name`
   # -------------------------------------------------------------------------
   skills:
-    - url: "https://github.com/anthropics/skills"    # Example — official Anthropic skills
+    - url: "https://github.com/anthropics/skills" # Example — official Anthropic skills
       name: pdf
     # - url: "https://github.com/anthropics/skills"
     #   name: docx
@@ -93,7 +92,6 @@ defaults:
 # Currently only `mcp_servers` is environment-specific.
 # =============================================================================
 environments:
-
   # Add mcp_servers under your environment name (devcontainer / docker / local).
   # MCP entries: merged and deduplicated by `name`. ${VAR} resolved from process.env.
   #

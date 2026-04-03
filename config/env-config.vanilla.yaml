@@ -8,7 +8,6 @@
 # DEFAULTS — base values shared across all environments
 # =============================================================================
 defaults:
-
   git:
     personal:
       name: "Mirosław Zaniewicz"
@@ -38,9 +37,11 @@ defaults:
 # ENVIRONMENTS — per-environment overrides that extend defaults
 # =============================================================================
 environments:
-
   devcontainer:
     mcp_servers: []
 
   docker:
+    mcp_servers: []
+
+  local:
     mcp_servers: []
