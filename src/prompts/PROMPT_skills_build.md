@@ -1,6 +1,0 @@
-- `superpowers:subagent-driven-development`
-- `superpowers:test-driven-development`
-- `superpowers:verification-before-completion`
-- `superpowers:systematic-debugging`
-- `agent-browser`
-- `auto-revise-claude-md`
