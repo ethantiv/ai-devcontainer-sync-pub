@@ -9,9 +9,7 @@ const PACKAGE_ROOT = path.resolve(__dirname, '..');
 const CORE_FILES = [
   { src: 'scripts/loop.sh', dest: 'loop/loop.sh' },
   { src: 'prompts/PROMPT_design.md', dest: 'loop/PROMPT_design.md' },
-  { src: 'prompts/PROMPT_plan.md', dest: 'loop/PROMPT_plan.md' },
-  { src: 'prompts/PROMPT_build.md', dest: 'loop/PROMPT_build.md' },
-  { src: 'scripts/cleanup.sh', dest: 'loop/cleanup.sh' },
+  { src: 'prompts/PROMPT_run.md', dest: 'loop/PROMPT_run.md' },
   { src: 'scripts/kill-loop.sh', dest: 'loop/kill-loop.sh' },
 ];
 
@@ -21,8 +19,7 @@ const TEMPLATES = [
   { src: '.claude/settings.json', dest: '.claude/settings.json' },
   { src: '.claude/skills/auto-revise-claude-md/SKILL.md', dest: '.claude/skills/auto-revise-claude-md/SKILL.md' },
   { src: 'prompts/PROMPT_skills_design.md', dest: 'loop/PROMPT_skills_design.md' },
-  { src: 'prompts/PROMPT_skills_plan.md', dest: 'loop/PROMPT_skills_plan.md' },
-  { src: 'prompts/PROMPT_skills_build.md', dest: 'loop/PROMPT_skills_build.md' },
+  { src: 'prompts/PROMPT_skills_run.md', dest: 'loop/PROMPT_skills_run.md' },
 ];
 
 const DIRS = ['docs/plans', 'loop/logs', '.claude/skills/auto-revise-claude-md'];
@@ -148,15 +145,13 @@ function init({ force = false, types } = {}) {
   if (effectiveTypes) {
     const resolved = resolveTypes(effectiveTypes);
     const designPath = path.join(projectRoot, 'loop/PROMPT_skills_design.md');
-    const planPath = path.join(projectRoot, 'loop/PROMPT_skills_plan.md');
-    const buildPath = path.join(projectRoot, 'loop/PROMPT_skills_build.md');
+    const runPath = path.join(projectRoot, 'loop/PROMPT_skills_run.md');
     if (fs.existsSync(designPath)) appendSkills(designPath, resolved.design);
-    if (fs.existsSync(planPath)) appendSkills(planPath, resolved.plan);
-    if (fs.existsSync(buildPath)) appendSkills(buildPath, resolved.build);
+    if (fs.existsSync(runPath)) appendSkills(runPath, resolved.run);
     console.log(`  applied skills for type: ${effectiveTypes}`);
   }
 
-  console.log('\nDone! Run: loop plan');
+  console.log('\nDone! Run: loop run');
 }
 
 module.exports = { init, CORE_FILES };
