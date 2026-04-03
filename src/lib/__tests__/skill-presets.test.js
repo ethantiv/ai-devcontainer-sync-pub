@@ -4,23 +4,20 @@ const os = require('os');
 const { resolveTypes, listPresets, PRESETS } = require('../skill-presets');
 
 describe('resolveTypes', () => {
-  test('returns same skills for design, plan and build', () => {
+  test('returns same skills for design and run', () => {
     const result = resolveTypes('web');
     expect(result.design).toEqual(PRESETS.web.skills);
-    expect(result.plan).toEqual(PRESETS.web.skills);
-    expect(result.build).toEqual(PRESETS.web.skills);
-    expect(result.design).toBe(result.plan);
-    expect(result.plan).toBe(result.build);
+    expect(result.run).toEqual(PRESETS.web.skills);
+    expect(result.design).toBe(result.run);
   });
 
   test('merges web,devops without overlap', () => {
     const result = resolveTypes('web,devops');
-    expect(result.plan).toEqual([
+    expect(result.run).toEqual([
       ...PRESETS.web.skills,
       ...PRESETS.devops.skills,
     ]);
-    expect(result.design).toBe(result.plan);
-    expect(result.plan).toBe(result.build);
+    expect(result.design).toBe(result.run);
   });
 
   test('throws on unknown type with valid types listed', () => {
@@ -35,14 +32,13 @@ describe('resolveTypes', () => {
 
   test('handles whitespace in comma-separated list', () => {
     const result = resolveTypes(' web , devops ');
-    expect(result.plan).toEqual([...PRESETS.web.skills, ...PRESETS.devops.skills]);
+    expect(result.run).toEqual([...PRESETS.web.skills, ...PRESETS.devops.skills]);
   });
 
-  test('devops returns same skills for design, plan and build', () => {
+  test('devops returns same skills for design and run', () => {
     const result = resolveTypes('devops');
     expect(result.design).toEqual(PRESETS.devops.skills);
-    expect(result.design).toBe(result.plan);
-    expect(result.plan).toBe(result.build);
+    expect(result.design).toBe(result.run);
   });
 });
 
@@ -78,35 +74,29 @@ describe('init integration with types', () => {
   });
 
   test('appendSkills adds skills to file', () => {
-    const { appendSkills } = jest.fn(); // we test via init instead
-    const buildPath = path.join(tmpDir, 'loop/PROMPT_skills_build.md');
-    fs.writeFileSync(buildPath, '- `superpowers:test-driven-development`\n- `agent-browser`\n');
+    const runPath = path.join(tmpDir, 'loop/PROMPT_skills_run.md');
+    fs.writeFileSync(runPath, '- `superpowers:subagent-driven-development`\n- `agent-browser`\n');
 
-    // Use the actual appendSkills from init module
-    const initModule = require('../init');
-    // We can test indirectly through init by mocking cwd
-    // Instead, let's test the file manipulation directly
-    const content = fs.readFileSync(buildPath, 'utf-8');
+    const content = fs.readFileSync(runPath, 'utf-8');
     const skills = ['frontend-design:frontend-design', 'web-design-guidelines'];
     const existing = skills.filter(s => !content.includes(s));
     const section = '\n# Project-specific skills (--type)\n'
       + existing.map(s => `- \`${s}\``).join('\n') + '\n';
-    fs.writeFileSync(buildPath, content.trimEnd() + '\n' + section);
+    fs.writeFileSync(runPath, content.trimEnd() + '\n' + section);
 
-    const updated = fs.readFileSync(buildPath, 'utf-8');
+    const updated = fs.readFileSync(runPath, 'utf-8');
     expect(updated).toContain('# Project-specific skills (--type)');
     expect(updated).toContain('frontend-design:frontend-design');
     expect(updated).toContain('web-design-guidelines');
-    // Original skills preserved
-    expect(updated).toContain('superpowers:test-driven-development');
+    expect(updated).toContain('superpowers:subagent-driven-development');
     expect(updated).toContain('agent-browser');
   });
 
   test('does not duplicate skills already present', () => {
-    const buildPath = path.join(tmpDir, 'loop/PROMPT_skills_build.md');
-    fs.writeFileSync(buildPath, '- `agent-browser`\n- `web-design-guidelines`\n');
+    const runPath = path.join(tmpDir, 'loop/PROMPT_skills_run.md');
+    fs.writeFileSync(runPath, '- `agent-browser`\n- `web-design-guidelines`\n');
 
-    const content = fs.readFileSync(buildPath, 'utf-8');
+    const content = fs.readFileSync(runPath, 'utf-8');
     const skills = ['web-design-guidelines', 'frontend-design:frontend-design'];
     const newSkills = skills.filter(s => !content.includes(s));
     expect(newSkills).toEqual(['frontend-design:frontend-design']);
