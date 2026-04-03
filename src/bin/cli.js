@@ -3,24 +3,9 @@
 const { program } = require('commander');
 const { init } = require('../lib/init');
 const { listPresets } = require('../lib/skill-presets');
-const { runPlan, runBuild, runCombined, runDesign } = require('../lib/run');
-const { cleanup } = require('../lib/cleanup');
-const { generateSummary } = require('../lib/summary');
-const { doctor } = require('../lib/doctor');
-
-function addLoopOptions(cmd) {
-  return cmd
-    .option('-i, --iterations <n>', 'Number of iterations')
-    .option('-I, --idea <text>', 'Seed idea written to docs/IDEA.md before start')
-    .option('-n, --new', 'Archive completed plan and start fresh')
-    .option('--interactive', 'Run interactively instead of autonomous')
-    .option('--tmux', 'Run in a detached tmux session');
-}
-
-function addBuildOptions(cmd) {
-  return addLoopOptions(cmd)
-    .option('-e, --no-early-exit', 'Disable early exit when plan is complete');
-}
+const { runRun, runDesign } = require('../lib/run');
+const { spawn } = require('child_process');
+const path = require('path');
 
 program
   .name('loop')
@@ -50,50 +35,26 @@ program
   .option('-n, --new', 'Archive completed plan and start fresh')
   .action((opts) => runDesign(opts));
 
-addLoopOptions(
-  program
-    .command('plan')
-    .description('Run planning phase (default: 3 iterations)')
-).action((opts) => runPlan(opts));
-
-addBuildOptions(
-  program
-    .command('build')
-    .description('Run build phase (default: 99 iterations)')
-).action((opts) => runBuild(opts));
-
-addBuildOptions(
-  program
-    .command('run')
-    .description('Plan then build sequentially (3 plan + 99 build iterations)')
-    .addHelpText('after', `
-In combined mode, -i applies only to the build phase.
-Plan always uses default 3 iterations.
-
-Examples:
-  $ loop run                        Plan (3 iter) then build (99 iter)
-  $ loop run -i 20                  Plan (3 iter) then build (20 iter)
-  $ loop run -I "Add auth"          Seed idea for plan, then build`)
-).action((opts) => runCombined(opts));
+program
+  .command('run')
+  .description('Autonomous plan + build in a single session')
+  .option('-I, --idea <text>', 'Seed idea written to docs/IDEA.md before start')
+  .option('-n, --new', 'Archive completed plan and start fresh')
+  .option('--interactive', 'Run interactively instead of autonomous')
+  .option('--tmux', 'Run in a detached tmux session')
+  .action((opts) => runRun(opts));
 
 program
-  .command('cleanup')
-  .description('Kill processes on dev server ports (3000, 5173, 8080, etc.)')
-  .action(() => cleanup());
-
-program
-  .command('summary')
-  .description('Show summary of last loop run')
-  .option('--log-dir <dir>', 'Log directory', './loop/logs')
-  .action(async (opts) => {
-    const report = await generateSummary(opts.logDir);
-    console.log(report);
+  .command('kill')
+  .description('Kill all running loop processes and tmux sessions')
+  .action(() => {
+    const scriptDir = path.resolve(__dirname, '..', 'scripts');
+    const child = spawn(path.join(scriptDir, 'kill-loop.sh'), [], {
+      stdio: 'inherit',
+      cwd: process.cwd(),
+    });
+    child.on('close', (code) => process.exit(code ?? 0));
   });
-
-program
-  .command('doctor')
-  .description('Check loop installation health')
-  .action(() => doctor());
 
 program
   .command('update')
@@ -105,17 +66,12 @@ program.addHelpText('after', `
 Examples:
   $ loop init               Set up loop in current project
   $ loop init --type web    Init with web-specific skills
-  $ loop init --list-types  Show available project types
   $ loop design             Interactive design/brainstorming session
-  $ loop plan               Plan mode (3 autonomous iterations)
-  $ loop build              Build mode (99 autonomous iterations)
-  $ loop build -i 20        Build mode with 20 iterations
-  $ loop run                Plan then build (3+99 iterations)
-  $ loop run -I "Add auth"  Plan with seed idea, then build
-  $ loop build --tmux       Build in a detached tmux session
-  $ loop summary            Show summary of last loop run
-  $ loop cleanup            Kill dev server processes
-  $ loop doctor             Check loop installation health
+  $ loop run                Autonomous plan + build
+  $ loop run -I "Add auth"  Seed idea, then plan + build
+  $ loop run --tmux         Run in a detached tmux session
+  $ loop run --new          Archive completed plan, start fresh
+  $ loop kill               Kill all loop processes
   $ loop update             Force-refresh symlinks and templates`);
 
 program.parse();
