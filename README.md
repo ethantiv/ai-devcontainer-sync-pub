@@ -72,31 +72,30 @@ The `loop` command runs Claude CLI in autonomous plan/build cycles against any p
 ```bash
 cd ~/projects/my-project
 loop init                          # Set up loop in your project
-loop init --type web               # Init with web-specific skills
-loop init --list-types             # Show available project types (web/devops)
+loop init --web                    # Init with web-specific skills
 
 loop design                        # Interactive brainstorming / design session
 loop run                           # Autonomous plan + build in single session
 
-loop run -I "Add authentication"   # Seed an idea before running
+loop run -i "Add authentication"   # Seed an idea before running
 loop run --interactive             # Manual Claude session
 loop run --new                     # Archive completed plan, start fresh
 
 loop kill                          # Kill all loop processes
 loop update                        # Refresh symlinks after package update
-loop update --type web,devops      # Update with merged skill presets
+loop update --web --devops         # Update with merged skill presets
 ```
 
 ### Idea Seeding
 
-The `-I` flag accepts multiple source formats — not just inline text:
+The `-i` flag accepts multiple source formats — not just inline text:
 
 ```bash
-loop run -I "Add user authentication"                        # Inline text
-loop run -I @docs/feature-spec.md                            # Read from file
-loop run -I https://github.com/org/repo/issues/42            # GitHub issue body (via gh CLI)
-loop run -I https://github.com/org/repo/pull/15              # GitHub PR body (via gh CLI)
-loop run -I https://example.com/spec.html                    # Any URL (via curl, HTML stripped)
+loop run -i "Add user authentication"                        # Inline text
+loop run -i @docs/feature-spec.md                            # Read from file
+loop run -i https://github.com/org/repo/issues/42            # GitHub issue body (via gh CLI)
+loop run -i https://github.com/org/repo/pull/15              # GitHub PR body (via gh CLI)
+loop run -i https://example.com/spec.html                    # Any URL (via curl, HTML stripped)
 ```
 
 The resolved content is written to `docs/IDEA.md`, which Claude reads as context during planning.

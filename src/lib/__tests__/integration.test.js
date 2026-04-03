@@ -37,7 +37,7 @@ const EXPECTED_SYMLINKS = [
 
 // Expected directories
 const EXPECTED_DIRS = [
-  'docs/plans',
+  'docs',
   'loop/logs',
   '.claude/skills/auto-revise-claude-md',
 ];
@@ -137,6 +137,26 @@ describe('loop init', () => {
     expect(content).toContain('*.log');
     expect(content).toContain('node_modules/');
     expect(content).toContain('loop/logs/');
+  });
+
+  test('creates docs/IDEA.md on init', () => {
+    init();
+
+    const ideaPath = path.join(project.dir, 'docs/IDEA.md');
+    expect(fs.existsSync(ideaPath)).toBe(true);
+    expect(fs.readFileSync(ideaPath, 'utf-8')).toBe('# Idea\n');
+  });
+
+  test('does not overwrite existing docs/IDEA.md on update', () => {
+    init();
+
+    const ideaPath = path.join(project.dir, 'docs/IDEA.md');
+    fs.writeFileSync(ideaPath, '# Idea\n\nMy project idea\n');
+
+    init({ force: true });
+
+    const content = fs.readFileSync(ideaPath, 'utf-8');
+    expect(content).toContain('My project idea');
   });
 
   test('skips existing symlinks without force', () => {

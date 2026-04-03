@@ -31,9 +31,9 @@ describe('buildArgs', () => {
     expect(args).toEqual([]);
   });
 
-  test('idea flag adds -I with text', () => {
+  test('idea flag adds -i with text', () => {
     const args = buildArgs({ idea: 'Add auth' }, 'run');
-    expect(args).toEqual(['-a', '-I', 'Add auth']);
+    expect(args).toEqual(['-a', '-i', 'Add auth']);
   });
 
   test('new flag adds -n', () => {
@@ -46,7 +46,7 @@ describe('buildArgs', () => {
       idea: 'Fix bug',
       new: true,
     }, 'run');
-    expect(args).toEqual(['-a', '-I', 'Fix bug', '-n']);
+    expect(args).toEqual(['-a', '-i', 'Fix bug', '-n']);
   });
 
   test('tmux flag is not included in shell args', () => {
@@ -63,13 +63,13 @@ describe('buildShellCommand', () => {
   });
 
   test('escapes single quotes in arguments', () => {
-    const cmd = buildShellCommand('./loop/loop.sh', ['-I', "it's a test"]);
-    expect(cmd).toBe("'./loop/loop.sh' '-I' 'it'\\''s a test'");
+    const cmd = buildShellCommand('./loop/loop.sh', ['-i', "it's a test"]);
+    expect(cmd).toBe("'./loop/loop.sh' '-i' 'it'\\''s a test'");
   });
 
   test('handles arguments with spaces', () => {
-    const cmd = buildShellCommand('./loop/loop.sh', ['-I', 'Add auth module']);
-    expect(cmd).toBe("'./loop/loop.sh' '-I' 'Add auth module'");
+    const cmd = buildShellCommand('./loop/loop.sh', ['-i', 'Add auth module']);
+    expect(cmd).toBe("'./loop/loop.sh' '-i' 'Add auth module'");
   });
 });
 

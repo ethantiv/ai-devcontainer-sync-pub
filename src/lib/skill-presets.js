@@ -22,8 +22,4 @@ function resolveTypes(commaString) {
   return { design: skills, run: skills };
 }
 
-function listPresets() {
-  return Object.entries(PRESETS).map(([name, { description }]) => ({ name, description }));
-}
-
-module.exports = { PRESETS, resolveTypes, listPresets };
+module.exports = { PRESETS, resolveTypes };

@@ -22,7 +22,7 @@ const TEMPLATES = [
   { src: 'prompts/PROMPT_skills_run.md', dest: 'loop/PROMPT_skills_run.md' },
 ];
 
-const DIRS = ['docs/plans', 'loop/logs', '.claude/skills/auto-revise-claude-md'];
+const DIRS = ['docs', 'loop/logs', '.claude/skills/auto-revise-claude-md'];
 
 // overlayfs (Docker) can leave ghost entries where existsSync returns true
 // but the file has nlink=0 and readFileSync throws ENOENT
@@ -56,6 +56,13 @@ function init({ force = false, types } = {}) {
       fs.mkdirSync(dirPath, { recursive: true });
       console.log(`  created ${dir}/`);
     }
+  }
+
+  // Create docs/IDEA.md if missing (never overwrite)
+  const ideaPath = path.join(projectRoot, 'docs/IDEA.md');
+  if (!fileExists(ideaPath)) {
+    fs.writeFileSync(ideaPath, '# Idea\n');
+    console.log('  created docs/IDEA.md');
   }
 
   // Copy templates (skip existing unless force)

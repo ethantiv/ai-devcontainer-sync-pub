@@ -37,13 +37,13 @@ CTX_FILE=""
 
 # Help function
 usage() {
-    echo "Usage: $0 [-d] [-a] [-n] [-I idea]"
+    echo "Usage: $0 [-d] [-a] [-n] [-i idea]"
     echo ""
     echo "Options:"
     echo "  -d              Design mode (interactive brainstorming)"
     echo "  -a              Autonomous mode (default: interactive)"
     echo "  -n              Archive completed plan and start fresh"
-    echo "  -I text         Seed idea written to docs/IDEA.md"
+    echo "  -i text         Seed idea written to docs/IDEA.md"
     echo "  -h              Show this help"
     exit 0
 }
@@ -294,12 +294,12 @@ done
 set -- "${ARGS[@]}"
 
 # Parse arguments
-while getopts "danhI:" opt; do
+while getopts "danhi:" opt; do
     case $opt in
         d) SCRIPT_NAME="design" ;;
         a) AUTONOMOUS=true ;;
         n) NEW_CYCLE=true ;;
-        I) IDEA=$OPTARG ;;
+        i) IDEA=$OPTARG ;;
         h) usage ;;
         *) usage ;;
     esac

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { resolveTypes, listPresets, PRESETS } = require('../skill-presets');
+const { resolveTypes, PRESETS } = require('../skill-presets');
 
 describe('resolveTypes', () => {
   test('returns same skills for design and run', () => {
@@ -39,25 +39,6 @@ describe('resolveTypes', () => {
     const result = resolveTypes('devops');
     expect(result.design).toEqual(PRESETS.devops.skills);
     expect(result.design).toBe(result.run);
-  });
-});
-
-describe('listPresets', () => {
-  test('returns all presets with name and description', () => {
-    const presets = listPresets();
-    expect(presets).toHaveLength(Object.keys(PRESETS).length);
-    for (const p of presets) {
-      expect(p).toHaveProperty('name');
-      expect(p).toHaveProperty('description');
-      expect(typeof p.name).toBe('string');
-      expect(typeof p.description).toBe('string');
-    }
-  });
-
-  test('includes all known types', () => {
-    const names = listPresets().map(p => p.name);
-    expect(names).toContain('web');
-    expect(names).toContain('devops');
   });
 });
 

@@ -56,16 +56,15 @@ Source at `src/`. Docker: `COPY src /opt/loop` + `npm install`, symlinked as `/u
 
 ```bash
 loop init / update      # Initialize/refresh symlinks in project
-loop init --type web    # Init with domain-specific skills (web/devops)
-loop init --list-types  # Show available project types
+loop init --web         # Init with domain-specific skills (web/devops)
 loop design             # Interactive brainstorming / design session
-loop run [-I <idea>]    # Autonomous plan + build in single session
+loop run [-i <idea>]    # Autonomous plan + build in single session
 loop kill               # Kill all loop processes
 ```
 
 **Structure**: `src/scripts/` (shell), `src/prompts/`, `src/templates/`, `src/bin/` + `src/lib/` (Node.js CLI).
 
-**Idea seeding**: `loop plan -I` accepts inline text, `@file.md` (read from file), or `https://...` URLs (GitHub issues/PRs via `gh`, generic via `curl`). Resolved by `resolve_idea()` in `loop.sh`.
+**Idea seeding**: `loop run -i` accepts inline text, `@file.md` (read from file), or `https://...` URLs (GitHub issues/PRs via `gh`, generic via `curl`). Resolved by `resolve_idea()` in `loop.sh`.
 
 **Auto-commit**: `ensure_committed()` in `loop.sh` auto-commits after each iteration (prefix `chore(loop):`).
 
@@ -132,5 +131,5 @@ Loop CLI: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.sh`, `src/lib/in
 - **MCP server JSON type**: Remote HTTP MCP servers require `"type": "http"` in `add-json` config, not `"type": "url"` (which silently fails).
 
 **Loop system:**
-- **Skill presets**: `src/lib/skill-presets.js` defines project type → skills mapping. `loop init --type` appends to PROMPT_skills_{design,run}.md. Type persisted in `loop/.type` for `loop update`.
+- **Skill presets**: `src/lib/skill-presets.js` defines project type → skills mapping. `loop init --web` appends to PROMPT_skills_{design,run}.md. Type persisted in `loop/.type` for `loop update`.
 - **Loop file naming**: `docs/IDEA.md` (seed). Plan and design doc paths are managed by superpowers skills (writing-plans, brainstorming). Dynamic plan discovery via `find_current_plan()` in `loop.sh` — glob for `*-plan.md`.

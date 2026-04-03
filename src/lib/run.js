@@ -35,7 +35,7 @@ function buildArgs(opts, mode) {
   if (mode === 'design') args.push('-d');
   if (!opts.interactive) args.push('-a');
 
-  if (opts.idea) args.push('-I', opts.idea);
+  if (opts.idea) args.push('-i', opts.idea);
   if (opts.new) args.push('-n');
 
   return args;
