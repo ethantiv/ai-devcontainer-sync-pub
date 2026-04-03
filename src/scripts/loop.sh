@@ -48,10 +48,10 @@ usage() {
     exit 0
 }
 
-# Find the current (most recent) plan file in docs/plans/
+# Find the current (most recent) plan file in docs/superpowers/plans/
 find_current_plan() {
     local latest=""
-    for f in docs/plans/*-plan.md; do
+    for f in docs/superpowers/plans/*-plan.md; do
         [[ -f "$f" ]] || continue
         latest="$f"
     done
@@ -72,7 +72,7 @@ check_completion() {
     [[ "$unchecked" -eq 0 && "$pending_phases" -eq 0 && "$complete_marker" -gt 0 ]]
 }
 
-# Archive a completed plan to docs/plans/archive/
+# Archive a completed plan and related specs to docs/superpowers/archive/
 archive_completed_plan() {
     local plan
     plan=$(find_current_plan)
@@ -83,12 +83,12 @@ archive_completed_plan() {
         return 1
     fi
 
-    local archive_dir="docs/plans/archive"
+    local archive_dir="docs/superpowers/archive"
     mkdir -p "$archive_dir"
     mv "$plan" "$archive_dir/"
     echo "[NEW] Archived completed plan to $archive_dir/$(basename "$plan")"
 
-    for doc in docs/plans/*-design.md; do
+    for doc in docs/superpowers/specs/*-design.md; do
         [[ -f "$doc" ]] || continue
         mv "$doc" "$archive_dir/"
         echo "[NEW] Archived design doc: $(basename "$doc")"

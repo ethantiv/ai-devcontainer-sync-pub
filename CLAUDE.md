@@ -132,4 +132,4 @@ Loop CLI: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.sh`, `src/lib/in
 
 **Loop system:**
 - **Skill presets**: `src/lib/skill-presets.js` defines project type → skills mapping. `loop init --web` appends to PROMPT_skills_{design,run}.md. Type persisted in `loop/.type` for `loop update`.
-- **Loop file naming**: `docs/IDEA.md` (seed). Plan and design doc paths are managed by superpowers skills (writing-plans, brainstorming). Dynamic plan discovery via `find_current_plan()` in `loop.sh` — glob for `*-plan.md`.
+- **Loop file naming**: `docs/IDEA.md` (seed). Plans in `docs/superpowers/plans/`, specs in `docs/superpowers/specs/` — paths managed by superpowers skills. `find_current_plan()` in `loop.sh` globs `docs/superpowers/plans/*-plan.md`. Archive: `docs/superpowers/archive/`.

@@ -7,3 +7,8 @@
 1. **Brainstorm**: Invoke **Skill** tool: `Skill(skill="superpowers:brainstorming")` with the IDEA.md goal.
 
 2. **Commit and push**: After the design doc is saved: `git add -A && git commit` then `git push`.
+
+---
+
+Design ends here. The user runs `loop run` separately to plan and implement.
+Do NOT invoke writing-plans or any implementation skill.
