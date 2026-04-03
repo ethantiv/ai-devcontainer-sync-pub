@@ -14,12 +14,10 @@ Re-sync configuration after changes:
 ```bash
 claude mcp list                    # Verify MCP servers
 claude plugin marketplace list     # List installed plugins
-npm install --prefix src && npm test --prefix src  # Run JS tests (123 tests, requires install)
+npm install --prefix src && npm test --prefix src  # Run JS tests (60 tests, requires install)
 npm run test:integration --prefix src              # Run only integration tests (17 tests)
 bash src/scripts/tests/test_write_idea.sh          # Run shell tests (18 tests)
-bash src/scripts/tests/test_check_completion.sh    # Run completion detection tests (26 tests)
 bash src/scripts/tests/test_ensure_playwright.sh   # Run Playwright lazy-install tests (14 tests)
-bash src/scripts/tests/test_cleanup.sh             # Run cleanup.sh port tests (11 tests)
 bash src/scripts/tests/test_backup.sh              # Run backup.sh tests (20 tests)
 bash src/scripts/tests/test_setup_common.sh        # Run setup-common.sh tests (48 tests)
 ```
@@ -61,9 +59,8 @@ loop init / update      # Initialize/refresh symlinks in project
 loop init --type web    # Init with domain-specific skills (web/devops)
 loop init --list-types  # Show available project types
 loop design             # Interactive brainstorming / design session
-loop plan / build / run # Run planning (3 iter), build (99 iter), or both
-loop doctor             # Check loop installation health
-loop summary / cleanup  # Show run stats / kill dev server processes
+loop run [-I <idea>]    # Autonomous plan + build in single session
+loop kill               # Kill all loop processes
 ```
 
 **Structure**: `src/scripts/` (shell), `src/prompts/`, `src/templates/`, `src/bin/` + `src/lib/` (Node.js CLI).
@@ -90,7 +87,7 @@ Setup/sync — apply across all:
 
 Loop system: `src/` + `docker/Dockerfile` + `docker/entrypoint.sh`.
 
-Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.sh`, optionally `src/lib/init.js`. `loop init` skips existing; `loop update` calls `init({ force: true })`.
+Loop CLI: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.sh`, `src/lib/init.js`. `loop init` skips existing; `loop update` calls `init({ force: true })`.
 
 ### Setup Flow
 
@@ -135,5 +132,5 @@ Loop CLI flags/defaults: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.s
 - **MCP server JSON type**: Remote HTTP MCP servers require `"type": "http"` in `add-json` config, not `"type": "url"` (which silently fails).
 
 **Loop system:**
-- **Skill presets**: `src/lib/skill-presets.js` defines project type → skills mapping. `loop init --type` appends to PROMPT_skills_{plan,build}.md. Type persisted in `loop/.type` for `loop update`.
-- **Loop file naming**: `docs/IDEA.md` (seed), `docs/plans/YYYY-MM-DD-<topic>-plan.md`, `docs/plans/YYYY-MM-DD-<topic>-design.md`. Dynamic plan discovery via `find_current_plan()` in `loop.sh` — glob for `*-plan.md`, not hardcoded paths.
+- **Skill presets**: `src/lib/skill-presets.js` defines project type → skills mapping. `loop init --type` appends to PROMPT_skills_{design,run}.md. Type persisted in `loop/.type` for `loop update`.
+- **Loop file naming**: `docs/IDEA.md` (seed). Plan and design doc paths are managed by superpowers skills (writing-plans, brainstorming). Dynamic plan discovery via `find_current_plan()` in `loop.sh` — glob for `*-plan.md`.
