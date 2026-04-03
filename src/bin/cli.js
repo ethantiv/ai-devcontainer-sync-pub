@@ -27,14 +27,14 @@ program
   .command('design')
   .description('Run interactive design/brainstorming phase')
   .option('-i, --idea <text>', 'Seed idea written to docs/IDEA.md before start')
-  .option('-n, --new', 'Archive completed plan and start fresh')
+  .option('-n, --new', 'Archive current plan and start fresh')
   .action((opts) => runDesign(opts));
 
 program
   .command('run')
   .description('Autonomous plan + build in a single session')
   .option('-i, --idea <text>', 'Seed idea written to docs/IDEA.md before start')
-  .option('-n, --new', 'Archive completed plan and start fresh')
+  .option('-n, --new', 'Archive current plan and start fresh')
   .option('--interactive', 'Run interactively instead of autonomous')
   .option('--tmux', 'Run in a detached tmux session')
   .action((opts) => runRun(opts));
@@ -66,7 +66,7 @@ Examples:
   $ loop run                Autonomous plan + build
   $ loop run -i "Add auth"  Seed idea, then plan + build
   $ loop run --tmux         Run in a detached tmux session
-  $ loop run --new          Archive completed plan, start fresh
+  $ loop run --new          Archive current plan, start fresh
   $ loop kill               Kill all loop processes
   $ loop update             Force-refresh symlinks and templates`);
 

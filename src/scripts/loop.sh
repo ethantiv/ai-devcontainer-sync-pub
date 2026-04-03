@@ -42,7 +42,7 @@ usage() {
     echo "Options:"
     echo "  -d              Design mode (interactive brainstorming)"
     echo "  -a              Autonomous mode (default: interactive)"
-    echo "  -n              Archive completed plan and start fresh"
+    echo "  -n              Archive current plan and start fresh"
     echo "  -i text         Seed idea written to docs/IDEA.md"
     echo "  -h              Show this help"
     exit 0
@@ -51,50 +51,28 @@ usage() {
 # Find the current (most recent) plan file in docs/superpowers/plans/
 find_current_plan() {
     local latest=""
-    for f in docs/superpowers/plans/*-plan.md; do
+    for f in docs/superpowers/plans/*.md; do
         [[ -f "$f" ]] || continue
         latest="$f"
     done
     echo "$latest"
 }
 
-# Check if plan is complete (for archive_completed_plan)
-check_completion() {
+archive_plan() {
     local plan
     plan=$(find_current_plan)
-    [[ -z "$plan" || ! -f "$plan" ]] && return 1
-
-    local unchecked pending_phases complete_marker
-    unchecked=$(grep -cE '^[[:space:]]*-[[:space:]]*\[[[:space:]]\]' "$plan" 2>/dev/null) || unchecked=0
-    pending_phases=$(grep -ciE '\*{0,2}Status\*{0,2}:\*{0,2}\s*(pending|in.progress)' "$plan" 2>/dev/null) || pending_phases=0
-    complete_marker=$(grep -cE '\*{0,2}Status\*{0,2}:\*{0,2}\s*(COMPLETE|DONE)|BUILD COMPLETE|PLAN COMPLETE' "$plan" 2>/dev/null) || complete_marker=0
-
-    [[ "$unchecked" -eq 0 && "$pending_phases" -eq 0 && "$complete_marker" -gt 0 ]]
-}
-
-# Archive a completed plan and related specs to docs/superpowers/archive/
-archive_completed_plan() {
-    local plan
-    plan=$(find_current_plan)
-    [[ -z "$plan" || ! -f "$plan" ]] && { echo "[NEW] No plan to archive."; return 0; }
-
-    if ! check_completion; then
-        echo "[NEW] Plan is not complete — cannot archive. Continue with current plan."
-        return 1
-    fi
+    [[ -z "$plan" ]] && { echo "[NEW] No plan to archive."; return 0; }
 
     local archive_dir="docs/superpowers/archive"
     mkdir -p "$archive_dir"
     mv "$plan" "$archive_dir/"
-    echo "[NEW] Archived completed plan to $archive_dir/$(basename "$plan")"
+    echo "[NEW] Archived plan to $archive_dir/$(basename "$plan")"
 
-    for doc in docs/superpowers/specs/*-design.md; do
+    for doc in docs/superpowers/specs/*.md; do
         [[ -f "$doc" ]] || continue
         mv "$doc" "$archive_dir/"
-        echo "[NEW] Archived design doc: $(basename "$doc")"
+        echo "[NEW] Archived spec: $(basename "$doc")"
     done
-
-    return 0
 }
 
 # Post-run git safety net — auto-commit if agent skipped git
@@ -317,9 +295,9 @@ else
     PROMPT_FILE="$LOOP_ROOT/prompts/PROMPT_${SCRIPT_NAME}.md"
 fi
 
-# Archive completed plan if --new flag set
+# Archive current plan if --new flag set
 if [[ "$NEW_CYCLE" == true ]]; then
-    archive_completed_plan
+    archive_plan
 fi
 
 # Write idea file if provided

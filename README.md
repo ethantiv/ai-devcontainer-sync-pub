@@ -79,7 +79,7 @@ loop run                           # Autonomous plan + build in single session
 
 loop run -i "Add authentication"   # Seed an idea before running
 loop run --interactive             # Manual Claude session
-loop run --new                     # Archive completed plan, start fresh
+loop run --new                     # Archive current plan, start fresh
 
 loop kill                          # Kill all loop processes
 loop update                        # Refresh symlinks after package update
