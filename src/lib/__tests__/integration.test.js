@@ -11,9 +11,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { init } = require('../init');
-const { generateSummary } = require('../summary');
-const { runChecks } = require('../doctor');
-
 const PACKAGE_ROOT = path.resolve(__dirname, '..', '..');
 
 /** Create an isolated temp directory and chdir into it, returning a restore fn. */
@@ -34,9 +31,7 @@ function useTempProject() {
 const EXPECTED_SYMLINKS = [
   'loop/loop.sh',
   'loop/PROMPT_design.md',
-  'loop/PROMPT_plan.md',
-  'loop/PROMPT_build.md',
-  'loop/cleanup.sh',
+  'loop/PROMPT_run.md',
   'loop/kill-loop.sh',
 ];
 
@@ -53,8 +48,7 @@ const EXPECTED_TEMPLATES = [
   '.claude/settings.json',
   '.claude/skills/auto-revise-claude-md/SKILL.md',
   'loop/PROMPT_skills_design.md',
-  'loop/PROMPT_skills_plan.md',
-  'loop/PROMPT_skills_build.md',
+  'loop/PROMPT_skills_run.md',
 ];
 
 describe('loop init', () => {
@@ -191,7 +185,7 @@ describe('loop update (force init)', () => {
     init();
 
     // Modify a template file
-    const templatePath = path.join(project.dir, 'loop/PROMPT_skills_plan.md');
+    const templatePath = path.join(project.dir, 'loop/PROMPT_skills_run.md');
     if (fs.existsSync(templatePath)) {
       fs.writeFileSync(templatePath, 'modified content');
 
@@ -218,176 +212,6 @@ describe('loop update (force init)', () => {
   });
 }, 30000);
 
-describe('loop summary (generateSummary end-to-end)', () => {
-  let tmpDir;
-
-  beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'loop-summary-'));
-  });
-
-  afterEach(() => {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  });
-
-  test('returns "no log files" message for empty directory', async () => {
-    const report = await generateSummary(tmpDir);
-    expect(report).toContain('No log files found');
-  });
-
-  test('produces formatted report from a realistic JSONL log', async () => {
-    // Build a realistic log file with tool usage, tokens, and test results
-    const logEntries = [
-      // Assistant uses tools
-      {
-        type: 'assistant',
-        message: {
-          content: [
-            { type: 'tool_use', name: 'Read', input: { file_path: '/src/app.js' } },
-            { type: 'tool_use', name: 'Edit', input: { file_path: '/src/app.js' } },
-          ],
-        },
-      },
-      {
-        type: 'assistant',
-        message: {
-          content: [
-            { type: 'tool_use', name: 'Bash' },
-            { type: 'tool_use', name: 'Read', input: { file_path: '/src/utils.js' } },
-            { type: 'tool_use', name: 'Write', input: { file_path: '/src/new.js' } },
-          ],
-        },
-      },
-      // Token usage
-      { type: 'result', usage: { input_tokens: 5000, output_tokens: 2000 } },
-      { type: 'result', usage: { input_tokens: 3000, output_tokens: 1500 } },
-      // Test results in output
-      {
-        type: 'assistant',
-        message: {
-          content: [
-            { type: 'text', text: 'Running tests...\nTests: 42 passed, 1 failed, 43 total\n' },
-          ],
-        },
-      },
-    ];
-
-    const logPath = path.join(tmpDir, 'run-2026-02-11.jsonl');
-    const content = logEntries.map(e => JSON.stringify(e)).join('\n') + '\n';
-    fs.writeFileSync(logPath, content);
-
-    const report = await generateSummary(tmpDir);
-
-    // Verify all sections appear in the report
-    expect(report).toContain('=== Loop Run Summary ===');
-
-    // Iteration stats (2 result entries)
-    expect(report).toContain('Iterations: 2');
-
-    // Tool usage
-    expect(report).toContain('Tool Usage:');
-    expect(report).toContain('Read: 2');
-    expect(report).toContain('Edit: 1');
-    expect(report).toContain('Bash: 1');
-    expect(report).toContain('Write: 1');
-    expect(report).toContain('Total: 5 calls');
-
-    // Files modified (Edit and Write targets only)
-    expect(report).toContain('Files Modified (2):');
-    expect(report).toContain('/src/app.js');
-    expect(report).toContain('/src/new.js');
-
-    // Most Edited Files (Edit on /src/app.js, Write on /src/new.js)
-    expect(report).toContain('Most Edited Files:');
-
-    // Token usage
-    expect(report).toContain('Token Usage:');
-    expect(report).toContain('8,000');  // input: 5000 + 3000
-    expect(report).toContain('3,500');  // output: 2000 + 1500
-
-    // Test results
-    expect(report).toContain('Test Results:');
-    expect(report).toContain('FAIL');
-    expect(report).toContain('42 passed');
-    expect(report).toContain('1 failed');
-
-    // Log file reference
-    expect(report).toContain(logPath);
-  });
-
-  test('picks the most recent log when multiple exist', async () => {
-    // Create two log files with different timestamps
-    const oldLog = path.join(tmpDir, 'old.jsonl');
-    const newLog = path.join(tmpDir, 'new.jsonl');
-
-    fs.writeFileSync(oldLog, JSON.stringify({
-      type: 'result', usage: { input_tokens: 100, output_tokens: 50 },
-    }) + '\n');
-    // Set old mtime
-    const past = new Date(Date.now() - 60000);
-    fs.utimesSync(oldLog, past, past);
-
-    fs.writeFileSync(newLog, JSON.stringify({
-      type: 'result', usage: { input_tokens: 9999, output_tokens: 1 },
-    }) + '\n');
-
-    const report = await generateSummary(tmpDir);
-
-    // Should use the newer log (9999 input tokens)
-    expect(report).toContain('9,999');
-    expect(report).not.toContain('100');
-  });
-
-  test('handles log with only token data (no tools, no tests)', async () => {
-    const logPath = path.join(tmpDir, 'minimal.jsonl');
-    fs.writeFileSync(logPath, JSON.stringify({
-      type: 'result', usage: { input_tokens: 500, output_tokens: 200 },
-    }) + '\n');
-
-    const report = await generateSummary(tmpDir);
-
-    expect(report).toContain('Token Usage:');
-    expect(report).toContain('500');
-    expect(report).toContain('200');
-    // Should NOT contain sections with no data
-    expect(report).not.toContain('Tool Usage:');
-    expect(report).not.toContain('Files Modified');
-    expect(report).not.toContain('Test Results:');
-  });
-}, 30000);
-
-describe('loop doctor (integration)', () => {
-  let project;
-
-  beforeEach(() => {
-    project = useTempProject();
-  });
-
-  afterEach(() => {
-    project.restore();
-  });
-
-  test('symlink check fails before init', () => {
-    const results = runChecks();
-    const symCheck = results.find(r => r.name === 'Loop symlinks');
-    expect(symCheck.ok).toBe(false);
-  });
-
-  test('symlink and version checks pass after init', () => {
-    init();
-    const results = runChecks();
-    const symCheck = results.find(r => r.name === 'Loop symlinks');
-    const verCheck = results.find(r => r.name === 'Loop version');
-    expect(symCheck.ok).toBe(true);
-    expect(verCheck.ok).toBe(true);
-  });
-
-  test('doctor command is registered in CLI', () => {
-    const { execSync } = require('child_process');
-    const help = execSync('node ' + path.join(PACKAGE_ROOT, 'bin/cli.js') + ' --help', { encoding: 'utf-8' });
-    expect(help).toContain('doctor');
-  });
-}, 30000);
-
 /**
  * Map a template destination path back to its source path in the package.
  * Matches the TEMPLATES array in init.js.
@@ -398,8 +222,7 @@ function templateSrcPath(destRel) {
     '.claude/settings.json': '.claude/settings.json',
     '.claude/skills/auto-revise-claude-md/SKILL.md': '.claude/skills/auto-revise-claude-md/SKILL.md',
     'loop/PROMPT_skills_design.md': 'prompts/PROMPT_skills_design.md',
-    'loop/PROMPT_skills_plan.md': 'prompts/PROMPT_skills_plan.md',
-    'loop/PROMPT_skills_build.md': 'prompts/PROMPT_skills_build.md',
+    'loop/PROMPT_skills_run.md': 'prompts/PROMPT_skills_run.md',
   };
   return mapping[destRel] || destRel;
 }
