@@ -66,7 +66,7 @@ archive_plan() {
     local archive_dir="docs/superpowers/archive"
     mkdir -p "$archive_dir"
     mv "$plan" "$archive_dir/"
-    echo "[NEW] Archived plan to $archive_dir/$(basename "$plan")"
+    echo "[NEW] Archived plan: $(basename "$plan")"
 
     for doc in docs/superpowers/specs/*.md; do
         [[ -f "$doc" ]] || continue
