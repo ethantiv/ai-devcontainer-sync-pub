@@ -14,7 +14,7 @@ Ready-to-use development environment with Claude Code, Gemini CLI, autonomous de
 ## What's Inside
 
 - **Claude Code** and **Gemini CLI** — pre-installed and configured
-- **dev-loop** — autonomous plan/build cycles powered by Claude CLI (`loop` command)
+- **dev-loop** — autonomous plan + build powered by Claude CLI (`loop` command)
 - **MCP Servers** — Context7, Coolify, AWS docs, Terraform
 - **Slash Commands** — `/roadmap`, `/git-worktree:create`, `/git-worktree:delete`, `/dependency-update`, `/read-arxiv-paper`
 - **Skills & Plugins** — 18 official + 4 local + 13 external skills, auto-installed from `config/env-config.yaml`
@@ -76,22 +76,15 @@ loop init --type web               # Init with web-specific skills
 loop init --list-types             # Show available project types (web/devops)
 
 loop design                        # Interactive brainstorming / design session
-loop plan                          # Planning phase (3 iterations)
-loop build                         # Build phase (99 iterations)
-loop run                           # Plan + build combined
+loop run                           # Autonomous plan + build in single session
 
-loop plan -I "Add authentication"  # Seed an idea before planning
-loop build -i 20                   # Custom iteration count
-loop run -i 20                     # -i applies to build phase only
-loop build --interactive           # Manual Claude session
-loop build --no-early-exit         # Run all iterations
-loop plan --new                    # Archive completed plan, start fresh
+loop run -I "Add authentication"   # Seed an idea before running
+loop run --interactive             # Manual Claude session
+loop run --new                     # Archive completed plan, start fresh
 
-loop doctor                        # Check loop installation health
+loop kill                          # Kill all loop processes
 loop update                        # Refresh symlinks after package update
 loop update --type web,devops      # Update with merged skill presets
-loop summary                       # Show stats from last run
-loop cleanup                       # Kill dev server ports
 ```
 
 ### Idea Seeding
@@ -99,20 +92,18 @@ loop cleanup                       # Kill dev server ports
 The `-I` flag accepts multiple source formats — not just inline text:
 
 ```bash
-loop plan -I "Add user authentication"                        # Inline text
-loop plan -I @docs/feature-spec.md                            # Read from file
-loop plan -I https://github.com/org/repo/issues/42            # GitHub issue body (via gh CLI)
-loop plan -I https://github.com/org/repo/pull/15              # GitHub PR body (via gh CLI)
-loop plan -I https://example.com/spec.html                    # Any URL (via curl, HTML stripped)
+loop run -I "Add user authentication"                        # Inline text
+loop run -I @docs/feature-spec.md                            # Read from file
+loop run -I https://github.com/org/repo/issues/42            # GitHub issue body (via gh CLI)
+loop run -I https://github.com/org/repo/pull/15              # GitHub PR body (via gh CLI)
+loop run -I https://example.com/spec.html                    # Any URL (via curl, HTML stripped)
 ```
 
 The resolved content is written to `docs/IDEA.md`, which Claude reads as context during planning.
 
-### Early Exit and New Cycles
+### New Cycles
 
-In build mode, loop automatically stops when the current plan file (`docs/plans/YYYY-MM-DD-<topic>-plan.md`) is 100% complete (all checkboxes checked, no pending phases, completion marker present). Use `--no-early-exit` to override this.
-
-When a plan is complete and you want to start a new one, use `--new` to archive the finished plan to `docs/plans/archive/` before planning begins.
+When a plan is complete and you want to start a new one, use `--new` to archive the finished plan to `docs/plans/archive/` before running.
 
 ## Environment Variables
 
