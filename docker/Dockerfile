@@ -32,7 +32,6 @@ ARG USER_UID=1000
 ARG USER_GID=1000
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    DO_NOT_TRACK=1 \
     LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8 \
     HOME=/home/${USERNAME} \
