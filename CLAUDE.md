@@ -60,13 +60,20 @@ loop init --web         # Init with domain-specific skills (web/devops)
 loop design             # Interactive brainstorming / design session
 loop run [-i <idea>]    # Autonomous plan + build in single session
 loop kill               # Kill all loop processes
+loop update [--web] [--devops]  # Force-refresh symlinks and templates
 ```
+
+**CLI subcommands** (`src/bin/cli.js`): `init`, `design`, `run`, `kill`, `update`. No `plan`, `build`, `doctor`, `summary`, or `cleanup` — these do not exist.
+
+**Design flow** (`PROMPT_design.md`): loads skills from `PROMPT_skills_design.md` (brainstorming) → reads `IDEA.md` + existing design docs → interactive conversation → saves design doc to `docs/` → commits. Always interactive, never plans or implements.
+
+**Run flow** (`PROMPT_run.md`): loads skills from `PROMPT_skills_run.md` (writing-plans, subagent-driven-development, agent-browser, auto-revise-claude-md) → reads `IDEA.md` + design docs → creates plan → builds with subagents → updates CLAUDE.md → commits. Single Claude invocation, no loop/iterations.
 
 **Structure**: `src/scripts/` (shell), `src/prompts/`, `src/templates/`, `src/bin/` + `src/lib/` (Node.js CLI).
 
 **Idea seeding**: `loop run -i` accepts inline text, `@file.md` (read from file), or `https://...` URLs (GitHub issues/PRs via `gh`, generic via `curl`). Resolved by `resolve_idea()` in `loop.sh`.
 
-**Auto-commit**: `ensure_committed()` in `loop.sh` auto-commits after each iteration (prefix `chore(loop):`).
+**Auto-commit**: `ensure_committed()` in `loop.sh` auto-commits any uncommitted changes after session ends (prefix `chore(loop):`).
 
 ### Adding New Components
 
@@ -85,6 +92,8 @@ Setup/sync — apply across all:
 - `README.md` — docs for all deployment options
 
 Loop system: `src/` + `docker/Dockerfile` + `docker/entrypoint.sh`.
+
+Documentation: `README.md` (setup guide), `ai-devcontainer-course.html` (interactive walkthrough — must stay in sync with actual CLI).
 
 Loop CLI: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.sh`, `src/lib/init.js`. `loop init` skips existing; `loop update` calls `init({ force: true })`.
 

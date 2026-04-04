@@ -5,11 +5,16 @@ Ready-to-use development environment with Claude Code, Gemini CLI, autonomous de
 ## Table of Contents
 
 - [What's Inside](#whats-inside)
+- [Interactive Guide](#interactive-guide)
 - [Getting Started](#getting-started)
 - [Using the Loop System](#using-the-loop-system)
 - [Environment Variables](#environment-variables)
 - [Multi-GitHub Accounts](#multi-github-accounts)
 - [Volume Backups](#volume-backups)
+
+## Interactive Guide
+
+Open [`ai-devcontainer-course.html`](ai-devcontainer-course.html) in your browser for a step-by-step walkthrough covering setup, the loop system, plugins, skills, and configuration. It's a single self-contained HTML file — no server needed.
 
 ## What's Inside
 

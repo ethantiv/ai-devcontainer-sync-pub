@@ -218,6 +218,26 @@ tr:hover td { background: var(--bg-card) }
 
 .anno { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-glow); border: 1px solid var(--accent-dim); border-radius: 4px; padding: 1px 8px; font-family: var(--font-mono); font-size: 12px; color: var(--accent) }
 
+.wf { position: relative; margin: 20px 0; padding: 0 0 0 32px }
+.wf-line { position: absolute; left: 11px; top: 0; bottom: 0; width: 2px; background: var(--border) }
+.wf-node { position: relative; margin-bottom: 20px }
+.wf-node:last-child { margin-bottom: 0 }
+.wf-dot { position: absolute; left: -32px; top: 4px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); background: var(--bg-surface); display: flex; align-items: center; justify-content: center; font-size: 10px; z-index: 1 }
+.wf-dot.you { border-color: var(--green); color: var(--green) }
+.wf-dot.ai { border-color: var(--accent); color: var(--accent) }
+.wf-dot.opt { border-color: var(--text-dim); color: var(--text-dim); border-style: dashed }
+.wf-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px }
+.wf-label.you { color: var(--green) }
+.wf-label.ai { color: var(--accent) }
+.wf-label.opt { color: var(--text-dim) }
+.wf-title { font-family: var(--font-mono); font-size: 14px; color: var(--text-bright); margin-bottom: 4px }
+.wf-desc { font-size: 13px; color: var(--text-dim); line-height: 1.6 }
+.wf-desc code { font-size: 12px }
+.wf-branch { margin: 12px 0 12px 8px; padding: 12px 16px; border-left: 2px dashed var(--text-dim); background: var(--bg-card); border-radius: 0 var(--radius) var(--radius) 0 }
+.wf-branch-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 6px }
+.wf-or { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-family: var(--font-mono); font-size: 11px; color: var(--text-dim) }
+.wf-or::before, .wf-or::after { content: ''; flex: 1; height: 1px; background: var(--border) }
+
 .kw { color: var(--accent) }
 .cm { color: #666 }
 .str { color: var(--green) }
@@ -254,7 +274,7 @@ tr:hover td { background: var(--bg-card) }
 
   <div class="nav-section">Praca codzienna</div>
   <div class="nav-item" data-module="loop"><span class="num">03</span> Komenda loop</div>
-  <div class="nav-item" data-module="workflow"><span class="num">04</span> Design &rarr; Plan &rarr; Build</div>
+  <div class="nav-item" data-module="workflow"><span class="num">04</span> Design &rarr; Run</div>
   <div class="nav-item" data-module="tools"><span class="num">05</span> Pluginy i skills</div>
 
   <div class="nav-section">Konfiguracja</div>
@@ -349,6 +369,16 @@ docker exec -it claude-code bash</code></pre>
     <div class="expandable" onclick="this.classList.toggle('open')">
       <div class="expandable-header">
         <span class="chevron">&#9654;</span>
+        <span>Coolify (deploy na serwerze)</span>
+      </div>
+      <div class="expandable-body">
+        <p>Stw&#243;rz zas&#243;b <strong>Docker Compose</strong> w Coolify, ustaw <code>Base Directory: /docker</code> i <code>Docker Compose Location: /docker-compose.yml</code>. Dodaj zmienne &#347;rodowiskowe w ustawieniach aplikacji.</p>
+      </div>
+    </div>
+
+    <div class="expandable" onclick="this.classList.toggle('open')">
+      <div class="expandable-header">
+        <span class="chevron">&#9654;</span>
         <span>macOS (bez Dockera)</span>
       </div>
       <div class="expandable-body">
@@ -375,19 +405,17 @@ claude plugin marketplace list # czy pluginy si&#281; zainstalowa&#322;y</code><
   <div class="module-header">
     <div class="module-badge">Modu&#322; 03</div>
     <h2>Komenda <span class="thin">loop</span></h2>
-    <p class="module-intro"><code>loop</code> to g&#322;&#243;wne narz&#281;dzie. Uruchamia Claude w autonomicznych cyklach &mdash; Ty podajesz pomys&#322;, Claude planuje i buduje.</p>
+    <p class="module-intro"><code>loop</code> to g&#322;&#243;wne narz&#281;dzie. Przygotowuje projekt do pracy z Claude i uruchamia go z odpowiednim promptem &mdash; Ty podajesz pomys&#322;, Claude planuje i buduje.</p>
   </div>
 
   <div class="section">
     <h3>Inicjalizacja w projekcie</h3>
-    <p>Wejd&#378; do swojego projektu i uruchom <code>loop init</code>. Stworzy katalog <code>loop/</code> z promptami i konfiguracj&#261;.</p>
+    <p>Wejd&#378; do swojego projektu i uruchom <code>loop init</code>. Stworzy katalog <code>loop/</code> z symlinkami do skrypt&#243;w i skopiuje szablony prompt&#243;w (kt&#243;re mo&#380;esz edytowa&#263;).</p>
     <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
     <pre><code>cd ~/projects/m&#243;j-projekt
 loop init                     # podstawowa inicjalizacja
-loop init --type web          # + skills do React/Next.js
-loop init --type devops       # + skills do Terraform
-loop init --type fullstack    # web + feature-dev
-loop init --list-types        # poka&#380; dost&#281;pne typy</code></pre></div>
+loop init --web               # + skills do React/Next.js
+loop init --devops            # + skills do Terraform</code></pre></div>
   </div>
 
   <div class="section">
@@ -396,23 +424,29 @@ loop init --list-types        # poka&#380; dost&#281;pne typy</code></pre></div>
       <thead><tr><th>Co chcesz zrobi&#263;</th><th>Komenda</th></tr></thead>
       <tbody>
         <tr><td>Przemy&#347;le&#263; rozwi&#261;zanie z Claude (interaktywnie)</td><td><code>loop design</code></td></tr>
-        <tr><td>Stworzy&#263; plan implementacji</td><td><code>loop plan</code></td></tr>
-        <tr><td>Zrealizowa&#263; plan (autonomicznie)</td><td><code>loop build</code></td></tr>
-        <tr><td>Planowanie + budowanie od razu</td><td><code>loop run</code></td></tr>
-        <tr><td>Sprawdzi&#263; zdrowie instalacji</td><td><code>loop doctor</code></td></tr>
-        <tr><td>Statystyki ostatniego uruchomienia</td><td><code>loop summary</code></td></tr>
-        <tr><td>Zbi&#263; procesy na portach dev (3000, 5173...)</td><td><code>loop cleanup</code></td></tr>
+        <tr><td>Autonomiczne planowanie + budowanie</td><td><code>loop run</code></td></tr>
+        <tr><td>Zbi&#263; wszystkie procesy loop</td><td><code>loop kill</code></td></tr>
+        <tr><td>Od&#347;wie&#380;y&#263; symlinki po aktualizacji</td><td><code>loop update</code></td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="section">
-    <h3>Podpowiadanie pomys&#322;&#243;w (<code>-I</code>)</h3>
+    <h3>Podpowiadanie pomys&#322;&#243;w (<code>-i</code>)</h3>
     <p>Przekazujesz Claude pomys&#322; na feature &mdash; tekst, plik, lub URL do GitHub issue:</p>
     <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
-    <pre><code>loop run -I "Dodaj autentykacj&#281; JWT"
-loop plan -I @docs/specyfikacja.md
-loop plan -I https://github.com/org/repo/issues/42</code></pre></div>
+    <pre><code>loop run -i "Dodaj autentykacj&#281; JWT"
+loop run -i @docs/specyfikacja.md
+loop run -i https://github.com/org/repo/issues/42</code></pre></div>
+    <div class="card">
+      <div class="card-label info">Flagi</div>
+      <p>
+        <code>-i / --idea</code> &mdash; przekazuje pomys&#322; (tekst, @plik, URL)<br>
+        <code>-n / --new</code> &mdash; archiwizuje obecny plan i zaczyna od nowa<br>
+        <code>--interactive</code> &mdash; tryb r&#281;czny (Claude czeka na Tw&#243;j input)<br>
+        <code>--tmux</code> &mdash; uruchom w oddzielonej sesji tmux
+      </p>
+    </div>
   </div>
 
   <div class="nav-buttons">
@@ -425,61 +459,129 @@ loop plan -I https://github.com/org/repo/issues/42</code></pre></div>
 <div class="module" id="mod-workflow">
   <div class="module-header">
     <div class="module-badge">Modu&#322; 04</div>
-    <h2>Design <span class="thin">&rarr; Plan &rarr; Build</span></h2>
-    <p class="module-intro">Trzy fazy autonomicznego programowania. Mo&#380;esz u&#380;y&#263; wszystkich trzech lub przeskoczy&#263; od razu do <code>loop run</code>.</p>
+    <h2>Design <span class="thin">&rarr; Run</span></h2>
+    <p class="module-intro">Dwie fazy autonomicznego programowania. Mo&#380;esz u&#380;y&#263; obu lub przeskoczy&#263; od razu do <code>loop run</code>.</p>
   </div>
 
   <div class="section">
-    <h3>Trzy fazy</h3>
-    <div class="phase-flow">
+    <h3>Dwie fazy</h3>
+    <div class="phase-flow" style="grid-template-columns: repeat(2, 1fr)">
       <div class="phase-card">
-        <div class="phase-num">Faza 1</div>
+        <div class="phase-num">Opcjonalna</div>
         <div class="phase-name">Design</div>
-        <div class="phase-desc">Rozmowa z Claude o wymaganiach i architekturze</div>
+        <div class="phase-desc">Interaktywna rozmowa: brainstorming i design doc</div>
       </div>
       <div class="phase-card">
-        <div class="phase-num">Faza 2</div>
-        <div class="phase-name">Plan</div>
-        <div class="phase-desc">Claude tworzy plan z taskami i checkboxami</div>
+        <div class="phase-num">G&#322;&#243;wna</div>
+        <div class="phase-name">Run</div>
+        <div class="phase-desc">Jedno wywo&#322;anie: plan &rarr; build &rarr; commit</div>
       </div>
-      <div class="phase-card">
-        <div class="phase-num">Faza 3</div>
-        <div class="phase-name">Build</div>
-        <div class="phase-desc">Claude realizuje plan, testuje i commituje</div>
-      </div>
+    </div>
+    <div class="card">
+      <div class="card-label info">Jak to dzia&#322;a</div>
+      <p>Ka&#380;da faza to <strong>jedno wywo&#322;anie Claude CLI</strong> z promptem (<code>PROMPT_design.md</code> lub <code>PROMPT_run.md</code>). Claude czyta prompt, &#322;aduje skills i wykonuje ca&#322;&#261; prac&#281; w jednej sesji. Nie ma p&#281;tli ani iteracji &mdash; Claude sam decyduje ile krok&#243;w potrzebuje.</p>
     </div>
   </div>
 
   <div class="section">
-    <h3>Kiedy czego u&#380;ywa&#263;</h3>
-    <table>
-      <thead><tr><th>Sytuacja</th><th>Co uruchomi&#263;</th></tr></thead>
-      <tbody>
-        <tr><td>Prosty feature, wiesz czego chcesz</td><td><code>loop run -I "opis"</code></td></tr>
-        <tr><td>Chcesz najpierw przemy&#347;le&#263; podej&#347;cie</td><td><code>loop design</code> &rarr; <code>loop plan</code> &rarr; <code>loop build</code></td></tr>
-        <tr><td>Masz spec w pliku</td><td><code>loop run -I @docs/spec.md</code></td></tr>
-        <tr><td>Feature z GitHub issue</td><td><code>loop run -I https://github.com/.../issues/42</code></td></tr>
-        <tr><td>Poprzedni plan uko&#324;czony, nowy cykl</td><td><code>loop plan --new -I "nast&#281;pny feature"</code></td></tr>
-      </tbody>
-    </table>
+    <h3>Co robi Design</h3>
+    <ol>
+      <li>&#321;aduje skills z <code>PROMPT_skills_design.md</code> (domy&#347;lnie: <code>brainstorming</code>)</li>
+      <li>Czyta <code>docs/IDEA.md</code> oraz istniej&#261;ce design docs</li>
+      <li>Prowadzi interaktywn&#261; rozmow&#281; o wymaganiach i architekturze</li>
+      <li>Zapisuje design doc do <code>docs/</code></li>
+      <li>Commituje i pushuje</li>
+    </ol>
+    <div class="card">
+      <div class="card-label note">Uwaga</div>
+      <p>Design jest zawsze interaktywny &mdash; Claude rozmawia z Tob&#261;. Nie tworzy planu ani nie implementuje.</p>
+    </div>
   </div>
 
   <div class="section">
-    <h3>Co robi Build w ka&#380;dej iteracji</h3>
+    <h3>Co robi Run</h3>
     <ol>
-      <li>Bierze pierwsz&#261; niezako&#324;czon&#261; faz&#281; z planu</li>
-      <li>Pisze testy &rarr; implementuje &rarr; sprawdza testy</li>
-      <li>Odhacza checkboxy w planie</li>
+      <li>&#321;aduje skills z <code>PROMPT_skills_run.md</code> (writing-plans, subagent-driven-development, agent-browser, auto-revise-claude-md)</li>
+      <li>Czyta <code>docs/IDEA.md</code> i design docs jako kontekst</li>
+      <li>Tworzy plan implementacji (skill <code>writing-plans</code>)</li>
+      <li>Realizuje plan, u&#380;ywaj&#261;c r&#243;wnoleg&#322;ych subagent&#243;w (skill <code>subagent-driven-development</code>)</li>
+      <li>Aktualizuje <code>CLAUDE.md</code> o nowe wnioski</li>
       <li>Commituje i pushuje</li>
-      <li>Jak plan jest w 100% zrobiony &mdash; ko&#324;czy</li>
     </ol>
     <div class="card">
-      <div class="card-label tip">Przydatne flagi</div>
-      <p>
-        <code>-i 20</code> &mdash; ogranicza liczb&#281; iteracji build<br>
-        <code>--no-early-exit</code> &mdash; nie ko&#324;czy po zako&#324;czeniu planu<br>
-        <code>--interactive</code> &mdash; tryb r&#281;czny (Claude czeka na Tw&#243;j input)
-      </p>
+      <div class="card-label note">Uwaga</div>
+      <p>Run jest domy&#347;lnie autonomiczny &mdash; Claude pracuje bez pytania. U&#380;yj <code>--interactive</code>, &#380;eby m&#243;c ingerowa&#263; w proces. Po zako&#324;czeniu, <code>loop.sh</code> automatycznie commituje niescommitowane zmiany.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Przyk&#322;adowy flow pracy</h3>
+    <div class="wf">
+      <div class="wf-line"></div>
+
+      <div class="wf-node">
+        <div class="wf-dot you">1</div>
+        <div class="wf-label you">Ty</div>
+        <div class="wf-title">Masz pomys&#322;</div>
+        <div class="wf-desc">Tekst, plik ze specyfikacj&#261;, lub link do GitHub issue.</div>
+      </div>
+
+      <div class="wf-node">
+        <div class="wf-dot you">2</div>
+        <div class="wf-label you">Ty</div>
+        <div class="wf-title">Inicjalizujesz projekt</div>
+        <div class="wf-desc"><code>loop init</code> &mdash; jednorazowo, tworzy <code>loop/</code> w projekcie.</div>
+      </div>
+
+      <div class="wf-node">
+        <div class="wf-dot opt">&#9702;</div>
+        <div class="wf-label opt">Opcjonalnie</div>
+        <div class="wf-title">Brainstorming z Claude</div>
+        <div class="wf-desc"><code>loop design -i "M&#243;j pomys&#322;"</code> &mdash; interaktywna rozmowa. Claude pisze design doc do <code>docs/</code> i commituje.</div>
+        <div class="wf-branch">
+          <div class="wf-branch-label">Mo&#380;esz pomin&#261;&#263;</div>
+          <div class="wf-desc">Je&#347;li wiesz czego chcesz, przeskocz do Run.</div>
+        </div>
+      </div>
+
+      <div class="wf-node">
+        <div class="wf-dot you">3</div>
+        <div class="wf-label you">Ty</div>
+        <div class="wf-title">Uruchamiasz Run</div>
+        <div class="wf-desc"><code>loop run -i "Dodaj autentykacj&#281; JWT"</code><br>
+          lub <code>loop run -i @docs/spec.md</code><br>
+          lub <code>loop run -i https://github.com/.../issues/42</code><br>
+          <span style="color:var(--text-dim);font-size:12px;margin-top:4px;display:inline-block">Pomys&#322; trafia do <code>docs/IDEA.md</code>, kt&#243;ry Claude czyta jako kontekst.</span>
+        </div>
+      </div>
+
+      <div class="wf-node">
+        <div class="wf-dot ai">&#9670;</div>
+        <div class="wf-label ai">Claude (autonomicznie)</div>
+        <div class="wf-title">Plan</div>
+        <div class="wf-desc">Czyta IDEA.md + design docs. Tworzy plan implementacji (skill <code>writing-plans</code>).</div>
+      </div>
+
+      <div class="wf-node">
+        <div class="wf-dot ai">&#9670;</div>
+        <div class="wf-label ai">Claude (autonomicznie)</div>
+        <div class="wf-title">Build</div>
+        <div class="wf-desc">Realizuje plan r&#243;wnoleg&#322;ymi subagentami (skill <code>subagent-driven-development</code>). Pisze testy, implementuje, weryfikuje.</div>
+      </div>
+
+      <div class="wf-node">
+        <div class="wf-dot ai">&#9670;</div>
+        <div class="wf-label ai">Claude (autonomicznie)</div>
+        <div class="wf-title">Commit &amp; push</div>
+        <div class="wf-desc">Aktualizuje <code>CLAUDE.md</code>, commituje i pushuje. Je&#347;li co&#347; pominie &mdash; <code>loop.sh</code> commituje automatycznie na ko&#324;cu.</div>
+      </div>
+
+      <div class="wf-node">
+        <div class="wf-dot you">&#10003;</div>
+        <div class="wf-label you">Ty</div>
+        <div class="wf-title">Gotowe</div>
+        <div class="wf-desc">Nowy cykl: <code>loop run --new -i "Nast&#281;pna rzecz"</code> &mdash; archiwizuje stary plan i zaczyna od nowa.</div>
+      </div>
     </div>
   </div>
 
@@ -581,10 +683,14 @@ loop plan -I https://github.com/org/repo/issues/42</code></pre></div>
       <thead><tr><th>Zmienna</th><th></th><th>Opis</th></tr></thead>
       <tbody>
         <tr><td>GH_TOKEN</td><td><span class="tag required">wymagany</span></td><td>Token GitHub (<code>repo</code> + <code>workflow</code>)</td></tr>
+        <tr><td>SSH_PRIVATE_KEY</td><td><span class="tag optional">opcja</span></td><td>Klucz SSH (base64) do uwierzytelniania Git</td></tr>
+        <tr><td>GIT_USER_NAME</td><td><span class="tag optional">opcja</span></td><td>Imi&#281; i nazwisko do commit&#243;w</td></tr>
+        <tr><td>GIT_USER_EMAIL</td><td><span class="tag optional">opcja</span></td><td>Email do commit&#243;w</td></tr>
         <tr><td>CONTEXT7_API_KEY</td><td><span class="tag optional">opcja</span></td><td>Dokumentacja bibliotek przez MCP</td></tr>
         <tr><td>COOLIFY_BASE_URL</td><td><span class="tag optional">opcja</span></td><td>URL instancji Coolify</td></tr>
         <tr><td>COOLIFY_ACCESS_TOKEN</td><td><span class="tag optional">opcja</span></td><td>Token Coolify</td></tr>
-        <tr><td>GH_TOKEN_WORK</td><td><span class="tag optional">opcja</span></td><td>Token do konta firmowego GitHub</td></tr>
+        <tr><td>STITCH_API_KEY</td><td><span class="tag optional">opcja</span></td><td>Google Stitch MCP server</td></tr>
+        <tr><td>GH_TOKEN_WORK</td><td><span class="tag optional">opcja</span></td><td>Token do konta firmowego GitHub (SSO)</td></tr>
         <tr><td>BACKUP_PIN</td><td><span class="tag optional">opcja</span></td><td>PIN do szyfrowania backup&#243;w</td></tr>
       </tbody>
     </table>
@@ -593,6 +699,22 @@ loop plan -I https://github.com/org/repo/issues/42</code></pre></div>
   <div class="section">
     <h3>config/env-config.yaml &mdash; ca&#322;a reszta</h3>
     <p>Tu definiujesz: to&#380;samo&#347;&#263; Git, list&#281; plugin&#243;w, skills, serwery MCP. Podzielony na <code>defaults</code> (wsp&#243;lne) i <code>environments</code> (per &#347;rodowisko).</p>
+
+    <div class="expandable" onclick="this.classList.toggle('open')">
+      <div class="expandable-header">
+        <span class="chevron">&#9654;</span>
+        <span>Sekcja claude (j&#281;zyk, uprawnienia)</span>
+      </div>
+      <div class="expandable-body">
+        <p>Kontrolujesz j&#281;zyk odpowiedzi Claude, tryb uprawnie&#324; i Remote Control:</p>
+        <pre><code><span class="kw">claude:</span>
+  language: <span class="str">"Polish"</span>
+  remoteControl: <span class="kw">false</span>
+  permissions:
+    defaultMode: <span class="str">"bypassPermissions"</span></code></pre>
+        <p style="margin-top:8px;font-size:13px;color:var(--text-dim)">Tryb <code>bypassPermissions</code> oznacza, &#380;e Claude nie b&#281;dzie pyta&#263; o zgod&#281; na ka&#380;de narz&#281;dzie.</p>
+      </div>
+    </div>
 
     <div class="expandable" onclick="this.classList.toggle('open')">
       <div class="expandable-header">
@@ -717,29 +839,28 @@ claude plugin marketplace list        # czy pluginy si&#281; zainstalowa&#322;y<
     <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
     <pre><code>cd ~/projects/m&#243;j-projekt
 loop init                             # zainicjalizuj loop
-loop init --type web                  # z webowymi skills
-loop doctor                           # sprawd&#378; instalacj&#281;</code></pre></div>
+loop init --web                       # z webowymi skills
+loop init --devops                    # z skills do Terraform</code></pre></div>
   </div>
 
   <div class="section">
     <h3>Codzienna praca</h3>
     <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
-    <pre><code>loop run -I "Dodaj autoryzacj&#281; JWT"    # pomys&#322; &rarr; plan &rarr; build
+    <pre><code>loop run -i "Dodaj autoryzacj&#281; JWT"    # pomys&#322; &rarr; plan &rarr; build
 loop design                           # interaktywny brainstorming
-loop plan                             # tylko planowanie
-loop build                            # tylko budowanie
-loop build -i 20                      # max 20 iteracji
-loop build --interactive              # tryb r&#281;czny
-loop plan --new -I "Nast&#281;pna rzecz"    # nowy cykl
-loop summary                          # statystyki
-loop cleanup                          # zbi&#263; dev serwery</code></pre></div>
+loop design -i "Pomys&#322; na API"        # brainstorming z pomys&#322;em
+loop run --interactive                 # tryb r&#281;czny
+loop run --tmux                        # uruchom w sesji tmux
+loop run --new -i "Nast&#281;pna rzecz"     # nowy cykl
+loop kill                              # zbi&#263; procesy loop</code></pre></div>
   </div>
 
   <div class="section">
     <h3>Po zmianach w konfiguracji</h3>
     <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
     <pre><code>./.devcontainer/setup-env.sh           # re-synchronizuj &#347;rodowisko
-loop update                           # od&#347;wie&#380; symlinki loop</code></pre></div>
+loop update                           # od&#347;wie&#380; symlinki loop
+loop update --web --devops            # od&#347;wie&#380; z preset&#243;w skills</code></pre></div>
   </div>
 
   <div class="section">
