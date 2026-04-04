@@ -115,8 +115,10 @@ apply_claude_settings() {
             local updated
             updated=$(jq --argjson rc "$remote_control" '.remoteControlAtStartup = $rc' "$claude_json" 2>/dev/null)
             [[ -n "$updated" ]] && echo "$updated" > "$claude_json"
-            ok "Remote Control: $remote_control"
+        else
+            jq -n --argjson rc "$remote_control" '{remoteControlAtStartup: $rc}' > "$claude_json"
         fi
+        ok "Remote Control: $remote_control"
     fi
 }
 
