@@ -24,7 +24,7 @@ jobs:
             config/env-config.yaml
           echo "" > config/CLAUDE.md.memory
           git add config/CLAUDE.md.memory
-          git commit -m "chore: exclude private files from public repo"
+          git commit --amend --no-edit
 
       - name: Push mirror
         run: |
