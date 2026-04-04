@@ -86,10 +86,24 @@ defaults:
 # =============================================================================
 environments:
   devcontainer:
-    mcp_servers: []
+    mcp_servers:
+      - name: coolify
+        type: stdio
+        command: npx
+        args: ["-y", "@masonator/coolify-mcp@latest"]
+        env:
+          COOLIFY_BASE_URL: "${COOLIFY_BASE_URL}"
+          COOLIFY_ACCESS_TOKEN: "${COOLIFY_ACCESS_TOKEN}"
 
   docker:
-    mcp_servers: []
+    mcp_servers:
+      - name: coolify
+        type: stdio
+        command: npx
+        args: ["-y", "@masonator/coolify-mcp@latest"]
+        env:
+          COOLIFY_BASE_URL: "${COOLIFY_BASE_URL}"
+          COOLIFY_ACCESS_TOKEN: "${COOLIFY_ACCESS_TOKEN}"
 
   local:
     mcp_servers: []
