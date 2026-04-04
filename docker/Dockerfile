@@ -85,7 +85,8 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && echo "alias ccc='clear && claude -c'" >> ${HOME}/.bashrc \
     && echo "alias ccr='clear && claude -r'" >> ${HOME}/.bashrc \
     && echo '[ -f "$HOME/.claude/env.sh" ] && . "$HOME/.claude/env.sh"' >> ${HOME}/.bashrc \
-    && echo "set-option -g default-shell /bin/bash" >> ${HOME}/.tmux.conf
+    && echo "set-option -g default-shell /bin/bash" >> ${HOME}/.tmux.conf \
+    && echo "set-option -g default-command /bin/bash" >> ${HOME}/.tmux.conf
 
 # Copy configuration files for runtime sync to volume
 COPY config/CLAUDE.md.memory /opt/claude-config/CLAUDE.md
