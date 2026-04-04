@@ -24,6 +24,11 @@
       "name": "roadmap",
       "description": "Generate or update ROADMAP.md with completed features and future proposals",
       "source": "./roadmap"
+    },
+    {
+      "name": "spec-compliance-review",
+      "description": "Systematically verify that an implementation plan or code covers every requirement of a specification document",
+      "source": "./spec-compliance-review"
     }
   ]
 }

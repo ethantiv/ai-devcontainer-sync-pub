@@ -1,0 +1,8 @@
+{
+  "name": "spec-compliance-review",
+  "version": "0.1.0",
+  "description": "Systematically verify that an implementation plan or code covers every requirement of a specification document",
+  "author": {
+    "name": "Mirek Zaniewicz"
+  }
+}

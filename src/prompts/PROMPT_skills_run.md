@@ -2,3 +2,4 @@
 - `superpowers:subagent-driven-development`
 - `agent-browser`
 - `auto-revise-claude-md`
+- `spec-compliance-review`
