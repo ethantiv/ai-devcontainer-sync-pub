@@ -290,7 +290,7 @@ tr:hover td { background: var(--bg-card) }
   <div class="module-header">
     <div class="module-badge">Modu&#322; 01</div>
     <h2>O co <span class="thin">tu chodzi</span></h2>
-    <p class="module-intro">Otwierasz kontener &mdash; wszystko jest gotowe. Claude Code, pluginy, serwery MCP, system autonomicznych p&#281;tli. Nie musisz niczego instalowa&#263; r&#281;cznie.</p>
+    <p class="module-intro">Otwierasz kontener &mdash; wszystko jest gotowe. Claude Code, pluginy, serwery MCP, autonomiczny tryb <code>loop</code>. Nie musisz niczego instalowa&#263; r&#281;cznie.</p>
   </div>
 
   <div class="section">
@@ -298,9 +298,9 @@ tr:hover td { background: var(--bg-card) }
     <p>Po uruchomieniu &#347;rodowiska masz dost&#281;p do:</p>
     <ul>
       <li><strong>Claude Code</strong> &mdash; agent AI do programowania w terminalu</li>
-      <li><strong><code>loop</code></strong> &mdash; komenda uruchamiaj&#261;ca Claude w autonomicznych cyklach (projektuj &rarr; planuj &rarr; buduj)</li>
-      <li><strong>Pluginy i skills</strong> &mdash; gotowe umiej&#281;tno&#347;ci: tworzenie commit&#243;w, review kodu, praca z PDF/DOCX, diagramy, i wi&#281;cej</li>
-      <li><strong>Serwery MCP</strong> &mdash; Claude &#322;&#261;czy si&#281; z zewn&#281;trznymi serwisami (dokumentacja bibliotek, Coolify, AWS)</li>
+      <li><strong><code>loop</code></strong> &mdash; komenda uruchamiaj&#261;ca Claude autonomicznie: <code>design</code> (brainstorming) i <code>run</code> (plan + build + commit w jednej sesji)</li>
+      <li><strong>Pluginy i skills</strong> &mdash; gotowe umiej&#281;tno&#347;ci: commity, review kodu, praca z PDF/DOCX/XLSX, diagramy Mermaid, Terraform, i wi&#281;cej</li>
+      <li><strong>Serwery MCP</strong> &mdash; Claude &#322;&#261;czy si&#281; z zewn&#281;trznymi serwisami: dokumentacja bibliotek (context7), Jira/Confluence (atlassian), AWS (Lambda, IaC, pricing)</li>
     </ul>
   </div>
 
@@ -600,51 +600,93 @@ loop run -i https://github.com/org/repo/issues/42</code></pre></div>
   </div>
 
   <div class="section">
-    <h3>Slash commands (wpisujesz Ty)</h3>
-    <p>Te komendy wpisujesz bezpo&#347;rednio w rozmowie z Claude:</p>
+    <h3>Jak to dzia&#322;a</h3>
+    <p>Twoje &#347;rodowisko zawiera trzy rodzaje rozszerze&#324;, instalowane automatycznie z <code>config/env-config.yaml</code>:</p>
     <table>
-      <thead><tr><th>Komenda</th><th>Co robi</th></tr></thead>
+      <thead><tr><th>Typ</th><th>Sk&#261;d</th><th>Jak u&#380;yty</th></tr></thead>
       <tbody>
-        <tr><td><code>/commit</code></td><td>Tworzy commit z opisem zmian</td></tr>
-        <tr><td><code>/commit-push-pr</code></td><td>Commit + push + otw&#243;rz Pull Request</td></tr>
-        <tr><td><code>/roadmap</code></td><td>Generuje lub aktualizuje plan projektu</td></tr>
-        <tr><td><code>/git-worktree:create</code></td><td>Nowy branch w odizolowanym katalogu</td></tr>
-        <tr><td><code>/dependency-update</code></td><td>Aktualizuje zale&#380;no&#347;ci projektu</td></tr>
-        <tr><td><code>/read-arxiv-paper</code></td><td>Streszcza artyku&#322; naukowy z arXiv</td></tr>
+        <tr><td><strong>Pluginy</strong></td><td>Oficjalny marketplace Anthropic + lokalny <code>dev-marketplace</code></td><td>Claude wybiera sam; cz&#281;&#347;&#263; udost&#281;pnia slash commands</td></tr>
+        <tr><td><strong>Skills</strong></td><td>Zewn&#281;trzne repo GitHub (<code>npx skills add</code>)</td><td>Claude wywo&#322;uje przez <code>Skill</code> tool</td></tr>
+        <tr><td><strong>Serwery MCP</strong></td><td>Dostarczane przez pluginy lub dodane r&#281;cznie</td><td>Claude &#322;&#261;czy si&#281; z zewn&#281;trznymi serwisami</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="section">
-    <h3>Pluginy (Claude u&#380;ywa sam)</h3>
-    <p>Claude automatycznie &#322;aduje odpowiedni plugin gdy tego potrzebuje:</p>
+    <h3>Pluginy z oficjalnego marketplace</h3>
+    <p>Instalowane z <code>anthropics/claude-plugins-official</code>. Claude sam decyduje kiedy kt&#243;ry za&#322;adowa&#263;.</p>
     <table>
       <thead><tr><th>Plugin</th><th>Kiedy si&#281; w&#322;&#261;cza</th></tr></thead>
       <tbody>
-        <tr><td><code>superpowers</code></td><td>Planowanie, TDD, debugging, code review</td></tr>
-        <tr><td><code>feature-dev</code></td><td>Rozbudowa feature&#243;w z eksploracj&#261; kodu</td></tr>
-        <tr><td><code>frontend-design</code></td><td>Tworzenie interfejs&#243;w UI</td></tr>
-        <tr><td><code>code-simplifier</code></td><td>Upraszczanie i refaktoryzacja</td></tr>
-        <tr><td><code>hookify</code></td><td>Tworzenie regu&#322; automatyzacji</td></tr>
+        <tr><td><code>superpowers</code></td><td>Planowanie, TDD, debugging, brainstorming, code review (u&#380;ywany przez loop)</td></tr>
+        <tr><td><code>feature-dev</code></td><td>Rozbudowa feature&#243;w z eksploracj&#261; kodu (<code>/feature-dev</code>)</td></tr>
+        <tr><td><code>frontend-design</code></td><td>Tworzenie interfejs&#243;w UI z dobrym stylem</td></tr>
+        <tr><td><code>code-simplifier</code></td><td>Upraszczanie i refaktoryzacja (<code>/simplify</code>)</td></tr>
+        <tr><td><code>commit-commands</code></td><td>Slash commands: <code>/commit</code>, <code>/commit-push-pr</code>, <code>/clean_gone</code></td></tr>
+        <tr><td><code>claude-md-management</code></td><td>Audyt i aktualizacja plik&#243;w CLAUDE.md</td></tr>
+        <tr><td><code>playground</code></td><td>Generowanie interaktywnych playground&#243;w HTML</td></tr>
+        <tr><td><code>skill-creator</code></td><td>Tworzenie i ewaluacja nowych skills</td></tr>
+        <tr><td><code>plugin-dev</code></td><td>Tworzenie w&#322;asnych plugin&#243;w (komendy, agenty, hooks)</td></tr>
+        <tr><td><code>agent-sdk-dev</code></td><td>Budowa aplikacji Claude Agent SDK</td></tr>
+        <tr><td><code>context7</code></td><td>Aktualna dokumentacja bibliotek (MCP server)</td></tr>
+        <tr><td><code>atlassian</code></td><td>Jira + Confluence (MCP server)</td></tr>
+        <tr><td><code>aws-serverless</code></td><td>Lambda, SAM, API Gateway, Step Functions (MCP)</td></tr>
+        <tr><td><code>deploy-on-aws</code></td><td>Wdro&#380;enia AWS, IaC, pricing, dokumentacja (MCP)</td></tr>
+        <tr><td><code>claude-code-setup</code></td><td>Rekomendacje automatyzacji Claude Code</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="section">
-    <h3>Skills (specjalistyczne umiej&#281;tno&#347;ci)</h3>
-    <p>Instalowane z zewn&#281;trznych repozytori&#243;w. Przyk&#322;ady:</p>
+    <h3>Lokalne pluginy (dev-marketplace)</h3>
+    <p>Utrzymywane w tym repo, w <code>config/plugins/dev-marketplace/</code>. Dostarczaj&#261; slash commands:</p>
+    <table>
+      <thead><tr><th>Komenda</th><th>Co robi</th></tr></thead>
+      <tbody>
+        <tr><td><code>/roadmap</code></td><td>Generuje lub aktualizuje <code>docs/ROADMAP.md</code></td></tr>
+        <tr><td><code>/git-worktree:create</code></td><td>Nowy branch w odizolowanym worktree</td></tr>
+        <tr><td><code>/git-worktree:delete</code></td><td>Usuwa worktree i zwi&#261;zany branch</td></tr>
+        <tr><td><code>/dependency-update</code></td><td>Aktualizuje zale&#380;no&#347;ci projektu</td></tr>
+        <tr><td><code>/read-arxiv-paper</code></td><td>Pobiera i streszcza artyku&#322; z arXiv</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h3>LSP (Language Server Protocol)</h3>
+    <p>Claude dostaje info o typach, b&#322;&#281;dach i definicjach z serwer&#243;w LSP:</p>
     <ul>
-      <li><code>pdf</code>, <code>docx</code>, <code>xlsx</code> &mdash; praca z plikami biurowymi</li>
-      <li><code>agent-browser</code> &mdash; Claude otwiera i obs&#322;uguje przegl&#261;dark&#281;</li>
-      <li><code>beautiful-mermaid</code> &mdash; renderowanie diagram&#243;w</li>
-      <li><code>terraform-*</code> &mdash; styl, testy i refaktoryzacja Terraform</li>
-      <li><code>humanizer</code> &mdash; usuwanie stylu AI z tekstu</li>
+      <li><code>typescript-lsp</code> &mdash; TypeScript / JavaScript</li>
+      <li><code>pyright-lsp</code> &mdash; Python</li>
+      <li><code>jdtls-lsp</code> &mdash; Java</li>
     </ul>
   </div>
 
   <div class="section">
-    <h3>Serwery MCP (po&#322;&#261;czenia z serwisami)</h3>
-    <p>Claude &#322;&#261;czy si&#281; z zewn&#281;trznymi serwisami przez protok&#243;&#322; MCP:</p>
+    <h3>Skills (zewn&#281;trzne umiej&#281;tno&#347;ci)</h3>
+    <p>Instalowane z repozytori&#243;w GitHub przez <code>npx skills add</code>. Claude &#322;aduje je przez <code>Skill</code> tool:</p>
+    <table>
+      <thead><tr><th>Skill</th><th>Do czego</th></tr></thead>
+      <tbody>
+        <tr><td><code>pdf</code>, <code>docx</code>, <code>xlsx</code></td><td>Odczyt i edycja plik&#243;w biurowych (Anthropic)</td></tr>
+        <tr><td><code>agent-browser</code></td><td>Automatyzacja przegl&#261;darki &mdash; nawigacja, formularze, screenshots</td></tr>
+        <tr><td><code>beautiful-mermaid</code></td><td>Renderowanie diagram&#243;w Mermaid jako SVG/PNG</td></tr>
+        <tr><td><code>mermaid-diagrams</code></td><td>Generowanie sk&#322;adni Mermaid</td></tr>
+        <tr><td><code>terraform-style-guide</code></td><td>Styl HCL wg HashiCorp</td></tr>
+        <tr><td><code>terraform-test</code></td><td>Pisanie test&#243;w <code>.tftest.hcl</code></td></tr>
+        <tr><td><code>refactor-module</code></td><td>Refaktoryzacja modu&#322;&#243;w Terraform</td></tr>
+        <tr><td><code>web-design-guidelines</code></td><td>Audyt UI pod k&#261;tem WIG / dost&#281;pno&#347;ci</td></tr>
+        <tr><td><code>vercel-composition-patterns</code></td><td>Wzorce kompozycji React (Vercel)</td></tr>
+        <tr><td><code>vercel-react-best-practices</code></td><td>Best practices React/Next.js (Vercel)</td></tr>
+        <tr><td><code>humanizer</code></td><td>Usuwanie &#347;lad&#243;w AI z tekstu</td></tr>
+        <tr><td><code>find-skills</code></td><td>Wyszukiwanie skills do instalacji</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h3>Serwery MCP</h3>
+    <p>Claude &#322;&#261;czy si&#281; z zewn&#281;trznymi serwisami przez protok&#243;&#322; MCP. Wi&#281;kszo&#347;&#263; serwer&#243;w pojawia si&#281; <strong>automatycznie z pluginami</strong> &mdash; nie musisz nic konfigurowa&#263;.</p>
     <div class="flow">
       <div class="flow-step">Claude Code</div>
       <div class="flow-arrow">&rarr;</div>
@@ -653,13 +695,21 @@ loop run -i https://github.com/org/repo/issues/42</code></pre></div>
       <div class="flow-step">zewn&#281;trzny serwis</div>
     </div>
     <table style="margin-top:14px">
-      <thead><tr><th>Serwer</th><th>Do czego s&#322;u&#380;y</th></tr></thead>
+      <thead><tr><th>Serwer</th><th>&#377;r&#243;d&#322;o</th><th>Do czego s&#322;u&#380;y</th></tr></thead>
       <tbody>
-        <tr><td><code>context7</code></td><td>Aktualna dokumentacja bibliotek (lepsza ni&#380; czytanie HTML)</td></tr>
-        <tr><td><code>coolify</code></td><td>Zarz&#261;dzanie deployami na Coolify</td></tr>
-        <tr><td><code>aws-documentation</code></td><td>Dokumentacja AWS</td></tr>
+        <tr><td><code>context7</code></td><td>plugin <code>context7</code></td><td>Aktualna dokumentacja bibliotek i framework&#243;w</td></tr>
+        <tr><td><code>atlassian</code></td><td>plugin <code>atlassian</code></td><td>Jira issues, Confluence pages</td></tr>
+        <tr><td><code>aws-serverless-mcp</code></td><td>plugin <code>aws-serverless</code></td><td>Lambda, SAM, Event Source Mappings</td></tr>
+        <tr><td><code>awsknowledge</code></td><td>plugin <code>deploy-on-aws</code></td><td>Dokumentacja AWS, rekomendacje us&#322;ug</td></tr>
+        <tr><td><code>awsiac</code></td><td>plugin <code>deploy-on-aws</code></td><td>CloudFormation / CDK, walidacja, best practices</td></tr>
+        <tr><td><code>awspricing</code></td><td>plugin <code>deploy-on-aws</code></td><td>Cennik AWS, kalkulacja koszt&#243;w</td></tr>
+        <tr><td><code>Gmail</code>, <code>Google Calendar</code></td><td>claude.ai (OAuth)</td><td>Email i kalendarz (wymaga logowania)</td></tr>
       </tbody>
     </table>
+    <div class="card" style="margin-top:12px">
+      <div class="card-label info">Sprawdzenie</div>
+      <p>Uruchom <code>claude mcp list</code> aby zobaczy&#263; status wszystkich serwer&#243;w (po&#322;&#261;czone / wymagaj&#261; autentykacji).</p>
+    </div>
   </div>
 
   <div class="nav-buttons">
