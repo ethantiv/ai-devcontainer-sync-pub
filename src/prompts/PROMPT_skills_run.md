@@ -1,5 +1,5 @@
-- `superpowers:writing-plans`
-- `superpowers:subagent-driven-development`
+- `writing-plans`
+- `subagent-driven-development`
 - `agent-browser`
 - `auto-revise-claude-md`
 - `spec-compliance-review`

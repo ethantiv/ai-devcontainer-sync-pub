@@ -1,1 +1,1 @@
-- `superpowers:brainstorming`
+- `brainstorming`

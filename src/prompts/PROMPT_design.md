@@ -4,7 +4,7 @@
 
 0c. Read any existing design docs in @docs/ to avoid duplicating past work.
 
-1. **Brainstorm**: Invoke **Skill** tool: `Skill(skill="superpowers:brainstorming")` with the IDEA.md goal.
+1. **Brainstorm**: Invoke **Skill** tool: `Skill(skill="brainstorming")` with the IDEA.md goal.
 
 2. **Commit and push**: After the design doc is saved: `git add -A && git commit` then `git push`.
 
