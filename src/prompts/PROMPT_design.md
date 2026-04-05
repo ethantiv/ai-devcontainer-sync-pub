@@ -8,7 +8,7 @@
 
 1. **Brainstorm**: Invoke **Skill** tool: `Skill(skill="brainstorming")` with the IDEA.md goal.
 
-2. **Commit and push**: After the design doc is saved: `git add -A && git commit` then `git push`.
+2. **Commit and push**: After the design doc is saved: `git add -A && git commit` then `git push`. Commit message MUST be written in English.
 
 ---
 

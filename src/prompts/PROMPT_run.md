@@ -12,4 +12,4 @@
 
 4. **Update CLAUDE.md**: Invoke **Skill** tool: `Skill(skill="auto-revise-claude-md")`.
 
-5. **Commit and push**: `git add -A && git commit` then `git push`.
+5. **Commit and push**: `git add -A && git commit` then `git push`. Commit message MUST be written in English.
