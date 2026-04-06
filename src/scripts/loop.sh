@@ -119,6 +119,7 @@ get_tool_color() {
 # Format tool_use content block
 format_tool_use() {
     local rest="${1#TOOL_USE|}"
+    local is_subagent="$2"
     local name="${rest%%|*}"
     rest="${rest#*|}"
     local id="${rest%%|*}"
@@ -133,7 +134,9 @@ format_tool_use() {
         [[ "$tokens" -gt 0 ]] && ctx="${C_DIM} | Ctx: $((tokens * 100 / CONTEXT_WINDOW))%"
     fi
 
-    echo -e "\n${C_BOLD}${color}[${SCRIPT_NAME^}] Tool Use: ${name}${ctx}${C_RESET}"
+    local prefix="${SCRIPT_NAME^}"
+    [[ -n "$is_subagent" ]] && prefix="${prefix}-Subagent"
+    echo -e "\n${C_BOLD}${color}[${prefix}] Tool Use: ${name}${ctx}${C_RESET}"
     echo -e "${C_DIM}Tool ID: ${id}${C_RESET}"
     echo "$params" | jq -C . 2>/dev/null || echo -e "${C_YELLOW}${params}${C_RESET}"
 }
@@ -149,14 +152,12 @@ format_stream() {
 
         case "$msg_type" in
             assistant)
-                if [[ -n "$CTX_FILE" ]]; then
-                    local is_subagent
-                    is_subagent=$(echo "$line" | jq -r '.parent_tool_use_id // empty' 2>/dev/null)
-                    if [[ -z "$is_subagent" ]]; then
-                        local atokens
-                        atokens=$(echo "$line" | jq -r "if .message.usage then .message.usage | $JQ_SUM_TOKENS else empty end" 2>/dev/null)
-                        [[ -n "$atokens" ]] && echo "$atokens" > "$CTX_FILE"
-                    fi
+                local is_subagent
+                is_subagent=$(echo "$line" | jq -r '.parent_tool_use_id // empty' 2>/dev/null)
+                if [[ -n "$CTX_FILE" && -z "$is_subagent" ]]; then
+                    local atokens
+                    atokens=$(echo "$line" | jq -r "if .message.usage then .message.usage | $JQ_SUM_TOKENS else empty end" 2>/dev/null)
+                    [[ -n "$atokens" ]] && echo "$atokens" > "$CTX_FILE"
                 fi
                 echo "$line" | jq -r '
                     .message.content[]? |
@@ -166,7 +167,7 @@ format_stream() {
                 ' 2>/dev/null | while IFS= read -r content; do
                     case "$content" in
                         TEXT\|*)     echo -e "\n${content#TEXT|}" ;;
-                        TOOL_USE\|*) format_tool_use "$content" ;;
+                        TOOL_USE\|*) format_tool_use "$content" "$is_subagent" ;;
                     esac
                 done
                 ;;
