@@ -34,14 +34,18 @@ IDEA=""
 NEW_CYCLE=false
 CONTEXT_WINDOW=200000
 CTX_FILE=""
+PLAN_ONLY=false
+BUILD_ONLY=false
 
 # Help function
 usage() {
-    echo "Usage: $0 [-d] [-a] [-n] [-i idea]"
+    echo "Usage: $0 [-d] [-a] [-n] [-P] [-B] [-i idea]"
     echo ""
     echo "Options:"
     echo "  -d              Design mode (interactive brainstorming)"
     echo "  -a              Autonomous mode (default: interactive)"
+    echo "  -P              Plan phase only"
+    echo "  -B              Build phase only"
     echo "  -n              Archive current plan and start fresh"
     echo "  -i text         Seed idea written to docs/IDEA.md"
     echo "  -h              Show this help"
@@ -273,11 +277,13 @@ done
 set -- "${ARGS[@]}"
 
 # Parse arguments
-while getopts "danhi:" opt; do
+while getopts "danhPBi:" opt; do
     case $opt in
         d) SCRIPT_NAME="design" ;;
         a) AUTONOMOUS=true ;;
         n) NEW_CYCLE=true ;;
+        P) PLAN_ONLY=true ;;
+        B) BUILD_ONLY=true ;;
         i) IDEA=$OPTARG ;;
         h) usage ;;
         *) usage ;;
@@ -289,13 +295,6 @@ if [[ "$SCRIPT_NAME" == "design" ]]; then
     AUTONOMOUS=false
 fi
 
-# Select prompt file — use project-local symlink if available, else built-in
-if [[ -f "loop/PROMPT_${SCRIPT_NAME}.md" ]]; then
-    PROMPT_FILE="loop/PROMPT_${SCRIPT_NAME}.md"
-else
-    PROMPT_FILE="$LOOP_ROOT/prompts/PROMPT_${SCRIPT_NAME}.md"
-fi
-
 # Archive current plan if --new flag set
 if [[ "$NEW_CYCLE" == true ]]; then
     archive_plan
@@ -305,26 +304,62 @@ fi
 write_idea
 
 # Print configuration
-echo "Mode: $SCRIPT_NAME"
 [[ "$AUTONOMOUS" == true ]] && echo "Autonomous mode"
 [[ -n "$IDEA" ]] && echo "Idea: $IDEA"
 
 if [[ "$AUTONOMOUS" == true ]]; then
     mkdir -p "$LOG_DIR"
-    LOG_FILE="$LOG_DIR/${SCRIPT_NAME}_$(date +%Y%m%d_%H%M%S).jsonl"
-    CTX_FILE="$LOG_DIR/.ctx_tokens"
-    echo "0" > "$CTX_FILE"
-    echo "Log file: $LOG_FILE"
 
-    claude -p --verbose --output-format stream-json --disallowedTools "AskUserQuestion" < "$PROMPT_FILE" \
-        | tee -a "$LOG_FILE" | format_stream
+    # Determine phases
+    if [[ "$PLAN_ONLY" == true && "$BUILD_ONLY" != true ]]; then
+        PHASES=("plan")
+    elif [[ "$BUILD_ONLY" == true && "$PLAN_ONLY" != true ]]; then
+        PHASES=("build")
+    else
+        PHASES=("plan" "build")
+    fi
 
-    ensure_committed
+    for phase in "${PHASES[@]}"; do
+        SCRIPT_NAME="$phase"
+
+        # Resolve prompt file for this phase
+        if [[ -f "loop/PROMPT_${phase}.md" ]]; then
+            PROMPT_FILE="loop/PROMPT_${phase}.md"
+        else
+            PROMPT_FILE="$LOOP_ROOT/prompts/PROMPT_${phase}.md"
+        fi
+
+        LOG_FILE="$LOG_DIR/${phase}_$(date +%Y%m%d_%H%M%S).jsonl"
+        CTX_FILE="$LOG_DIR/.ctx_tokens"
+        echo "0" > "$CTX_FILE"
+
+        echo -e "\n[LOOP] Phase: $phase"
+        echo "Prompt: $PROMPT_FILE"
+        echo "Log file: $LOG_FILE"
+
+        claude -p --verbose --output-format stream-json --disallowedTools "AskUserQuestion" < "$PROMPT_FILE" \
+            | tee -a "$LOG_FILE" | format_stream
+
+        ensure_committed
+        echo -e "\n[LOOP] Phase $phase completed"
+    done
+
     EXIT_STATUS="completed"
     echo -e "\nCompleted"
-    echo "Logs saved to: $LOG_FILE"
 else
-    # Design mode: single interactive session
+    # Interactive mode
+    if [[ "$BUILD_ONLY" == true ]]; then
+        SCRIPT_NAME="build"
+    elif [[ "$PLAN_ONLY" == true ]]; then
+        SCRIPT_NAME="plan"
+    fi
+
+    if [[ -f "loop/PROMPT_${SCRIPT_NAME}.md" ]]; then
+        PROMPT_FILE="loop/PROMPT_${SCRIPT_NAME}.md"
+    else
+        PROMPT_FILE="$LOOP_ROOT/prompts/PROMPT_${SCRIPT_NAME}.md"
+    fi
+
     claude < "$PROMPT_FILE"
     ensure_committed
 fi

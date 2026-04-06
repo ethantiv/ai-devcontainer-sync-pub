@@ -9,7 +9,8 @@ const PACKAGE_ROOT = path.resolve(__dirname, '..');
 const CORE_FILES = [
   { src: 'scripts/loop.sh', dest: 'loop/loop.sh' },
   { src: 'prompts/PROMPT_design.md', dest: 'loop/PROMPT_design.md' },
-  { src: 'prompts/PROMPT_run.md', dest: 'loop/PROMPT_run.md' },
+  { src: 'prompts/PROMPT_plan.md', dest: 'loop/PROMPT_plan.md' },
+  { src: 'prompts/PROMPT_build.md', dest: 'loop/PROMPT_build.md' },
   { src: 'scripts/kill-loop.sh', dest: 'loop/kill-loop.sh' },
 ];
 

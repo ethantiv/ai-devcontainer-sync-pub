@@ -424,7 +424,9 @@ loop init --devops            # + skills do Terraform</code></pre></div>
       <thead><tr><th>Co chcesz zrobi&#263;</th><th>Komenda</th></tr></thead>
       <tbody>
         <tr><td>Przemy&#347;le&#263; rozwi&#261;zanie z Claude (interaktywnie)</td><td><code>loop design</code></td></tr>
-        <tr><td>Autonomiczne planowanie + budowanie</td><td><code>loop run</code></td></tr>
+        <tr><td>Autonomiczne planowanie + budowanie (obie fazy)</td><td><code>loop run</code></td></tr>
+        <tr><td>Tylko faza planowania</td><td><code>loop run --plan</code></td></tr>
+        <tr><td>Tylko faza budowania (u&#380;ywa istniej&#261;cego planu)</td><td><code>loop run --build</code></td></tr>
         <tr><td>Zbi&#263; wszystkie procesy loop</td><td><code>loop kill</code></td></tr>
         <tr><td>Od&#347;wie&#380;y&#263; symlinki po aktualizacji</td><td><code>loop update</code></td></tr>
       </tbody>
@@ -443,6 +445,8 @@ loop run -i https://github.com/org/repo/issues/42</code></pre></div>
       <p>
         <code>-i / --idea</code> &mdash; przekazuje pomys&#322; (tekst, @plik, URL)<br>
         <code>-n / --new</code> &mdash; archiwizuje obecny plan i zaczyna od nowa<br>
+        <code>--plan</code> &mdash; uruchamia tylko faz&#281; planowania<br>
+        <code>--build</code> &mdash; uruchamia tylko faz&#281; budowania (wymaga istniej&#261;cego planu)<br>
         <code>--interactive</code> &mdash; tryb r&#281;czny (Claude czeka na Tw&#243;j input)<br>
         <code>--tmux</code> &mdash; uruchom w oddzielonej sesji tmux
       </p>
@@ -474,7 +478,7 @@ loop run -i https://github.com/org/repo/issues/42</code></pre></div>
       <div class="phase-card">
         <div class="phase-num">G&#322;&#243;wna</div>
         <div class="phase-name">Run</div>
-        <div class="phase-desc">Jedno wywo&#322;anie: plan &rarr; build &rarr; commit</div>
+        <div class="phase-desc">Dwie pod-fazy: <strong>plan</strong> &rarr; <strong>build</strong> &rarr; commit. Mo&#380;esz uruchomi&#263; je osobno flagami <code>--plan</code> / <code>--build</code>.</div>
       </div>
     </div>
     <div class="card">
@@ -510,7 +514,7 @@ loop run -i https://github.com/org/repo/issues/42</code></pre></div>
     </ol>
     <div class="card">
       <div class="card-label note">Uwaga</div>
-      <p>Run jest domy&#347;lnie autonomiczny &mdash; Claude pracuje bez pytania. U&#380;yj <code>--interactive</code>, &#380;eby m&#243;c ingerowa&#263; w proces. Po zako&#324;czeniu, <code>loop.sh</code> automatycznie commituje niescommitowane zmiany.</p>
+      <p>Run jest domy&#347;lnie autonomiczny &mdash; Claude pracuje bez pytania. U&#380;yj <code>--plan</code>, &#380;eby zatrzyma&#263; si&#281; po planowaniu i przejrze&#263; plan przed budowaniem, a nast&#281;pnie <code>--build</code>, &#380;eby kontynuowa&#263;. U&#380;yj <code>--interactive</code>, &#380;eby m&#243;c ingerowa&#263; w proces. Po zako&#324;czeniu, <code>loop.sh</code> automatycznie commituje niescommitowane zmiany.</p>
     </div>
   </div>
 
@@ -897,6 +901,8 @@ loop init --devops                    # z skills do Terraform</code></pre></div>
     <h3>Codzienna praca</h3>
     <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
     <pre><code>loop run -i "Dodaj autoryzacj&#281; JWT"    # pomys&#322; &rarr; plan &rarr; build
+loop run --plan -i "Dodaj JWT"         # tylko faza planowania
+loop run --build                       # tylko faza budowania (u&#380;ywa istniej&#261;cego planu)
 loop design                           # interaktywny brainstorming
 loop design -i "Pomys&#322; na API"        # brainstorming z pomys&#322;em
 loop run --interactive                 # tryb r&#281;czny

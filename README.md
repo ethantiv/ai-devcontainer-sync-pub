@@ -80,7 +80,9 @@ loop init                          # Set up loop in your project
 loop init --web                    # Init with web-specific skills
 
 loop design                        # Interactive brainstorming / design session
-loop run                           # Autonomous plan + build in single session
+loop run                           # Autonomous plan + build (two phases)
+loop run --plan                    # Plan phase only
+loop run --build                   # Build phase only
 
 loop run -i "Add authentication"   # Seed an idea before running
 loop run --interactive             # Manual Claude session

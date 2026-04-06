@@ -54,6 +54,26 @@ describe('buildArgs', () => {
     expect(args).not.toContain('--tmux');
     expect(args).toEqual(['-a']);
   });
+
+  test('plan flag adds -P', () => {
+    const args = buildArgs({ plan: true }, 'run');
+    expect(args).toEqual(['-a', '-P']);
+  });
+
+  test('build flag adds -B', () => {
+    const args = buildArgs({ build: true }, 'run');
+    expect(args).toEqual(['-a', '-B']);
+  });
+
+  test('plan and build flags add both -P -B', () => {
+    const args = buildArgs({ plan: true, build: true }, 'run');
+    expect(args).toEqual(['-a', '-P', '-B']);
+  });
+
+  test('plan flag with idea', () => {
+    const args = buildArgs({ plan: true, idea: 'Add auth' }, 'run');
+    expect(args).toEqual(['-a', '-P', '-i', 'Add auth']);
+  });
 });
 
 describe('buildShellCommand', () => {

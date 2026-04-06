@@ -32,9 +32,11 @@ program
 
 program
   .command('run')
-  .description('Autonomous plan + build in a single session')
+  .description('Autonomous plan + build (two phases)')
   .option('-i, --idea <text>', 'Seed idea written to docs/IDEA.md before start')
   .option('-n, --new', 'Archive current plan and start fresh')
+  .option('--plan', 'Run plan phase only')
+  .option('--build', 'Run build phase only')
   .option('--interactive', 'Run interactively instead of autonomous')
   .option('--tmux', 'Run in a detached tmux session')
   .action((opts) => runRun(opts));
@@ -63,7 +65,9 @@ Examples:
   $ loop init               Set up loop in current project
   $ loop init --web         Init with web-specific skills
   $ loop design             Interactive design/brainstorming session
-  $ loop run                Autonomous plan + build
+  $ loop run                Autonomous plan + build (two phases)
+  $ loop run --plan         Plan phase only
+  $ loop run --build        Build phase only (uses existing plan)
   $ loop run -i "Add auth"  Seed idea, then plan + build
   $ loop run --tmux         Run in a detached tmux session
   $ loop run --new          Archive current plan, start fresh

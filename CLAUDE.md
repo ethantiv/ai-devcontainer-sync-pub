@@ -58,7 +58,9 @@ Source at `src/`. Docker: `COPY src /opt/loop` + `npm install`, symlinked as `/u
 loop init / update      # Initialize/refresh symlinks in project
 loop init --web         # Init with domain-specific skills (web/devops)
 loop design             # Interactive brainstorming / design session
-loop run [-i <idea>]    # Autonomous plan + build in single session
+loop run [-i <idea>]    # Autonomous plan + build (two phases)
+loop run --plan         # Plan phase only
+loop run --build        # Build phase only (uses existing plan)
 loop kill               # Kill all loop processes
 loop update [--web] [--devops]  # Force-refresh symlinks and templates
 ```
@@ -67,7 +69,7 @@ loop update [--web] [--devops]  # Force-refresh symlinks and templates
 
 **Design flow** (`PROMPT_design.md`): loads skills from `PROMPT_skills_design.md` (brainstorming) → reads `IDEA.md` + existing design docs → interactive conversation → saves design doc to `docs/` → commits. Always interactive, never plans or implements.
 
-**Run flow** (`PROMPT_run.md`): loads skills from `PROMPT_skills_run.md` (writing-plans, subagent-driven-development, agent-browser, auto-revise-claude-md) → reads `IDEA.md` + design docs → creates plan → builds with subagents → updates CLAUDE.md → commits. Single Claude invocation, no loop/iterations.
+**Run flow** (`PROMPT_plan.md` + `PROMPT_build.md`): Two sequential Claude sessions. Plan phase: loads skills from `PROMPT_skills_run.md` → reads `IDEA.md` + design docs → creates plan → spec compliance review → commits. Build phase: loads same skills → reads plan → builds with subagents → updates CLAUDE.md → commits. Flags: `--plan` (plan only), `--build` (build only), default runs both.
 
 **Structure**: `src/scripts/` (shell), `src/prompts/`, `src/templates/`, `src/bin/` + `src/lib/` (Node.js CLI).
 

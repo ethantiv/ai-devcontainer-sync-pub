@@ -31,7 +31,8 @@ function useTempProject() {
 const EXPECTED_SYMLINKS = [
   'loop/loop.sh',
   'loop/PROMPT_design.md',
-  'loop/PROMPT_run.md',
+  'loop/PROMPT_plan.md',
+  'loop/PROMPT_build.md',
   'loop/kill-loop.sh',
 ];
 
