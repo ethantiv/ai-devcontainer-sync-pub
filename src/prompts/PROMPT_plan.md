@@ -4,7 +4,7 @@
 
 1. **Plan**: Invoke **Skill** tool: `Skill(skill="writing-plans")`. Read any design docs in @docs/ for architecture context.
 
-2. **Verify spec compliance**: Invoke **Skill** tool: `Skill(skill="spec-compliance-review")`. Pass the design doc from `docs/specs` as the spec argument and the plan file just created in `docs/superpowers/plans/` as the target argument. Review the generated gap report — if any **Critical** or **Important** severity gaps are found, update the plan to address them before proceeding. Minor gaps can be ignored unless obviously relevant.
+2. **Verify spec compliance**: Invoke **Skill** tool: `Skill(skill="spec-compliance-review")`. Pass the design doc from `docs/superpowers/specs/` as the spec argument and the plan file just created in `docs/superpowers/plans/` as the target argument. Review the generated gap report — if any **Critical** or **Important** severity gaps are found, update the plan to address them before proceeding. Minor gaps can be ignored unless obviously relevant.
 
 3. **Commit and push**: `git add -A && git commit` then `git push`. Commit message MUST be written in English.
 
