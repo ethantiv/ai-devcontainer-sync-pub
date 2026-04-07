@@ -5,8 +5,11 @@ const PRESETS = {
              'vercel-composition-patterns', 'vercel-react-best-practices'],
   },
   devops: {
-    description: 'Infrastructure & DevOps (Terraform, cloud)',
-    skills: ['terraform-style-guide', 'terraform-test', 'refactor-module'],
+    description: 'Infrastructure & DevOps (Terraform, AWS, cloud)',
+    skills: ['terraform-style-guide', 'terraform-test', 'refactor-module',
+             'deploy-on-aws:deploy', 'aws-serverless:aws-lambda',
+             'aws-serverless:aws-serverless-deployment',
+             'aws-serverless:api-gateway'],
   },
 };
 
