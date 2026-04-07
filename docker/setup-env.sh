@@ -62,6 +62,7 @@ main() {
     setup_github_token
     apply_claude_settings
     propagate_env_from_config
+    configure_agent_browser
     sync_plugins
     sync_skills
     install_all_plugins_and_skills

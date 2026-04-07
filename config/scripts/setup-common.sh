@@ -153,6 +153,24 @@ propagate_env_from_config() {
     ok "Environment variables propagated to $ENV_EXPORT_FILE"
 }
 
+# Detect Playwright Chromium and set AGENT_BROWSER_EXECUTABLE_PATH
+# Skips if already set (e.g. Docker sets it to /usr/bin/chromium in Dockerfile)
+configure_agent_browser() {
+    [[ -n "${AGENT_BROWSER_EXECUTABLE_PATH:-}" ]] && return 0
+
+    local pw_path="${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"
+    local chrome_bin
+    chrome_bin=$(find "$pw_path" -path "*/chrome-linux/chrome" -type f 2>/dev/null | head -1)
+
+    if [[ -n "$chrome_bin" ]]; then
+        export AGENT_BROWSER_EXECUTABLE_PATH="$chrome_bin"
+        if ! grep -q 'AGENT_BROWSER_EXECUTABLE_PATH' "$ENV_EXPORT_FILE" 2>/dev/null; then
+            printf 'export AGENT_BROWSER_EXECUTABLE_PATH=%q\n' "$chrome_bin" >> "$ENV_EXPORT_FILE"
+        fi
+        ok "agent-browser → $chrome_bin"
+    fi
+}
+
 # Copy CLAUDE.md.memory to ~/.claude/CLAUDE.md
 # Args: source_dir — directory containing config/CLAUDE.md.memory
 copy_claude_memory() {

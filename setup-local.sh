@@ -188,6 +188,7 @@ setup_claude_configuration() {
 
     apply_claude_settings
     propagate_env_from_config
+    configure_agent_browser
     copy_claude_memory "$SCRIPT_DIR"
     sync_claude_scripts "$SCRIPT_DIR"
 }

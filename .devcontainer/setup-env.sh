@@ -342,6 +342,7 @@ main() {
     load_env_file
 
     propagate_env_from_config
+    configure_agent_browser
     setup_git_identity
     setup_ssh_authentication
     setup_github_token
