@@ -106,4 +106,7 @@ environments:
           COOLIFY_ACCESS_TOKEN: "${COOLIFY_ACCESS_TOKEN}"
 
   local:
+    claude:
+      sandbox:
+        enabled: true
     mcp_servers: []

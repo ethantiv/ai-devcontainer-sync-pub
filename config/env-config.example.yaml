@@ -43,7 +43,9 @@ defaults:
       allow: [] # Tool patterns always allowed (e.g. "Bash(*)")
       deny: [] # Tool patterns always denied
       ask: [] # Tool patterns that require confirmation
-      defaultMode: "bypassPermissions" # "bypassPermissions" | "default"
+      defaultMode: "bypassPermissions" # "default" | "acceptEdits" | "plan" | "auto" | "dontAsk" | "bypassPermissions"
+    sandbox:
+      enabled: false # Enable OS-level sandboxing (macOS: Seatbelt, Linux: bubblewrap)
 
   # -------------------------------------------------------------------------
   # Plugins — installed from the official marketplace or external sources

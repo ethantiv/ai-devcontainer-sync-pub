@@ -93,13 +93,13 @@ apply_claude_settings() {
         permissions: .permissions,
         language: .language,
         statusLine: $sl
-    }')
+    } + if .sandbox then {sandbox: .sandbox} else {} end')
 
     ensure_directory "$CLAUDE_DIR"
 
     if [[ -f "$CLAUDE_SETTINGS_FILE" ]]; then
         local merged
-        merged=$(jq -s '.[0] * .[1]' <(echo "$default_settings") "$CLAUDE_SETTINGS_FILE" 2>/dev/null)
+        merged=$(jq -s '.[1] * .[0]' <(echo "$default_settings") "$CLAUDE_SETTINGS_FILE" 2>/dev/null)
         [[ -n "$merged" ]] && echo "$merged" > "$CLAUDE_SETTINGS_FILE"
     else
         echo "$default_settings" | jq '.' > "$CLAUDE_SETTINGS_FILE"
