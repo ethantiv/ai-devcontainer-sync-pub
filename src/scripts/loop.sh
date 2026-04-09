@@ -31,22 +31,20 @@ LOG_DIR="loop/logs"
 SCRIPT_NAME="run"
 AUTONOMOUS=false
 IDEA=""
-NEW_CYCLE=false
-CONTEXT_WINDOW=200000
+CONTEXT_WINDOW=1000000
 CTX_FILE=""
 PLAN_ONLY=false
 BUILD_ONLY=false
 
 # Help function
 usage() {
-    echo "Usage: $0 [-d] [-a] [-n] [-P] [-B] [-i idea]"
+    echo "Usage: $0 [-d] [-a] [-P] [-B] [-i idea]"
     echo ""
     echo "Options:"
     echo "  -d              Design mode (interactive brainstorming)"
     echo "  -a              Autonomous mode (default: interactive)"
     echo "  -P              Plan phase only"
     echo "  -B              Build phase only"
-    echo "  -n              Archive current plan and start fresh"
     echo "  -i text         Seed idea written to docs/IDEA.md"
     echo "  -h              Show this help"
     exit 0
@@ -65,17 +63,17 @@ find_current_plan() {
 archive_plan() {
     local plan
     plan=$(find_current_plan)
-    [[ -z "$plan" ]] && { echo "[NEW] No plan to archive."; return 0; }
+    [[ -z "$plan" ]] && return 0
 
     local archive_dir="docs/superpowers/archive"
     mkdir -p "$archive_dir"
     mv "$plan" "$archive_dir/"
-    echo "[NEW] Archived plan: $(basename "$plan")"
+    echo "[ARCHIVE] Archived plan: $(basename "$plan")"
 
     for doc in docs/superpowers/specs/*.md; do
         [[ -f "$doc" ]] || continue
         mv "$doc" "$archive_dir/"
-        echo "[NEW] Archived spec: $(basename "$doc")"
+        echo "[ARCHIVE] Archived spec: $(basename "$doc")"
     done
 }
 
@@ -277,11 +275,10 @@ done
 set -- "${ARGS[@]}"
 
 # Parse arguments
-while getopts "danhPBi:" opt; do
+while getopts "dahPBi:" opt; do
     case $opt in
         d) SCRIPT_NAME="design" ;;
         a) AUTONOMOUS=true ;;
-        n) NEW_CYCLE=true ;;
         P) PLAN_ONLY=true ;;
         B) BUILD_ONLY=true ;;
         i) IDEA=$OPTARG ;;
@@ -295,8 +292,8 @@ if [[ "$SCRIPT_NAME" == "design" ]]; then
     AUTONOMOUS=false
 fi
 
-# Archive current plan if --new flag set
-if [[ "$NEW_CYCLE" == true ]]; then
+# Archive current plan (skip for build-only — it needs the existing plan)
+if [[ "$BUILD_ONLY" != true ]]; then
     archive_plan
 fi
 

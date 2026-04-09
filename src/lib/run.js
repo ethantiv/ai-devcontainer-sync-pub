@@ -38,7 +38,6 @@ function buildArgs(opts, mode) {
   if (opts.plan) args.push('-P');
   if (opts.build) args.push('-B');
   if (opts.idea) args.push('-i', opts.idea);
-  if (opts.new) args.push('-n');
 
   return args;
 }

@@ -36,17 +36,9 @@ describe('buildArgs', () => {
     expect(args).toEqual(['-a', '-i', 'Add auth']);
   });
 
-  test('new flag adds -n', () => {
-    const args = buildArgs({ new: true }, 'run');
-    expect(args).toEqual(['-a', '-n']);
-  });
-
   test('all flags combined', () => {
-    const args = buildArgs({
-      idea: 'Fix bug',
-      new: true,
-    }, 'run');
-    expect(args).toEqual(['-a', '-i', 'Fix bug', '-n']);
+    const args = buildArgs({ idea: 'Fix bug', plan: true }, 'run');
+    expect(args).toEqual(['-a', '-P', '-i', 'Fix bug']);
   });
 
   test('tmux flag is not included in shell args', () => {
