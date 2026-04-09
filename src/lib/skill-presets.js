@@ -2,14 +2,11 @@ const PRESETS = {
   web: {
     description: 'Web frontend (React, Next.js, UI design)',
     skills: ['frontend-design:frontend-design', 'web-design-guidelines',
-             'vercel-composition-patterns', 'vercel-react-best-practices'],
+      'vercel-composition-patterns', 'vercel-react-best-practices'],
   },
   devops: {
     description: 'Infrastructure & DevOps (Terraform, AWS, cloud)',
-    skills: ['terraform-style-guide', 'terraform-test', 'refactor-module',
-             'deploy-on-aws:deploy', 'aws-serverless:aws-lambda',
-             'aws-serverless:aws-serverless-deployment',
-             'aws-serverless:api-gateway'],
+    skills: ['terraform-style-guide', 'terraform-test', 'refactor-module'],
   },
 };
 

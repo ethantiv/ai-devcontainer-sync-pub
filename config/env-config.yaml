@@ -34,13 +34,11 @@ defaults:
     marketplace:
       - agent-sdk-dev
       - atlassian
-      - aws-serverless
       - claude-code-setup
       - claude-md-management
       - code-simplifier
       - commit-commands
       - context7
-      - deploy-on-aws
       - feature-dev
       - frontend-design
       - playground
