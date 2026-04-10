@@ -20,10 +20,10 @@ Open [`ai-devcontainer-course.html`](ai-devcontainer-course.html) in your browse
 
 - **Claude Code** and **Gemini CLI** — pre-installed and configured
 - **dev-loop** — autonomous plan + build powered by Claude CLI (`loop` command)
-- **MCP Servers** — Context7, Coolify, AWS docs, Terraform
-- **Slash Commands** — `/roadmap`, `/git-worktree:create`, `/git-worktree:delete`, `/dependency-update`, `/read-arxiv-paper`
-- **Skills & Plugins** — 18 official + 4 local + 13 external skills, auto-installed from `config/env-config.yaml`
-- **LSP Support** — TypeScript, Python (Pyright), Rust (rust-analyzer), Java (jdtls)
+- **MCP Servers** — Context7, Coolify
+- **Local Plugins** — `roadmap`, `git-worktree`, `dependency-update`, `read-arxiv-paper`, `spec-compliance-review`
+- **Skills & Plugins** — official marketplace plugins + external skills, auto-installed from `config/env-config.yaml`
+- **LSP Support** — TypeScript, Python (Pyright), Java (jdtls)
 
 ## Getting Started
 
@@ -86,7 +86,7 @@ loop run --build                   # Build phase only
 
 loop run -i "Add authentication"   # Seed an idea before running
 loop run --interactive             # Manual Claude session
-loop run --new                     # Archive current plan, start fresh
+loop run --tmux                    # Run in a detached tmux session
 
 loop kill                          # Kill all loop processes
 loop update                        # Refresh symlinks after package update
@@ -107,9 +107,7 @@ loop run -i https://example.com/spec.html                    # Any URL (via curl
 
 The resolved content is written to `docs/IDEA.md`, which Claude reads as context during planning.
 
-### New Cycles
-
-When a plan is complete and you want to start a new one, use `--new` to archive the finished plan to `docs/plans/archive/` before running.
+Completed plans are archived automatically to `docs/superpowers/archive/` at the start of each new `loop run`, so you can just re-run the command to start a new cycle.
 
 ## Environment Variables
 
