@@ -357,6 +357,7 @@ main() {
     sync_skills
     install_all_plugins_and_skills
     install_local_marketplace_plugins
+    sync_marketplaces
     sync_mcp_servers
 
     ok "Setup complete!"
