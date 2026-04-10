@@ -587,3 +587,41 @@ sync_mcp_servers() {
 
     echo "  📊 MCP: ${#mcp_expected[@]} configured, $removed removed"
 }
+
+# =============================================================================
+# MARKETPLACE SYNC
+# =============================================================================
+
+# Sync marketplaces: remove any installed marketplaces not in the expected set.
+# Expected = OFFICIAL_MARKETPLACE_NAME + LOCAL_MARKETPLACE_NAME.
+# Source of truth is ~/.claude/plugins/known_marketplaces.json (managed by
+# claude plugin marketplace add/remove), which lists every registered
+# marketplace including the official one.
+sync_marketplaces() {
+    echo "🔄 Synchronizing marketplaces..."
+    has_command claude || { warn "Claude CLI not found"; return 0; }
+    has_command jq || { warn "jq not found"; return 0; }
+
+    local known_file="$CLAUDE_DIR/plugins/known_marketplaces.json"
+    [[ -f "$known_file" ]] || { ok "No marketplaces registered — nothing to sync"; return 0; }
+
+    declare -A expected_marketplaces=(
+        ["$OFFICIAL_MARKETPLACE_NAME"]=1
+        ["$LOCAL_MARKETPLACE_NAME"]=1
+    )
+
+    local removed=0 failed=0
+    while IFS= read -r name; do
+        [[ -z "$name" ]] && continue
+        [[ -n "${expected_marketplaces[$name]:-}" ]] && continue
+        if claude plugin marketplace remove "$name" < /dev/null 2>/dev/null; then
+            echo "  🗑️  Removed marketplace: $name"
+            removed=$((removed + 1))
+        else
+            warn "Failed to remove marketplace: $name"
+            failed=$((failed + 1))
+        fi
+    done < <(jq -r 'keys[]' "$known_file" 2>/dev/null)
+
+    ((removed > 0 || failed > 0)) && echo "  📊 Marketplaces sync: $removed removed, $failed failed" || ok "All marketplaces in sync"
+}

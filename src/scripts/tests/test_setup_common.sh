@@ -213,6 +213,14 @@ else
     fail_test "function 'sync_skills' is defined" "not found"
 fi
 
+# Marketplace sync
+TESTS_RUN=$((TESTS_RUN + 1))
+if declare -f sync_marketplaces > /dev/null 2>&1; then
+    pass "function 'sync_marketplaces' is defined"
+else
+    fail_test "function 'sync_marketplaces' is defined" "not found"
+fi
+
 # MCP functions
 for fn in add_mcp_server parse_mcp_servers sync_mcp_servers; do
     TESTS_RUN=$((TESTS_RUN + 1))
