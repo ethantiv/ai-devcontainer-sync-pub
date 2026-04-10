@@ -68,6 +68,8 @@ defaults:
       name: humanizer
     - url: "https://github.com/softaworks/agent-toolkit"
       name: mermaid-diagrams
+    - url: "https://github.com/tanweai/pua"
+      name: pua-en
     - url: "https://github.com/vercel-labs/agent-browser"
       name: agent-browser
     - url: "https://github.com/vercel-labs/agent-skills"
