@@ -67,19 +67,25 @@ defaults:
       # - rust-analyzer-lsp
 
   # -------------------------------------------------------------------------
-  # Skills — installed via `npx skills add`
+  # Skills — installed via `npx skills add` (one call per repo)
   #
-  # Each entry has:
-  #   url:  GitHub repo URL
-  #   name: skill name within that repo
+  # Each entry has a `url` and one of:
+  #   name: x            — install a single skill from the repo
+  #   names: [a, b, c]   — install listed skills (single `skills add` call)
+  #   (neither)          — install ALL skills from the repo (`--skill '*'`)
   #
-  # Merge: appended and deduplicated by `name`
+  # For the wildcard form, resolved skill names are tracked in
+  # ~/.claude/skills/.sources.json so removing the URL from this list
+  # cleans those skills up on the next sync.
+  #
+  # Merge: appended and deduplicated by `name` (or `url` for bundles).
   # -------------------------------------------------------------------------
   skills:
-    - url: "https://github.com/anthropics/skills" # Example — official Anthropic skills
+    - url: "https://github.com/anthropics/skills" # single skill
       name: pdf
-    # - url: "https://github.com/anthropics/skills"
-    #   name: docx
+    # - url: "https://github.com/anthropics/skills" # bundle: multiple skills, one call
+    #   names: [docx, pdf, xlsx]
+    # - url: "https://github.com/pbakaus/impeccable" # wildcard: install everything from repo
     # - url: "https://github.com/your-org/your-skills"
     #   name: your-skill-name
 

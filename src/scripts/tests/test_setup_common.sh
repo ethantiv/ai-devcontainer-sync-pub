@@ -176,7 +176,7 @@ for fn in install_plugin update_plugin_counters ensure_marketplace uninstall_plu
 done
 
 # Skill functions
-for fn in install_skill install_github_skill; do
+for fn in install_skill_bundle install_github_skill; do
     TESTS_RUN=$((TESTS_RUN + 1))
     if declare -f "$fn" > /dev/null 2>&1; then
         pass "function '$fn' is defined"

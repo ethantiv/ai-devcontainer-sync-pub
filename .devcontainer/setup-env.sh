@@ -354,8 +354,8 @@ main() {
 
     setup_claude_configuration
     sync_plugins
-    sync_skills
     install_all_plugins_and_skills
+    sync_skills
     install_local_marketplace_plugins
     sync_marketplaces
     sync_mcp_servers

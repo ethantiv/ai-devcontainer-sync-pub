@@ -269,22 +269,70 @@ uninstall_plugin() {
 # SKILL INSTALLATION
 # =============================================================================
 
-# Install skill using skills CLI (npx skills add)
-# Args: skill_name, url (e.g., https://github.com/vercel-labs/agent-skills)
+# Install one or more skills from a single repo in a single `skills add` call.
+# Args: url, name1 [name2 ...]  (use single "*" to install all skills from repo)
+# For wildcard mode, records resolved skill names in $CLAUDE_DIR/skills/.sources.json
+# so sync_skills can clean up when the URL is removed from YAML later.
 # Note: < /dev/null prevents npx from consuming stdin (breaks while-read loops)
-install_skill() {
-    local name="$1"
-    local url="$2"
+install_skill_bundle() {
+    local url="$1"; shift
+    local names=("$@")
+    [[ ${#names[@]} -gt 0 ]] || return 1
 
     has_command npx || return 1
-    ensure_directory "$CLAUDE_DIR/skills"
+    local skills_dir="$CLAUDE_DIR/skills"
+    ensure_directory "$skills_dir"
 
-    if npx -y skills add "$url" --skill "$name" --agent claude-code -g -y < /dev/null >/dev/null 2>&1; then
-        ok "Installed skill: $name"
-        return 0
+    local args=()
+    local wildcard=0
+    if [[ ${#names[@]} -eq 1 && "${names[0]}" == "*" ]]; then
+        wildcard=1
+        # Use --skill '*' instead of --all: --all forces --agent '*' which
+        # installs into every supported agent (cursor, augment, bob, etc).
+        args=(--skill '*' --agent claude-code -g -y)
+    else
+        args=(--skill "${names[@]}" --agent claude-code -g -y)
     fi
-    warn "Failed to install skill: $name"
-    return 1
+
+    local before=""
+    (( wildcard )) && before=$(ls -1 "$skills_dir" 2>/dev/null | sort)
+
+    if ! npx -y skills add "$url" "${args[@]}" < /dev/null >/dev/null 2>&1; then
+        warn "Failed to install skills from $url: ${names[*]}"
+        return 1
+    fi
+
+    if (( wildcard )); then
+        local after resolved
+        after=$(ls -1 "$skills_dir" 2>/dev/null | sort)
+        # Resolved names = union of pre-existing and newly added from this repo.
+        # Snapshot delta is approximate — on re-runs --all is idempotent and delta is empty.
+        # Merge with any prior manifest entry so we don't lose previously tracked names.
+        resolved=$(comm -13 <(echo "$before") <(echo "$after"))
+        _update_skill_sources "$url" "$resolved"
+        ok "Installed skills from $url (--all)"
+    else
+        ok "Installed skills from $url: ${names[*]}"
+    fi
+    return 0
+}
+
+# Update $CLAUDE_DIR/skills/.sources.json: merge resolved skill names under URL key.
+# Args: url, newline-separated names (may be empty — still ensures key exists)
+_update_skill_sources() {
+    local url="$1"
+    local new_names="$2"
+    local manifest="$CLAUDE_DIR/skills/.sources.json"
+    has_command jq || return 0
+    [[ -f "$manifest" ]] || echo '{}' > "$manifest"
+
+    local names_json
+    names_json=$(echo "$new_names" | jq -R . | jq -s 'map(select(length > 0))')
+    local tmp
+    tmp=$(mktemp)
+    jq --arg url "$url" --argjson new "$names_json" \
+        '.[$url] = ((.[$url] // []) + $new | unique)' "$manifest" > "$tmp" \
+        && mv "$tmp" "$manifest" || rm -f "$tmp"
 }
 
 # Install skill from direct GitHub path (no skills CLI required)
@@ -358,12 +406,20 @@ install_all_plugins_and_skills() {
         warn "Failed to parse skills config"; return 0
     }
 
-    while IFS= read -r skill; do
-        local name url
-        name=$(echo "$skill" | jq -r '.name')
-        url=$(echo "$skill" | jq -r '.url')
-        install_skill "$name" "$url" < /dev/null && skills_installed=$((skills_installed + 1)) || skills_failed=$((skills_failed + 1))
-    done < <(echo "$skills_json" | jq -c '.[]')
+    # Group skills by URL so one repo -> one `skills add` call.
+    while IFS= read -r group; do
+        local url count names_json
+        url=$(echo "$group" | jq -r '.url')
+        names_json=$(echo "$group" | jq -r '.names[]')
+        count=$(echo "$group" | jq -r '.names | length')
+        local names=()
+        while IFS= read -r n; do names+=("$n"); done <<< "$names_json"
+        if install_skill_bundle "$url" "${names[@]}" < /dev/null; then
+            skills_installed=$((skills_installed + count))
+        else
+            skills_failed=$((skills_failed + count))
+        fi
+    done < <(echo "$skills_json" | jq -c 'group_by(.url) | map({url: .[0].url, names: [.[].name]}) | .[]')
 
     echo "  📊 Plugins: $plugins_installed installed, $plugins_skipped present, $plugins_failed failed"
     echo "  📊 Skills: $skills_installed installed, $skills_failed failed"
@@ -474,11 +530,39 @@ sync_skills() {
     local skills_json
     skills_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section skills 2>/dev/null) || return 0
 
+    local wildcard_urls=()
     while IFS= read -r skill; do
-        local name
+        local name url
         name=$(echo "$skill" | jq -r '.name')
-        [[ -n "$name" ]] && expected+=("$name")
+        url=$(echo "$skill" | jq -r '.url')
+        if [[ "$name" == "*" ]]; then
+            wildcard_urls+=("$url")
+        elif [[ -n "$name" ]]; then
+            expected+=("$name")
+        fi
     done < <(echo "$skills_json" | jq -c '.[]')
+
+    # Resolve wildcard URLs via manifest: all skill names previously installed from those repos
+    local manifest="$skills_dir/.sources.json"
+    if [[ ${#wildcard_urls[@]} -gt 0 && -f "$manifest" ]]; then
+        local url
+        for url in "${wildcard_urls[@]}"; do
+            while IFS= read -r name; do
+                [[ -n "$name" ]] && expected+=("$name")
+            done < <(jq -r --arg u "$url" '.[$u][]? // empty' "$manifest")
+        done
+    fi
+
+    # Prune manifest entries whose URL is no longer declared in YAML
+    if [[ -f "$manifest" ]] && has_command jq; then
+        local declared_urls_json
+        declared_urls_json=$(echo "$skills_json" | jq '[.[].url] | unique')
+        local tmp
+        tmp=$(mktemp)
+        jq --argjson keep "$declared_urls_json" \
+            'with_entries(select(.key as $k | $keep | index($k)))' "$manifest" > "$tmp" \
+            && mv "$tmp" "$manifest" || rm -f "$tmp"
+    fi
 
     # Compare installed vs expected, remove stale (directories and symlinks)
     local removed=0 failed=0
@@ -486,6 +570,7 @@ sync_skills() {
         [[ -d "$entry" || -L "$entry" ]] || continue
         local name
         name=$(basename "$entry")
+        [[ "$name" == .* ]] && continue
         local found=0
         for exp in "${expected[@]}"; do
             [[ "$name" == "$exp" ]] && { found=1; break; }

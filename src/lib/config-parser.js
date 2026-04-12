@@ -34,9 +34,9 @@ function mergeConfig(defaults, envOverrides) {
     if (Array.isArray(def) && Array.isArray(env)) {
       // Deduplicate by 'name' for objects, by value for strings
       const combined = [...def, ...env];
-      if (combined.length > 0 && typeof combined[0] === 'object' && combined[0].name) {
+      if (combined.length > 0 && typeof combined[0] === 'object' && (combined[0].name || combined[0].url)) {
         const seen = new Map();
-        for (const item of combined) seen.set(item.name, item);
+        for (const item of combined) seen.set(item.name || item.url, item);
         merged[key] = [...seen.values()];
       } else {
         merged[key] = [...new Set(combined)];
@@ -131,6 +131,21 @@ if (require.main === module) {
       // Special computed section
       if (section === 'plugins_flat') {
         process.stdout.write(JSON.stringify(flattenPlugins(config), null, 2) + '\n');
+      } else if (section === 'skills') {
+        // Expand bundle entries ({url, names: [...]}) into flat {url, name} list.
+        const skills = config.skills || [];
+        const flat = [];
+        for (const entry of skills) {
+          if (Array.isArray(entry.names) && entry.names.length > 0) {
+            for (const name of entry.names) flat.push({ url: entry.url, name });
+          } else if (entry.name) {
+            flat.push({ url: entry.url, name: entry.name });
+          } else {
+            // No names listed -> wildcard: install all skills from repo
+            flat.push({ url: entry.url, name: '*' });
+          }
+        }
+        process.stdout.write(JSON.stringify(flat, null, 2) + '\n');
       } else {
         const value = config[section];
         if (value === undefined) {

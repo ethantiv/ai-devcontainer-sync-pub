@@ -22,7 +22,7 @@ Open [`ai-devcontainer-course.html`](ai-devcontainer-course.html) in your browse
 - **dev-loop** — autonomous plan + build powered by Claude CLI (`loop` command)
 - **MCP Servers** — Context7, Coolify
 - **Local Plugins** — `roadmap`, `git-worktree`, `dependency-update`, `read-arxiv-paper`, `spec-compliance-review`
-- **Skills & Plugins** — official marketplace plugins + external skills, auto-installed from `config/env-config.yaml`
+- **Skills & Plugins** — official marketplace plugins + external skills, auto-installed from `config/env-config.yaml`. Skills entries support single (`name: x`), bundle (`names: [a, b]`), or wildcard (url only → install all skills from repo)
 - **LSP Support** — TypeScript, Python (Pyright), Java (jdtls)
 
 ## Getting Started

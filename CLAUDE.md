@@ -121,8 +121,12 @@ Loop CLI: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.sh`, `src/lib/in
 - **Setup scripts must be non-fatal**: Writes to dotfiles use `|| warn` / `|| true`. Don't block plugin/MCP setup on non-essential ops.
 - **Shell helpers**: `ok()`, `warn()`, `fail()` for colored status output in setup scripts.
 - **Config parser**: `src/lib/config-parser.js` reads `config/env-config.yaml`, merges defaults with environment overrides, interpolates `${VAR}`. CLI: `node config-parser.js --config <path> --env <env> --section <name>` or `--all`. YAML configs: `env-config.yaml` (real, private), `env-config.example.yaml` (template, public).
+- **Parser `skills` section**: expands `names: [a,b]` to flat `{url, name}` pairs; entry with neither `name` nor `names` emits sentinel `{url, name: "*"}` (wildcard, consumed by `install_skill_bundle`). `mergeConfig` dedupes by `name || url` so wildcard entries don't collide on `undefined`.
+- **Rerun setup scripts**: `rm -f /tmp/dev-env-setup.lock` before invoking `setup-env.sh` again — `flock` can hold the lock past exit on some shells.
 - **Config parser path timing**: In `setup-env.sh`, `CONFIG_PARSER`/`CONFIG_FILE` must be set inside `detect_workspace_folder()`, not at script top-level — `WORKSPACE_FOLDER` is unset until that function runs. In `setup-local.sh`, they're set at top-level using `$CONFIG_DIR` (`$SCRIPT_DIR/config`) which is available immediately.
-- **Skills install**: `npx -y skills add "$url" --skill "$name" --agent claude-code -g -y`
+- **Skills install**: One `npx skills add` call per repo via `install_skill_bundle()`. YAML entry supports `name: x`, `names: [a, b]`, or bare `url` (wildcard → `--skill '*'`). Never use `--all` (forces `--agent '*'` → creates dot-dirs for every supported agent; omitting `-g` installs to CWD instead of `~/.claude/skills/`).
+- **Wildcard manifest**: `~/.claude/skills/.sources.json` tracks `{url: [skills]}` for wildcard entries — snapshot-delta updated on each install. Lets sync remove skills when URL removed from YAML.
+- **Setup order**: `install_all_plugins_and_skills` MUST run before `sync_skills` — sync reads the manifest for wildcard URLs, which is populated during install.
 
 **Docker & containers:**
 - **EXDEV gotcha**: `~/.claude` is ext4 volume, `/tmp` is tmpfs — `rename()` fails cross-device. Scripts export `TMPDIR="$CLAUDE_DIR/tmp"`.

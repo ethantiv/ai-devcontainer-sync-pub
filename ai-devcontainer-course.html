@@ -792,10 +792,17 @@ loop run -i https://github.com/org/repo/issues/42</code></pre></div>
         <span>Dodaj skill</span>
       </div>
       <div class="expandable-body">
-        <p>Dopisz wpis do listy <code>skills</code>:</p>
+        <p>Dopisz wpis do listy <code>skills</code>. Ka&#380;dy wpis to jedno repo &mdash; instalator robi pojedyncze wywo&#322;anie <code>npx skills add</code> per repo:</p>
         <pre><code><span class="kw">skills:</span>
+  <span class="cm"># pojedynczy skill</span>
   - url: <span class="str">"https://github.com/autor/repo"</span>
-    name: <span class="str">nazwa-skill</span></code></pre>
+    name: <span class="str">nazwa-skill</span>
+  <span class="cm"># bundle: wiele skilli z jednego repo, jedna instalacja</span>
+  - url: <span class="str">"https://github.com/anthropics/skills"</span>
+    names: [<span class="str">docx</span>, <span class="str">pdf</span>, <span class="str">xlsx</span>]
+  <span class="cm"># wildcard: wszystkie skille z repo (dynamicznie)</span>
+  - url: <span class="str">"https://github.com/pbakaus/impeccable"</span></code></pre>
+        <p>Dla wariantu wildcard rozwi&#261;zane nazwy skilli s&#261; &#347;ledzone w <code>~/.claude/skills/.sources.json</code>, wi&#281;c po usuni&#281;ciu URL z listy sync automatycznie skasuje te skille.</p>
       </div>
     </div>
 

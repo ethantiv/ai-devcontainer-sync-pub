@@ -49,93 +49,32 @@ defaults:
       - jdtls-lsp
       - pyright-lsp
       - typescript-lsp
+  # Skills grouped by source repo. Each entry accepts:
+  #   name: x            -> install one skill
+  #   names: [a, b]      -> install listed skills (single `npx skills add` call)
+  #   (neither)          -> install ALL skills from the repo (`--all`)
+  # For the wildcard form, resolved skill names are tracked in
+  # ~/.claude/skills/.sources.json so removing the URL from this list
+  # cleans them up on next sync.
   skills:
     - url: "https://github.com/anthropics/skills"
-      name: docx
-    - url: "https://github.com/anthropics/skills"
-      name: pdf
-    - url: "https://github.com/anthropics/skills"
-      name: xlsx
+      names: [docx, pdf, xlsx]
     - url: "https://github.com/emilkowalski/skill"
       name: emil-design-eng
     - url: "https://github.com/hashicorp/agent-skills"
-      name: refactor-module
-    - url: "https://github.com/hashicorp/agent-skills"
-      name: terraform-style-guide
-    - url: "https://github.com/hashicorp/agent-skills"
-      name: terraform-test
+      names: [refactor-module, terraform-stacks, terraform-style-guide, terraform-test, terraform-search-import]
     - url: "https://github.com/intellectronica/agent-skills"
       name: beautiful-mermaid
-    - url: "https://github.com/Leonxlnx/taste-skill"
-      name: design-taste-frontend
-    - url: "https://github.com/Leonxlnx/taste-skill"
-      name: full-output-enforcement
-    - url: "https://github.com/Leonxlnx/taste-skill"
-      name: high-end-visual-design
-    - url: "https://github.com/Leonxlnx/taste-skill"
-      name: industrial-brutalist-ui
-    - url: "https://github.com/Leonxlnx/taste-skill"
-      name: minimalist-ui
-    - url: "https://github.com/Leonxlnx/taste-skill"
-      name: redesign-existing-projects
-    - url: "https://github.com/Leonxlnx/taste-skill"
-      name: stitch-design-taste
+    # - url: "https://github.com/Leonxlnx/taste-skill"
     - url: "https://github.com/pbakaus/impeccable"
-      name: adapt
-    - url: "https://github.com/pbakaus/impeccable"
-      name: animate
-    - url: "https://github.com/pbakaus/impeccable"
-      name: arrange
-    - url: "https://github.com/pbakaus/impeccable"
-      name: audit
-    - url: "https://github.com/pbakaus/impeccable"
-      name: bolder
-    - url: "https://github.com/pbakaus/impeccable"
-      name: clarify
-    - url: "https://github.com/pbakaus/impeccable"
-      name: colorize
-    - url: "https://github.com/pbakaus/impeccable"
-      name: critique
-    - url: "https://github.com/pbakaus/impeccable"
-      name: delight
-    - url: "https://github.com/pbakaus/impeccable"
-      name: distill
-    - url: "https://github.com/pbakaus/impeccable"
-      name: extract
-    - url: "https://github.com/pbakaus/impeccable"
-      name: harden
-    - url: "https://github.com/pbakaus/impeccable"
-      name: impeccable
-    - url: "https://github.com/pbakaus/impeccable"
-      name: normalize
-    - url: "https://github.com/pbakaus/impeccable"
-      name: onboard
-    - url: "https://github.com/pbakaus/impeccable"
-      name: optimize
-    - url: "https://github.com/pbakaus/impeccable"
-      name: overdrive
-    - url: "https://github.com/pbakaus/impeccable"
-      name: polish
-    - url: "https://github.com/pbakaus/impeccable"
-      name: quieter
-    - url: "https://github.com/pbakaus/impeccable"
-      name: shape
-    - url: "https://github.com/pbakaus/impeccable"
-      name: typeset
     - url: "https://github.com/softaworks/agent-toolkit"
-      name: humanizer
-    - url: "https://github.com/softaworks/agent-toolkit"
-      name: mermaid-diagrams
+      names: [humanizer]
     - url: "https://github.com/tanweai/pua"
       name: pua-en
     - url: "https://github.com/vercel-labs/agent-browser"
       name: agent-browser
     - url: "https://github.com/vercel-labs/agent-skills"
-      name: vercel-composition-patterns
-    - url: "https://github.com/vercel-labs/agent-skills"
-      name: vercel-react-best-practices
-    - url: "https://github.com/vercel-labs/agent-skills"
-      name: web-design-guidelines
+      names: [vercel-composition-patterns, vercel-react-best-practices, web-design-guidelines]
     - url: "https://github.com/vercel-labs/skills"
       name: find-skills
 
