@@ -4,6 +4,8 @@
 
 1. **Build**: Find the current plan in `docs/superpowers/plans/` (most recent .md file). Invoke **Skill** tool: `Skill(skill="subagent-driven-development")`.
 
-2. **Update CLAUDE.md**: Invoke **Skill** tool: `Skill(skill="auto-revise-claude-md")`.
+2. **Simplify**: Invoke **Skill** tool: `Skill(skill="simplify")`.
 
-3. **Commit and push**: `git add -A && git commit` then `git push`. Commit message MUST be written in English.
+3. **Update CLAUDE.md**: Invoke **Skill** tool: `Skill(skill="auto-revise-claude-md")`.
+
+4. **Commit and push**: `git add -A && git commit` then `git push`. Commit message MUST be written in English.
