@@ -65,7 +65,6 @@ defaults:
       names: [refactor-module, terraform-stacks, terraform-style-guide, terraform-test, terraform-search-import]
     - url: "https://github.com/intellectronica/agent-skills"
       name: beautiful-mermaid
-    # - url: "https://github.com/Leonxlnx/taste-skill"
     - url: "https://github.com/pbakaus/impeccable"
     - url: "https://github.com/softaworks/agent-toolkit"
       names: [humanizer]
