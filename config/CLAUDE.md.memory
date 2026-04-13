@@ -1,52 +1,59 @@
-## Remote Access
+## Dostęp zdalny
 
-When the user says "log in", "debug", "check on raspberry pi/rpi", or equivalent Polish phrases ("zaloguj się", "zrób debug", "sprawdź na rpi"), connect via SSH: `ssh mirek@raspberrypi.local`.
+Gdy użytkownik prosi o zalogowanie, diagnozę problemu lub sprawdzenie czegoś na Raspberry Pi (np. „zaloguj się", „zrób debug", „sprawdź na rpi"), połącz się przez SSH: `ssh mirek@raspberrypi.local`.
 
-## Git Operations
+## Operacje Git
 
-Wait for explicit user permission before executing Git or GitHub commands (git add, commit, push, pull, merge, rebase, gh pr create/merge). Execute Git commands only when user explicitly requests it in their message or user invokes a slash command (e.g., /commit).
+Nie uruchamiaj poleceń Git ani GitHub (git add, commit, push, pull, merge, rebase, gh pr create/merge) bez wyraźnej zgody użytkownika. Wyjątek: użytkownik wywołał polecenie ukośnikowe (np. `/commit`).
 
-## Language
+## Język
 
-Use English for all code, comments, documentation, commit messages, and PR descriptions.
-Use Polish (Polski) for all user-facing output: chat conversations, plan titles and descriptions, task names, and commit/PR summaries shown to the user.
-Always use proper Polish diacritics (ą, ć, ę, ł, ń, ó, ś, ź, ż) in all Polish text — never skip them.
-Use Mermaid for diagrams (avoid Polish diacritics and quotes in node labels). Use `beautiful-mermaid` skill to generate Mermaid diagrams in documents.
+Kod, komentarze, dokumentacja, commity i opisy PR-ów — po angielsku.
 
-## Simplicity and Focus
+Czat, tytuły i opisy planów, nazwy zadań, podsumowania commitów i PR-ów pokazywane użytkownikowi — po polsku.
+Zawsze używaj polskich znaków diakrytycznych (ą, ć, ę, ł, ń, ó, ś, ź, ż).
+Diagramy rób w Mermaid, korzystając z umiejętności `beautiful-mermaid`. W etykietach węzłów nie używaj diakrytyków ani cudzysłowów.
 
-Make only the changes that are directly requested or clearly necessary:
-- A bug fix stands on its own without cleaning up surrounding code
-- A simple feature works without extra configurability
-- Trust internal code and framework guarantees; validate only at system boundaries (user input, external APIs)
-- Create helpers or abstractions only when they'll be reused
-- The right amount of complexity is the minimum needed for the current task
-- Reuse existing abstractions where possible and follow the DRY principle
+### Styl pisania po polsku
 
-## Tests and Validation
+Pisz pełnymi zdaniami. Poprawna składnia, gramatyka, interpunkcja. Żadnych równoważników zdań ani telegraficznego stylu w rodzaju „Dobra. Zakres trzech bundli…".
+Nie mieszaj angielskiego z polskim w jednym zdaniu. Jeśli istnieje polski odpowiednik, użyj go. Nie pisz „puścić równolegle", „zrobię review pass", „red-flag ze skilla", „file-disjoint pracy", „UI-polish scope", „skeleton rotuje warianty", „listener early-return", „fokusuje search". Pisz: „uruchomić równolegle", „wykonam przegląd", „ostrzeżenie z umiejętności", „praca na rozłącznych plikach", „dopracowanie interfejsu", „szkielet naprzemiennie pokazuje warianty", „nasłuch kończy się wcześnie", „ustawia kursor w polu wyszukiwania".
+Bez odmiany zostawiaj tylko nazwy własne (React, Next.js, Playwright), identyfikatory z kodu (`FeedGrid.tsx`, `clamp()`, `selectedArticle`), polecenia CLI, nazwy plików i numery wersji. Resztę tłumacz: *bundle* → pakiet, *scope* → zakres, *review* → przegląd, *pass* → przebieg, *fallback* → rezerwa, *listener* → nasłuch, *early-return* → wcześniejszy powrót, *disjoint* → rozłączny, *polish* → dopracowanie, *skeleton* → szkielet, *banner* → pasek, *layout* → układ, *focus* → fokus.
+Angielski rzeczownik musi być odmieniony albo zdanie przeformułowane. Źle: „pomijam per-task two-stage review dla UI-polish scope". Dobrze: „pomijam dwuetapowy przegląd każdego zadania dla prac nad dopracowaniem interfejsu".
+Nie sklejaj angielskiego rzeczownika z polskim rzeczownikiem jako przydawki. Zamiast „scope-wise", „file-disjoint", „UI-polish", „two-stage bundle" pisz opisowo: „zakres dopracowania interfejsu", „dwuetapowy przegląd", „praca na rozłącznych plikach".
+Używaj pełnych zdań, nie telegramów z myślnikami. Zamiast „Skeleton rotuje warianty: spacious + compact — layout zgodny z tym co przyjdzie" napisz: „Szkielet naprzemiennie pokazuje dwa warianty układu — przestronny i zwarty — dzięki czemu odpowiada temu, co faktycznie się załaduje."
+Polska interpunkcja: cudzysłowy „…" w tekście (angielskie "…" tylko w cytatach z kodu), przecinki przed „że", „który", „ponieważ", pauza — (nie dywiz -) do wtrąceń.
+Przed wysłaniem przeczytaj odpowiedź na głos. Brzmi jak tłumaczenie automatyczne albo żargon programisty-hybrydy? Przepisz.
 
-Run project-specific validation (tests, typecheck, lint) after implementation.
-Use skill `agent-browser` to verify UI changes in browser.
+## Prostota i skupienie
 
-## Skills
+Poprawka błędu to poprawka błędu — nie sprzątaj przy okazji otaczającego kodu.
+Prosta funkcjonalność ma działać bez dodatkowych opcji konfiguracyjnych.
+Ufaj wewnętrznemu kodowi i gwarancjom frameworków. Waliduj tylko na granicach systemu (wejście od użytkownika, zewnętrzne API).
+Funkcje pomocnicze i abstrakcje twórz tylko wtedy, gdy będą używane ponownie.
+Minimum złożoności potrzebne do wykonania zadania. Nic więcej.
+Korzystaj z istniejących abstrakcji. Trzymaj się zasad DRY, YAGNI i KISS.
 
-Always load the correct skills at the beginning of the relevant tasks.
+## Testy i walidacja
 
-## Documentation Lookup
+Po wprowadzeniu zmian uruchom testy, sprawdzenie typów i lintowanie właściwe dla projektu.
+Zmiany w interfejsie weryfikuj w przeglądarce przez umiejętność `agent-browser`.
 
-Prefer `context7` MCP tools over `WebFetch` for library and SDK documentation. WebFetch parses raw HTML and wastes tokens; context7 returns structured, up-to-date docs directly.
+## Wyszukiwanie dokumentacji
+
+Dokumentację bibliotek i SDK pobieraj przez MCP `context7`, nie przez `WebFetch`. `WebFetch` parsuje surowy HTML i marnuje tokeny; `context7` zwraca gotową, aktualną dokumentację.
 
 ## README.md
 
-Always maintain README.md as a simple instruction guide for new or returning users — not as technical documentation. Write it in second person ("you"), focus on getting started quickly, and keep explanations minimal. Technical details, architecture notes, and codebase patterns belong in CLAUDE.md. When the project changes significantly, update README.md to reflect the current state.
+README.md to prosty przewodnik dla nowych i powracających użytkowników — nie dokumentacja techniczna. Pisz w drugiej osobie („ty"), prowadź czytelnika do szybkiego startu, ograniczaj wyjaśnienia. Szczegóły techniczne, notatki o architekturze i wzorce kodu trzymaj w CLAUDE.md. Gdy projekt istotnie się zmieni, zaktualizuj README.md.
 
-### CLAUDE.md Size Limit
+### Limit rozmiaru CLAUDE.md
 
-CLAUDE.md files should not exceed ~500 lines. When approaching this limit, remove outdated or obvious entries, consolidate redundant notes, and refactor verbose descriptions into concise rules. Prefer deleting over relocating — if information isn't essential for day-to-day development, it doesn't belong in CLAUDE.md.
+CLAUDE.md nie powinien przekraczać ok. 500 linii. Przy zbliżaniu się do limitu: usuwaj nieaktualne i oczywiste wpisy, łącz powtórzenia, skracaj rozwlekłe opisy do zasad. Lepiej usunąć niż przenieść — jeśli coś nie jest potrzebne na co dzień, nie powinno tam być.
 
-### CLAUDE.md Template
+### Szablon CLAUDE.md
 
-When generating the CLAUDE.md file with project guidelines, use the following structure:
+Generując plik CLAUDE.md z wytycznymi projektu, zastosuj następującą strukturę:
 
 ```markdown
 ## Build & Run
