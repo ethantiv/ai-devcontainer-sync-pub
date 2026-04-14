@@ -292,11 +292,6 @@ if [[ "$SCRIPT_NAME" == "design" ]]; then
     AUTONOMOUS=false
 fi
 
-# Archive current plan (skip for build-only — it needs the existing plan)
-if [[ "$BUILD_ONLY" != true ]]; then
-    archive_plan
-fi
-
 # Write idea file if provided
 write_idea
 
@@ -338,6 +333,16 @@ if [[ "$AUTONOMOUS" == true ]]; then
             | tee -a "$LOG_FILE" | format_stream
 
         ensure_committed
+
+        if [[ "$phase" == "build" ]]; then
+            archive_plan
+            if ! git diff --quiet HEAD 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+                git add -A
+                git commit -m "chore(loop): archive completed plan and specs" || true
+                git push 2>/dev/null || true
+            fi
+        fi
+
         echo -e "\n[LOOP] Phase $phase completed"
     done
 

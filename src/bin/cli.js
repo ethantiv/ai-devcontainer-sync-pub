@@ -11,6 +11,15 @@ function parseTypes(opts) {
   return Object.keys(PRESETS).filter(t => opts[t]).join(',') || undefined;
 }
 
+function spawnScript(name) {
+  const scriptDir = path.resolve(__dirname, '..', 'scripts');
+  const child = spawn(path.join(scriptDir, name), [], {
+    stdio: 'inherit',
+    cwd: process.cwd(),
+  });
+  child.on('close', (code) => process.exit(code ?? 0));
+}
+
 program
   .name('loop')
   .description('Autonomous development loop powered by Claude CLI')
@@ -42,14 +51,12 @@ program
 program
   .command('kill')
   .description('Kill all running loop processes and tmux sessions')
-  .action(() => {
-    const scriptDir = path.resolve(__dirname, '..', 'scripts');
-    const child = spawn(path.join(scriptDir, 'kill-loop.sh'), [], {
-      stdio: 'inherit',
-      cwd: process.cwd(),
-    });
-    child.on('close', (code) => process.exit(code ?? 0));
-  });
+  .action(() => spawnScript('kill-loop.sh'));
+
+program
+  .command('archive')
+  .description('Archive current plan and specs to docs/superpowers/archive/')
+  .action(() => spawnScript('archive-loop.sh'));
 
 program
   .command('update')
@@ -69,6 +76,7 @@ Examples:
   $ loop run -i "Add auth"  Seed idea, then plan + build
   $ loop run --tmux         Run in a detached tmux session
   $ loop kill               Kill all loop processes
+  $ loop archive            Archive current plan/specs without running
   $ loop update             Force-refresh symlinks and templates`);
 
 program.parse();

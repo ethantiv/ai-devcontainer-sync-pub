@@ -62,10 +62,11 @@ loop run [-i <idea>]    # Autonomous plan + build (two phases)
 loop run --plan         # Plan phase only
 loop run --build        # Build phase only (uses existing plan)
 loop kill               # Kill all loop processes
+loop archive            # Archive current plan/specs to docs/superpowers/archive/
 loop update [--web] [--devops]  # Force-refresh symlinks and templates
 ```
 
-**CLI subcommands** (`src/bin/cli.js`): `init`, `design`, `run`, `kill`, `update`. No `plan`, `build`, `doctor`, `summary`, or `cleanup` — these do not exist.
+**CLI subcommands** (`src/bin/cli.js`): `init`, `design`, `run`, `kill`, `archive`, `update`. No `plan`, `build`, `doctor`, `summary`, or `cleanup` — these do not exist. `archive_plan` is now invoked automatically after the build phase completes (not at start of next run).
 
 **Design flow** (`PROMPT_design.md`): loads skills from `PROMPT_skills_design.md` (brainstorming) → reads `IDEA.md` + existing design docs → interactive conversation → saves design doc to `docs/` → commits. Always interactive, never plans or implements.
 
