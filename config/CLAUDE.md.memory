@@ -1,6 +1,6 @@
 ## Dostęp zdalny
 
-Gdy użytkownik prosi o zalogowanie, diagnozę problemu lub sprawdzenie czegoś na Raspberry Pi (np. „zaloguj się", „zrób debug", „sprawdź na rpi"), połącz się przez SSH: `ssh mirek@raspberrypi.local`.
+Gdy użytkownik prosi o zalogowanie, diagnozę problemu lub sprawdzenie czegoś na zdalnej maszynie, szczegóły połączenia znajdziesz w pamięci (`memory/`, np. `reference_rpi_ssh.md`).
 
 ## Operacje Git
 
@@ -11,32 +11,39 @@ Nie uruchamiaj poleceń Git ani GitHub (git add, commit, push, pull, merge, reba
 Kod, komentarze, dokumentacja, commity i opisy PR-ów — po angielsku.
 
 Czat, tytuły i opisy planów, nazwy zadań, podsumowania commitów i PR-ów pokazywane użytkownikowi — po polsku.
-Zawsze używaj polskich znaków diakrytycznych (ą, ć, ę, ł, ń, ó, ś, ź, ż).
+
 Diagramy rób w Mermaid, korzystając z umiejętności `beautiful-mermaid`. W etykietach węzłów nie używaj diakrytyków ani cudzysłowów.
 
-### Styl pisania po polsku
+## Styl pisania po polsku
 
-Pisz pełnymi zdaniami. Poprawna składnia, gramatyka, interpunkcja. Żadnych równoważników zdań ani telegraficznego stylu w rodzaju „Dobra. Zakres trzech bundli…".
-Nie mieszaj angielskiego z polskim w jednym zdaniu. Jeśli istnieje polski odpowiednik, użyj go. Nie pisz „puścić równolegle", „zrobię review pass", „red-flag ze skilla", „file-disjoint pracy", „UI-polish scope", „skeleton rotuje warianty", „listener early-return", „fokusuje search". Pisz: „uruchomić równolegle", „wykonam przegląd", „ostrzeżenie z umiejętności", „praca na rozłącznych plikach", „dopracowanie interfejsu", „szkielet naprzemiennie pokazuje warianty", „nasłuch kończy się wcześnie", „ustawia kursor w polu wyszukiwania".
-Bez odmiany zostawiaj tylko nazwy własne (React, Next.js, Playwright), identyfikatory z kodu (`FeedGrid.tsx`, `clamp()`, `selectedArticle`), polecenia CLI, nazwy plików i numery wersji. Resztę tłumacz: *bundle* → pakiet, *scope* → zakres, *review* → przegląd, *pass* → przebieg, *fallback* → rezerwa, *listener* → nasłuch, *early-return* → wcześniejszy powrót, *disjoint* → rozłączny, *polish* → dopracowanie, *skeleton* → szkielet, *banner* → pasek, *layout* → układ, *focus* → fokus.
-Angielski rzeczownik musi być odmieniony albo zdanie przeformułowane. Źle: „pomijam per-task two-stage review dla UI-polish scope". Dobrze: „pomijam dwuetapowy przegląd każdego zadania dla prac nad dopracowaniem interfejsu".
-Nie sklejaj angielskiego rzeczownika z polskim rzeczownikiem jako przydawki. Zamiast „scope-wise", „file-disjoint", „UI-polish", „two-stage bundle" pisz opisowo: „zakres dopracowania interfejsu", „dwuetapowy przegląd", „praca na rozłącznych plikach".
-Używaj pełnych zdań, nie telegramów z myślnikami. Zamiast „Skeleton rotuje warianty: spacious + compact — layout zgodny z tym co przyjdzie" napisz: „Szkielet naprzemiennie pokazuje dwa warianty układu — przestronny i zwarty — dzięki czemu odpowiada temu, co faktycznie się załaduje."
-Polska interpunkcja: cudzysłowy „…" w tekście (angielskie "…" tylko w cytatach z kodu), przecinki przed „że", „który", „ponieważ", pauza — (nie dywiz -) do wtrąceń.
-Przed wysłaniem przeczytaj odpowiedź na głos. Brzmi jak tłumaczenie automatyczne albo żargon programisty-hybrydy? Przepisz.
+Pisz pełnymi, poprawnymi składniowo zdaniami. Unikaj równoważników zdań i telegraficznego stylu opartego na myślnikach oraz dwukropkach.
+
+Nie mieszaj angielskiego z polskim w obrębie jednego zdania. Jeśli istnieje polski odpowiednik terminu, użyj go. Każdy angielski rzeczownik pospolity użyty w polskim zdaniu musi być albo poprawnie odmieniony, albo zdanie należy przeformułować opisowo. Nie sklejaj angielskiego rzeczownika z polskim jako przydawki (konstrukcje typu „coś-coś") — rozwijaj je w pełne wyrażenia opisowe.
+
+Bez tłumaczenia i bez odmiany zostawiaj wyłącznie: nazwy własne produktów i technologii, identyfikatory z kodu, polecenia CLI, nazwy plików, numery wersji oraz cytaty z kodu. Wszystkie inne angielskie terminy branżowe tłumacz na polskie odpowiedniki.
+
+Stosuj polską interpunkcję: cudzysłowy drukarskie „…" w tekście (angielskie "…" tylko w cytatach z kodu), przecinki przed spójnikami zależnymi („że", „który", „ponieważ", „gdy", „jeśli"), pauzę — (nie dywiz -) do wtrąceń. Używaj zawsze znaków diakrytycznych (ą, ć, ę, ł, ń, ó, ś, ź, ż).
+
+Przed wysłaniem odpowiedzi przeczytaj ją w myślach. Jeśli brzmi jak kalka z angielskiego, automatyczne tłumaczenie albo żargon programisty-hybrydy — przepisz.
 
 ## Prostota i skupienie
 
 Poprawka błędu to poprawka błędu — nie sprzątaj przy okazji otaczającego kodu.
+
 Prosta funkcjonalność ma działać bez dodatkowych opcji konfiguracyjnych.
+
 Ufaj wewnętrznemu kodowi i gwarancjom frameworków. Waliduj tylko na granicach systemu (wejście od użytkownika, zewnętrzne API).
+
 Funkcje pomocnicze i abstrakcje twórz tylko wtedy, gdy będą używane ponownie.
+
 Minimum złożoności potrzebne do wykonania zadania. Nic więcej.
+
 Korzystaj z istniejących abstrakcji. Trzymaj się zasad DRY, YAGNI i KISS.
 
 ## Testy i walidacja
 
 Po wprowadzeniu zmian uruchom testy, sprawdzenie typów i lintowanie właściwe dla projektu.
+
 Zmiany w interfejsie weryfikuj w przeglądarce przez umiejętność `agent-browser`.
 
 ## Wyszukiwanie dokumentacji
@@ -47,11 +54,13 @@ Dokumentację bibliotek i SDK pobieraj przez MCP `context7`, nie przez `WebFetch
 
 README.md to prosty przewodnik dla nowych i powracających użytkowników — nie dokumentacja techniczna. Pisz w drugiej osobie („ty"), prowadź czytelnika do szybkiego startu, ograniczaj wyjaśnienia. Szczegóły techniczne, notatki o architekturze i wzorce kodu trzymaj w CLAUDE.md. Gdy projekt istotnie się zmieni, zaktualizuj README.md.
 
-### Limit rozmiaru CLAUDE.md
+## CLAUDE.md
+
+### Limit rozmiaru
 
 CLAUDE.md nie powinien przekraczać ok. 500 linii. Przy zbliżaniu się do limitu: usuwaj nieaktualne i oczywiste wpisy, łącz powtórzenia, skracaj rozwlekłe opisy do zasad. Lepiej usunąć niż przenieść — jeśli coś nie jest potrzebne na co dzień, nie powinno tam być.
 
-### Szablon CLAUDE.md
+### Szablon
 
 Generując plik CLAUDE.md z wytycznymi projektu, zastosuj następującą strukturę:
 
