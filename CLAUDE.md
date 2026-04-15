@@ -82,7 +82,7 @@ loop update [--web] [--devops]  # Force-refresh symlinks and templates
 
 **Global npm tools** — 3 files: `.devcontainer/Dockerfile`, `docker/Dockerfile`, `setup-local.sh`.
 
-**Plugins/Skills** — Edit `config/env-config.yaml` (plugins/skills sections). All three setup scripts read via config-parser. Local plugins: add to `config/plugins/dev-marketplace/` + register in `marketplace.json`.
+**Plugins/Skills** — Edit `config/env-config.yaml` (plugins/skills sections). All three setup scripts read via config-parser. Local plugins: add to `config/plugins/dev-marketplace/` + register in `marketplace.json`. Third-party marketplace plugins (outside `claude-plugins-official` and `dev-marketplace`): add to `plugins.external` with `name` (plugin ID), `marketplace` (name from its `marketplace.json`), and `source` (arg for `claude plugin marketplace add`, e.g. `owner/repo`).
 
 **Local plugin layout**: `plugins/dev-marketplace/<name>/.claude-plugin/plugin.json` + `commands/<cmd>.md` (YAML frontmatter: `allowed-tools`, `description`, `argument-hint`).
 

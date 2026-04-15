@@ -356,6 +356,7 @@ main() {
     sync_plugins
     install_all_plugins_and_skills
     sync_skills
+    install_external_marketplace_plugins
     install_local_marketplace_plugins
     sync_marketplaces
     sync_mcp_servers

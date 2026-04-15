@@ -425,6 +425,41 @@ install_all_plugins_and_skills() {
     echo "  📊 Skills: $skills_installed installed, $skills_failed failed"
 }
 
+# Install plugins from external marketplaces declared in plugins.external.
+install_external_marketplace_plugins() {
+    echo "📦 Installing external marketplace plugins..."
+
+    has_command claude || { warn "Claude CLI not found"; return 0; }
+    has_command jq || { warn "jq not found"; return 0; }
+
+    local external_json
+    external_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section plugins_external 2>/dev/null) || {
+        warn "Failed to parse external plugins"; return 0
+    }
+    [[ "$external_json" == "[]" ]] && { ok "No external plugins declared"; return 0; }
+
+    local installed=0 skipped=0 failed=0
+
+    while IFS= read -r entry; do
+        [[ -z "$entry" ]] && continue
+        local name marketplace source
+        name=$(echo "$entry" | jq -r '.name // empty')
+        marketplace=$(echo "$entry" | jq -r '.marketplace // empty')
+        source=$(echo "$entry" | jq -r '.source // empty')
+        if [[ -z "$name" || -z "$marketplace" || -z "$source" ]]; then
+            warn "Skipping malformed external plugin entry: $entry"
+            failed=$((failed + 1))
+            continue
+        fi
+
+        ensure_marketplace "$marketplace" "$source" || { failed=$((failed + 1)); continue; }
+        local rc=0; install_plugin "${name}@${marketplace}" "$name" || rc=$?
+        update_plugin_counters $rc installed skipped failed
+    done < <(echo "$external_json" | jq -c '.[]')
+
+    echo "  📊 External: $installed installed, $skipped present, $failed failed"
+}
+
 # Install plugins from the local marketplace (uses $LOCAL_MARKETPLACE_DIR)
 install_local_marketplace_plugins() {
     local manifest="$LOCAL_MARKETPLACE_DIR/.claude-plugin/marketplace.json"
@@ -481,6 +516,19 @@ build_expected_plugins_list() {
             expected_plugins["${name}@${LOCAL_MARKETPLACE_NAME}"]=1
         done <<< "$plugin_names"
     fi
+
+    # External marketplace plugins (keyed by their own marketplace name).
+    # Fall back to [] on parser failure — returning early would empty the whole
+    # expected list (built above) and cause sync_plugins to mass-uninstall.
+    local external_json
+    external_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section plugins_external 2>/dev/null) || external_json='[]'
+    while IFS= read -r entry; do
+        [[ -z "$entry" ]] && continue
+        local name marketplace
+        name=$(echo "$entry" | jq -r '.name // empty')
+        marketplace=$(echo "$entry" | jq -r '.marketplace // empty')
+        [[ -n "$name" && -n "$marketplace" ]] && expected_plugins["${name}@${marketplace}"]=1
+    done < <(echo "$external_json" | jq -c '.[]?' 2>/dev/null)
 }
 
 # Get installed plugins from settings.json
@@ -694,6 +742,13 @@ sync_marketplaces() {
         ["$OFFICIAL_MARKETPLACE_NAME"]=1
         ["$LOCAL_MARKETPLACE_NAME"]=1
     )
+
+    # Preserve marketplaces that host declared external plugins
+    local external_json
+    external_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section plugins_external 2>/dev/null) || external_json='[]'
+    while IFS= read -r marketplace; do
+        [[ -n "$marketplace" ]] && expected_marketplaces["$marketplace"]=1
+    done < <(echo "$external_json" | jq -r '.[]?.marketplace // empty' 2>/dev/null)
 
     local removed=0 failed=0
     while IFS= read -r name; do

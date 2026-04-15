@@ -131,6 +131,9 @@ if (require.main === module) {
       // Special computed section
       if (section === 'plugins_flat') {
         process.stdout.write(JSON.stringify(flattenPlugins(config), null, 2) + '\n');
+      } else if (section === 'plugins_external') {
+        const external = (config.plugins && config.plugins.external) || [];
+        process.stdout.write(JSON.stringify(external, null, 2) + '\n');
       } else if (section === 'skills') {
         // Expand bundle entries ({url, names: [...]}) into flat {url, name} list.
         const skills = config.skills || [];

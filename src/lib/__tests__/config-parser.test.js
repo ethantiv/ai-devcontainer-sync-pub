@@ -297,4 +297,38 @@ environments: {}
       { name: 'ts-lsp', type: 'marketplace' },
     ]);
   });
+
+  test('--section plugins_external returns external marketplace plugin list', () => {
+    const configPath = writeYaml('cli-plugins-external.yaml', `
+defaults:
+  git:
+    personal:
+      name: Test
+      email: t@t.com
+  plugins:
+    external:
+      - name: pua
+        marketplace: pua-skills
+        source: tanweai/pua
+environments: {}
+`);
+    const output = execFileSync('node', [parserPath, '--config', configPath, '--section', 'plugins_external'], { encoding: 'utf8' });
+    const parsed = JSON.parse(output);
+    expect(parsed).toEqual([
+      { name: 'pua', marketplace: 'pua-skills', source: 'tanweai/pua' },
+    ]);
+  });
+
+  test('--section plugins_external returns empty array when not configured', () => {
+    const configPath = writeYaml('cli-plugins-external-empty.yaml', `
+defaults:
+  git:
+    personal:
+      name: Test
+      email: t@t.com
+environments: {}
+`);
+    const output = execFileSync('node', [parserPath, '--config', configPath, '--section', 'plugins_external'], { encoding: 'utf8' });
+    expect(JSON.parse(output)).toEqual([]);
+  });
 });

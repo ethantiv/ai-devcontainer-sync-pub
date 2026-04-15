@@ -52,7 +52,7 @@ defaults:
   #
   # plugins.marketplace  — official anthropics/claude-plugins-official entries
   # plugins.lsp          — Language Server Protocol plugins
-  # plugins.external     — external marketplace repos
+  # plugins.external     — plugins from external marketplace repos
   #
   # Merge: lists are appended and deduplicated (strings by value, objects by name)
   # -------------------------------------------------------------------------
@@ -65,6 +65,14 @@ defaults:
       - typescript-lsp # Example — add LSP plugins you need
       # - pyright-lsp
       # - rust-analyzer-lsp
+    external: # Plugins served from a third-party marketplace repo
+      # Each entry needs three fields:
+      #   name:        plugin name inside the marketplace (as in marketplace.json)
+      #   marketplace: marketplace identifier (from .claude-plugin/marketplace.json "name")
+      #   source:      argument for `claude plugin marketplace add` (e.g. "owner/repo")
+      # - name: pua
+      #   marketplace: pua-skills
+      #   source: tanweai/pua
 
   # -------------------------------------------------------------------------
   # Skills — installed via `npx skills add` (one call per repo)
