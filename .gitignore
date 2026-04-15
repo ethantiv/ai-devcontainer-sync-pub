@@ -3,6 +3,7 @@
 
 # Environment / secrets
 .env
+roche-ona/
 
 # Dependencies
 node_modules/
