@@ -93,7 +93,9 @@ apply_claude_settings() {
         permissions: .permissions,
         language: .language,
         statusLine: $sl
-    } + if .sandbox then {sandbox: .sandbox} else {} end')
+    }
+    + if .sandbox then {sandbox: .sandbox} else {} end
+    + if .effortLevel then {effortLevel: .effortLevel} else {} end')
 
     ensure_directory "$CLAUDE_DIR"
 
