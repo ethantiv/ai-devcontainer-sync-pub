@@ -24,7 +24,6 @@ defaults:
   claude:
     language: "Polski"
     remoteControl: true
-    effortLevel: "high"
     permissions:
       allow: []
       deny: []
