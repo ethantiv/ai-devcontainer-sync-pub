@@ -28,7 +28,7 @@ defaults:
       allow: []
       deny: []
       ask: []
-      defaultMode: "bypassPermissions"
+      defaultMode: "auto"
 
   plugins:
     marketplace:
