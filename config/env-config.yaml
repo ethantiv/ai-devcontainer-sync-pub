@@ -49,10 +49,10 @@ defaults:
       - jdtls-lsp
       - pyright-lsp
       - typescript-lsp
-    external:
-      - name: pua
-        marketplace: pua-skills
-        source: tanweai/pua
+    # external:
+    #   - name: pua
+    #     marketplace: pua-skills
+    #     source: tanweai/pua
   # Skills grouped by source repo. Each entry accepts:
   #   name: x            -> install one skill
   #   names: [a, b]      -> install listed skills (single `npx skills add` call)
