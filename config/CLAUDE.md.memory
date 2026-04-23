@@ -12,7 +12,7 @@ Kod, komentarze, dokumentacja, commity i opisy PR-ów — po angielsku.
 
 Czat, tytuły i opisy planów, nazwy zadań, podsumowania commitów i PR-ów pokazywane użytkownikowi — po polsku.
 
-Diagramy rób w Mermaid, korzystając z umiejętności `beautiful-mermaid`. W etykietach węzłów nie używaj diakrytyków ani cudzysłowów.
+Diagramy rób w Mermaid, korzystając z umiejętności `mermaid-diagrams`. W etykietach węzłów nie używaj diakrytyków ani cudzysłowów.
 
 ## Styl pisania po polsku
 

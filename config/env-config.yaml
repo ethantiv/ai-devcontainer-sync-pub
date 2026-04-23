@@ -67,11 +67,9 @@ defaults:
       name: emil-design-eng
     - url: "https://github.com/hashicorp/agent-skills"
       names: [refactor-module, terraform-stacks, terraform-style-guide, terraform-test, terraform-search-import]
-    - url: "https://github.com/intellectronica/agent-skills"
-      name: beautiful-mermaid
     - url: "https://github.com/pbakaus/impeccable"
     - url: "https://github.com/softaworks/agent-toolkit"
-      names: [humanizer]
+      names: [humanizer, mermaid-diagrams]
     - url: "https://github.com/vercel-labs/agent-browser"
       name: agent-browser
     - url: "https://github.com/vercel-labs/agent-skills"
