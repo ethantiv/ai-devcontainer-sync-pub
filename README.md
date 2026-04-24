@@ -14,7 +14,7 @@ Ready-to-use development environment with Claude Code, Gemini CLI, and pre-confi
 
 - **Claude Code** and **Gemini CLI** — pre-installed and configured
 - **MCP Servers** — Context7, Coolify
-- **Local Plugins** — `roadmap`, `git-worktree`, `dependency-update`, `read-arxiv-paper`, `spec-compliance-review`
+- **Local Plugins** — `roadmap`, `git-worktree`, `dependency-update`, `read-arxiv-paper`
 - **Skills & Plugins** — official marketplace plugins + external skills, auto-installed from `config/env-config.yaml`. Skills entries support single (`name: x`), bundle (`names: [a, b]`), or wildcard (url only → install all skills from repo)
 - **LSP Support** — TypeScript, Python (Pyright), Java (jdtls)
 
