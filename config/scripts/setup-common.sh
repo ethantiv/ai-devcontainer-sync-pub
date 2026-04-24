@@ -320,7 +320,7 @@ install_plugin() {
         return 1
     fi
 
-    if claude plugin install "$plugin" --scope user < /dev/null 2>/dev/null; then
+    if claude plugin install "$plugin" --scope user < /dev/null >/dev/null 2>&1; then
         ok "Installed: $display_name"
         return 0
     fi
@@ -353,7 +353,7 @@ ensure_marketplace() {
         return 0
     fi
 
-    if claude plugin marketplace add "$source" 2>/dev/null; then
+    if claude plugin marketplace add "$source" >/dev/null 2>&1; then
         ok "Added marketplace: $name"
         return 0
     fi
@@ -365,7 +365,7 @@ ensure_marketplace() {
 uninstall_plugin() {
     local plugin="$1"
     local display_name="${plugin%%@*}"
-    if claude plugin uninstall "$plugin" --scope user < /dev/null 2>/dev/null; then
+    if claude plugin uninstall "$plugin" --scope user < /dev/null >/dev/null 2>&1; then
         echo "  🗑️  Uninstalled: $display_name"
         return 0
     fi
@@ -483,7 +483,7 @@ install_all_plugins_and_skills() {
         warn "Skipping official marketplace plugins"
         return 0
     fi
-    claude plugin marketplace update "$OFFICIAL_MARKETPLACE_NAME" 2>/dev/null || true
+    claude plugin marketplace update "$OFFICIAL_MARKETPLACE_NAME" >/dev/null 2>&1 || true
 
     # Clean stale gemini skill symlinks (gemini-cli scans ~/.agents/skills/ directly)
     if [[ -d "$HOME/.gemini/skills" ]]; then
@@ -755,7 +755,7 @@ add_mcp_server() {
         return
     fi
 
-    if claude mcp add-json "$name" "$config" --scope user 2>/dev/null; then
+    if claude mcp add-json "$name" "$config" --scope user >/dev/null 2>&1; then
         ok "Added: $name"
     else
         warn "Failed to add $name"
@@ -809,7 +809,7 @@ sync_mcp_servers() {
     local removed=0
     for name in "${installed[@]}"; do
         if [[ -z "${mcp_expected[$name]:-}" ]]; then
-            if claude mcp remove "$name" --scope user < /dev/null 2>/dev/null; then
+            if claude mcp remove "$name" --scope user < /dev/null >/dev/null 2>&1; then
                 echo "  🗑️  Removed MCP: $name"
                 removed=$((removed + 1))
             fi
@@ -852,7 +852,7 @@ sync_marketplaces() {
     while IFS= read -r name; do
         [[ -z "$name" ]] && continue
         [[ -n "${expected_marketplaces[$name]:-}" ]] && continue
-        if claude plugin marketplace remove "$name" < /dev/null 2>/dev/null; then
+        if claude plugin marketplace remove "$name" < /dev/null >/dev/null 2>&1; then
             echo "  🗑️  Removed marketplace: $name"
             removed=$((removed + 1))
         else

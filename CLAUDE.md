@@ -27,7 +27,7 @@ No automated test suite, typecheck, or linter — pure JS/Bash project validated
 | `GH_TOKEN` | Yes | GitHub PAT with `repo`, `workflow` permissions |
 | `SSH_PRIVATE_KEY` | No | Base64-encoded SSH key for Git auth |
 | `RESET_CLAUDE_CONFIG` | No | Clear `~/.claude/` on startup |
-| `RESET_GEMINI_CONFIG` | No | Clear `~/.gemini/` on startup |
+| `RESET_GEMINI_CONFIG` | No | Clear `~/.gemini/` on startup (DevContainer only) |
 | `CONTEXT7_API_KEY` | No | API key for Context7 MCP server |
 | `COOLIFY_BASE_URL` | No | URL of Coolify instance |
 | `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |
@@ -68,7 +68,7 @@ Documentation: `README.md` (setup guide).
 
 **Docker**: start → `entrypoint.sh` → sync `/opt/claude-config` → first-run (`.configured` marker) → `setup-env.sh`. Claude binary installed to `~/.claude/bin/` (volume) at first start, not during build. GH auth via `gh auth login --with-token`.
 
-**Docker volumes** (4): `claude-code-claude-config` (~/.claude), `claude-code-agents-skills` (~/.agents), `claude-code-gemini-config` (~/.gemini), `claude-code-projects` (~/projects).
+**Docker volumes** (3): `claude-code-claude-config` (~/.claude), `claude-code-agents-skills` (~/.agents), `claude-code-projects` (~/projects).
 
 ### File Sync Mapping
 

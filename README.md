@@ -75,7 +75,7 @@ Set in `config/.env` (copy from `config/.env.example`).
 | `CONTEXT7_API_KEY` | No | Context7 MCP server |
 | `COOLIFY_BASE_URL` / `COOLIFY_ACCESS_TOKEN` | No | Coolify deployment management |
 | `STITCH_API_KEY` | No | Google Stitch MCP server |
-| `RESET_CLAUDE_CONFIG` / `RESET_GEMINI_CONFIG` | No | Set `true` to clear config on startup |
+| `RESET_CLAUDE_CONFIG` / `RESET_GEMINI_CONFIG` | No | Set `true` to clear config on startup (`RESET_GEMINI_CONFIG` applies to DevContainer only) |
 | `BACKUP_PIN` | No | PIN for encrypting/decrypting volume backups |
 
 ## Multi-GitHub Accounts
@@ -100,7 +100,7 @@ The `gh` CLI shim at `~/.local/bin/gh` detects org URLs in arguments first, then
 
 ## Volume Backups
 
-Create encrypted backups of DevContainer Docker volumes (`~/.claude`, `~/.gemini`, `~/.cache/google-vscode-extension/auth`).
+Create encrypted backups of DevContainer Docker volumes (`~/.claude`, `~/.gemini`, `~/.cache/google-vscode-extension/auth`). Gemini and Google VSCode auth paths apply only to DevContainer/Codespaces; the standalone Docker image no longer mounts `~/.gemini`.
 
 ```bash
 .devcontainer/backup.sh create              # Create encrypted backup

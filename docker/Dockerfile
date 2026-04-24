@@ -18,7 +18,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g @google/gemini-cli agent-browser
+RUN npm install -g agent-browser
 
 RUN pip3 install --break-system-packages uv
 
@@ -69,15 +69,14 @@ COPY --from=builder /usr/lib/node_modules /usr/lib/node_modules
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uvx /usr/local/bin/
 
 # Create symlinks for npm global packages (Claude Code installed via curl at runtime)
-RUN ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini \
-    && ln -sf ../lib/node_modules/agent-browser/bin/agent-browser.js /usr/bin/agent-browser
+RUN ln -sf ../lib/node_modules/agent-browser/bin/agent-browser.js /usr/bin/agent-browser
 
 # Create non-root user with required directories
 RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME} \
     && usermod -aG sudo ${USERNAME} \
     && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/${USERNAME} \
-    && mkdir -p ${HOME}/.claude/scripts ${HOME}/.claude/skills ${HOME}/.agents ${HOME}/.gemini ${HOME}/projects \
+    && mkdir -p ${HOME}/.claude/scripts ${HOME}/.claude/skills ${HOME}/.agents ${HOME}/projects \
     && chown -R ${USERNAME}:${USERNAME} ${HOME} \
     && echo 'export PATH="$HOME/.claude/bin:$HOME/.local/bin:$HOME/.uv/bin:$HOME/.bun/bin:$PATH"' >> ${HOME}/.bashrc \
     && echo "alias cc='clear && claude'" >> ${HOME}/.bashrc \
@@ -97,7 +96,7 @@ COPY docker/entrypoint.sh docker/setup-env.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/setup-env.sh \
     && chown -R ${USERNAME}:${USERNAME} /opt/claude-config
 
-VOLUME ["${HOME}/.claude", "${HOME}/.agents", "${HOME}/.gemini", "${HOME}/projects"]
+VOLUME ["${HOME}/.claude", "${HOME}/.agents", "${HOME}/projects"]
 
 USER ${USERNAME}
 WORKDIR ${HOME}/projects

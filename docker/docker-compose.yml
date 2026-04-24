@@ -10,7 +10,6 @@ services:
       # Persistent configuration
       - claude-config:/home/developer/.claude
       - agents-skills:/home/developer/.agents
-      - gemini-config:/home/developer/.gemini
       # Projects directory
       - projects:/home/developer/projects
     stdin_open: true
@@ -29,7 +28,5 @@ volumes:
     name: claude-code-claude-config
   agents-skills:
     name: claude-code-agents-skills
-  gemini-config:
-    name: claude-code-gemini-config
   projects:
     name: claude-code-projects

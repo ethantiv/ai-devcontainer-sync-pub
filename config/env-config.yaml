@@ -61,8 +61,6 @@ defaults:
   skills:
     - url: "https://github.com/anthropics/skills"
       names: [docx, pdf, xlsx]
-    - url: "https://github.com/emilkowalski/skill"
-      name: emil-design-eng
     - url: "https://github.com/hashicorp/agent-skills"
       names: [refactor-module, terraform-stacks, terraform-style-guide, terraform-test, terraform-search-import]
     - url: "https://github.com/pbakaus/impeccable"
@@ -70,8 +68,6 @@ defaults:
       names: [humanizer, mermaid-diagrams]
     - url: "https://github.com/vercel-labs/agent-browser"
       name: agent-browser
-    - url: "https://github.com/vercel-labs/agent-skills"
-      names: [vercel-composition-patterns, vercel-react-best-practices, web-design-guidelines]
     - url: "https://github.com/vercel-labs/skills"
       name: find-skills
 

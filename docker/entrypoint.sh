@@ -4,6 +4,8 @@
 
 set -e
 export TERM=dumb  # Suppress ANSI escape sequences during startup
+export NO_COLOR=1 # Disable color output in CLIs that honor no-color.org
+export CI=1       # Signal non-interactive mode to ink/TUI libraries
 
 readonly CLAUDE_DIR="$HOME/.claude"
 readonly CONFIG_SOURCE="/opt/claude-config"
@@ -189,7 +191,6 @@ echo ""
 echo "AI Code DevContainer"
 echo ""
 echo "  claude --version    : $(claude_version)"
-echo "  gemini --version    : $(NO_COLOR=1 gemini --version 2>/dev/null || echo 'not available')"
 echo ""
 echo "  Working directory   : $(pwd)"
 echo ""
