@@ -35,7 +35,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8 \
     HOME=/home/${USERNAME} \
-    PATH="/home/${USERNAME}/.claude/bin:/home/${USERNAME}/.local/bin:/home/${USERNAME}/.uv/bin:/usr/local/bin:${PATH}" \
+    PATH="/home/${USERNAME}/.claude/bin:/home/${USERNAME}/.local/bin:/home/${USERNAME}/.uv/bin:/home/${USERNAME}/.bun/bin:/usr/local/bin:${PATH}" \
     NODE_OPTIONS="--max-old-space-size=512"
 
 # Core packages + chromium for ARM64 (Chrome for Testing lacks ARM64 builds)
@@ -79,7 +79,7 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/${USERNAME} \
     && mkdir -p ${HOME}/.claude/scripts ${HOME}/.claude/skills ${HOME}/.agents ${HOME}/.gemini ${HOME}/projects \
     && chown -R ${USERNAME}:${USERNAME} ${HOME} \
-    && echo 'export PATH="$HOME/.claude/bin:$HOME/.local/bin:$HOME/.uv/bin:$PATH"' >> ${HOME}/.bashrc \
+    && echo 'export PATH="$HOME/.claude/bin:$HOME/.local/bin:$HOME/.uv/bin:$HOME/.bun/bin:$PATH"' >> ${HOME}/.bashrc \
     && echo "alias cc='clear && claude'" >> ${HOME}/.bashrc \
     && echo "alias ccc='clear && claude -c'" >> ${HOME}/.bashrc \
     && echo "alias ccr='clear && claude -r'" >> ${HOME}/.bashrc \
@@ -101,6 +101,9 @@ VOLUME ["${HOME}/.claude", "${HOME}/.agents", "${HOME}/.gemini", "${HOME}/projec
 
 USER ${USERNAME}
 WORKDIR ${HOME}/projects
+
+# Install Bun runtime
+RUN curl -fsSL https://bun.sh/install | bash
 
 ENV CLAUDE_CONFIG_DIR=${HOME}/.claude \
     PLAYWRIGHT_BROWSERS_PATH=${HOME}/.cache/ms-playwright \

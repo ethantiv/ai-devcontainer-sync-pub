@@ -4,7 +4,11 @@ Gdy użytkownik prosi o zalogowanie, diagnozę problemu lub sprawdzenie czegoś 
 
 ## Operacje Git
 
-Nie uruchamiaj poleceń Git ani GitHub (git add, commit, push, pull, merge, rebase, gh pr create/merge) bez wyraźnej zgody użytkownika. Wyjątek: użytkownik wywołał polecenie ukośnikowe (np. `/commit`).
+Rutynowe polecenia Git i GitHub (git add, commit, push, pull, fetch, merge bez konfliktów) możesz wykonywać bez dodatkowego pytania, gdy wynikają naturalnie z bieżącego zadania.
+
+Wymagają wyraźnej zgody użytkownika operacje destrukcyjne, nieodwracalne lub widoczne dla innych, czyli między innymi: `git push --force` (także `--force-with-lease`), `git reset --hard`, `git rebase` na opublikowanych commitach, `git commit --amend` po pushu, `git branch -D`, `git checkout -- .`, `git restore .`, `git clean -f`, `gh pr create`, `gh pr merge`, `gh pr close`, usuwanie zdalnych gałęzi oraz pomijanie hooków flagami typu `--no-verify`.
+
+W razie wątpliwości, czy dana operacja jest odwracalna, zapytaj przed jej wykonaniem.
 
 ## Język
 
