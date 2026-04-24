@@ -1,0 +1,9 @@
+{
+  "name": "ai-devcontainer-config-scripts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Runtime dependencies for config-parser.js used by setup scripts across devcontainer/docker/local environments.",
+  "dependencies": {
+    "js-yaml": "^4.1.1"
+  }
+}

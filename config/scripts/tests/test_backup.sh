@@ -1,6 +1,6 @@
 #!/bin/bash
 # Tests for .devcontainer/backup.sh
-# Run: bash src/scripts/tests/test_backup.sh
+# Run: bash config/scripts/tests/test_backup.sh
 
 set -euo pipefail
 

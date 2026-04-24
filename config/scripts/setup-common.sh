@@ -124,6 +124,22 @@ apply_claude_settings() {
     fi
 }
 
+# Install runtime npm dependencies for config-parser.js (js-yaml) if missing.
+# Called by each adapter before any CONFIG_PARSER invocation.
+ensure_config_parser_deps() {
+    local parser_dir
+    parser_dir="$(dirname "$CONFIG_PARSER")"
+    [[ -d "$parser_dir/node_modules/js-yaml" ]] && return 0
+    [[ -f "$parser_dir/package.json" ]] || return 0
+
+    echo "📦 Installing config-parser dependencies..."
+    if (cd "$parser_dir" && npm install --omit=dev --no-audit --no-fund --silent >/dev/null 2>&1); then
+        ok "config-parser dependencies installed"
+    else
+        warn "Failed to install config-parser dependencies (js-yaml) — parsing may fail"
+    fi
+}
+
 # Propagate timezone, locale, and git identity from config to $ENV_EXPORT_FILE
 # Includes all vars from the DevContainer version: tz, locale, git_name, git_email,
 # work_email, work_orgs, work_dirs

@@ -66,12 +66,6 @@ COPY --from=builder /usr/local/bin/uv /usr/local/bin/uvx /usr/local/bin/
 RUN ln -sf ../lib/node_modules/@google/gemini-cli/dist/index.js /usr/bin/gemini \
     && ln -sf ../lib/node_modules/agent-browser/bin/agent-browser.js /usr/bin/agent-browser
 
-# Install loop system (autonomous dev loop + CLI)
-COPY src /opt/loop
-RUN cd /opt/loop && npm install --omit=dev \
-    && chmod +x /opt/loop/scripts/*.sh /opt/loop/bin/cli.js \
-    && ln -sf /opt/loop/bin/cli.js /usr/bin/loop
-
 # Create non-root user with required directories
 RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME} \
@@ -90,11 +84,12 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
 # Copy configuration files for runtime sync to volume
 COPY config/CLAUDE.md.memory /opt/claude-config/CLAUDE.md
 COPY config/env-config.yaml /opt/claude-config/env-config.yaml
-COPY config/scripts/*.sh /opt/claude-config/scripts/
+COPY config/scripts /opt/claude-config/scripts
 COPY config/plugins/dev-marketplace /opt/claude-config/plugins/dev-marketplace
 COPY docker/entrypoint.sh docker/setup-env.sh /usr/local/bin/
 
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/setup-env.sh \
+    && cd /opt/claude-config/scripts && npm install --omit=dev --no-audit --no-fund --silent \
     && chown -R ${USERNAME}:${USERNAME} /opt/claude-config
 
 VOLUME ["${HOME}/.claude", "${HOME}/.agents", "${HOME}/.gemini", "${HOME}/projects"]

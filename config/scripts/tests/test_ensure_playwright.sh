@@ -1,6 +1,6 @@
 #!/bin/bash
 # Tests for ensure-playwright.sh and pre-tool-check-playwright.sh
-# Run: bash src/scripts/tests/test_ensure_playwright.sh
+# Run: bash config/scripts/tests/test_ensure_playwright.sh
 
 set -euo pipefail
 

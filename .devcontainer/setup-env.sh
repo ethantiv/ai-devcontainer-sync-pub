@@ -55,7 +55,7 @@ setup_file_lock() {
 
 detect_workspace_folder() {
     WORKSPACE_FOLDER="${CODESPACE_VSCODE_FOLDER:-$PWD}"
-    CONFIG_PARSER="$WORKSPACE_FOLDER/src/lib/config-parser.js"
+    CONFIG_PARSER="$WORKSPACE_FOLDER/config/scripts/config-parser.js"
     CONFIG_FILE="$WORKSPACE_FOLDER/config/env-config.yaml"
     LOCAL_MARKETPLACE_DIR="$WORKSPACE_FOLDER/config/plugins/$LOCAL_MARKETPLACE_NAME"
     local env_type="local DevContainer"
@@ -280,31 +280,6 @@ GHEOF
 }
 
 # =============================================================================
-# LOOP CLI INSTALLATION
-# =============================================================================
-
-install_loop_cli() {
-    echo "📦 Installing loop CLI..."
-
-    local loop_dir="${WORKSPACE_FOLDER}/src"
-
-    if [[ ! -d "$loop_dir" ]]; then
-        warn "src/ directory not found in workspace"
-        return 0
-    fi
-
-    (cd "$loop_dir" && npm install --omit=dev 2>/dev/null)
-    chmod +x "$loop_dir/bin/cli.js" "$loop_dir/scripts/"*.sh
-    sudo ln -sf "$loop_dir/bin/cli.js" /usr/bin/loop
-
-    if command -v loop &>/dev/null; then
-        ok "loop CLI installed ($(loop --version 2>/dev/null))"
-    else
-        warn "Failed to install loop CLI"
-    fi
-}
-
-# =============================================================================
 # CLAUDE CONFIGURATION
 # =============================================================================
 
@@ -341,13 +316,13 @@ main() {
     detect_workspace_folder
     load_env_file
 
+    ensure_config_parser_deps
     propagate_env_from_config
     configure_agent_browser
     setup_git_identity
     setup_ssh_authentication
     setup_github_token
     setup_multi_github
-    install_loop_cli
 
     reset_config_if_requested "RESET_CLAUDE_CONFIG" "$CLAUDE_DIR"
     reset_config_if_requested "RESET_GEMINI_CONFIG" "$GEMINI_DIR"

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-DevContainer for multi-AI agent development with Claude Code and Gemini CLI. Includes configuration, loop system (Node.js CLI + shell scripts), prompts, and templates.
+DevContainer for multi-AI agent development with Claude Code and Gemini CLI. Configuration, setup scripts, and shared tooling for plugins, skills and MCP servers.
 
 ## Build & Run
 
@@ -12,14 +12,12 @@ Re-sync configuration after changes:
 ## Validation
 
 ```bash
-claude mcp list                    # Verify MCP servers
-claude plugin marketplace list     # List installed plugins
-npm install --prefix src && npm test --prefix src  # Run JS tests (requires install)
-npm run test:integration --prefix src              # Run only integration tests
-bash src/scripts/tests/test_write_idea.sh          # Run shell tests
-bash src/scripts/tests/test_ensure_playwright.sh   # Run Playwright lazy-install tests
-bash src/scripts/tests/test_backup.sh              # Run backup.sh tests
-bash src/scripts/tests/test_setup_common.sh        # Run setup-common.sh tests
+claude mcp list                                       # Verify MCP servers
+claude plugin marketplace list                        # List installed plugins
+bash config/scripts/tests/test_ensure_playwright.sh   # Run Playwright lazy-install tests
+bash config/scripts/tests/test_backup.sh              # Run backup.sh tests
+bash config/scripts/tests/test_setup_common.sh        # Run setup-common.sh tests
+npx jest config/scripts/tests/config-parser.test.js   # Run config-parser tests (Jest)
 ```
 
 No typecheck (pure JS/Bash project). No linter configured.
@@ -48,35 +46,7 @@ Codespaces: add as repository secrets. Local: create `config/.env` (copy from `c
 
 ### MCP Servers
 
-Declared in `config/env-config.yaml` (per-environment `mcp_servers` section) — single source of truth. All three setup scripts (`setup-env.sh`, `docker/setup-env.sh`, `setup-local.sh`) use `config-parser.js` to read YAML and sync (add/remove) servers automatically.
-
-### Loop System
-
-Source at `src/`. Docker: `COPY src /opt/loop` + `npm install`, symlinked as `/usr/bin/loop`.
-
-```bash
-loop init / update      # Initialize/refresh symlinks in project
-loop init --web         # Init with domain-specific skills (web/devops)
-loop design             # Interactive brainstorming / design session
-loop run [-i <idea>]    # Autonomous plan + build (two phases)
-loop run --plan         # Plan phase only
-loop run --build        # Build phase only (uses existing plan)
-loop kill               # Kill all loop processes
-loop archive            # Archive current plan/specs to docs/superpowers/archive/
-loop update [--web] [--devops]  # Force-refresh symlinks and templates
-```
-
-**CLI subcommands** (`src/bin/cli.js`): `init`, `design`, `run`, `kill`, `archive`, `update`. No `plan`, `build`, `doctor`, `summary`, or `cleanup` — these do not exist. `archive_plan` is now invoked automatically after the build phase completes (not at start of next run).
-
-**Design flow** (`PROMPT_design.md`): loads skills from `PROMPT_skills_design.md` (brainstorming) → reads `IDEA.md` + existing design docs → interactive conversation → saves design doc to `docs/` → commits. Always interactive, never plans or implements.
-
-**Run flow** (`PROMPT_plan.md` + `PROMPT_build.md`): Two sequential Claude sessions. Plan phase: loads skills from `PROMPT_skills_run.md` → reads `IDEA.md` + design docs → creates plan → spec compliance review → commits. Build phase: loads same skills → reads plan → builds with subagents → updates CLAUDE.md → commits. Flags: `--plan` (plan only), `--build` (build only), default runs both.
-
-**Structure**: `src/scripts/` (shell), `src/prompts/`, `src/templates/`, `src/bin/` + `src/lib/` (Node.js CLI).
-
-**Idea seeding**: `loop run -i` accepts inline text, `@file.md` (read from file), or `https://...` URLs (GitHub issues/PRs via `gh`, generic via `curl`). Resolved by `resolve_idea()` in `loop.sh`.
-
-**Auto-commit**: `ensure_committed()` in `loop.sh` auto-commits any uncommitted changes after session ends (prefix `chore(loop):`).
+Declared in `config/env-config.yaml` (per-environment `mcp_servers` section) — single source of truth. All three setup scripts (`setup-env.sh`, `docker/setup-env.sh`, `setup-local.sh`) use `config/scripts/config-parser.js` to read YAML and sync (add/remove) servers automatically.
 
 ### Adding New Components
 
@@ -94,11 +64,7 @@ Setup/sync — apply across all:
 - `docker/Dockerfile` + `docker/entrypoint.sh` + `docker/setup-env.sh` — Docker
 - `README.md` — docs for all deployment options
 
-Loop system: `src/` + `docker/Dockerfile` + `docker/entrypoint.sh`.
-
-Documentation: `README.md` (setup guide), `ai-devcontainer-course.html` (interactive walkthrough — must stay in sync with actual CLI).
-
-Loop CLI: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.sh`, `src/lib/init.js`. `loop init` skips existing; `loop update` calls `init({ force: true })`.
+Documentation: `README.md` (setup guide).
 
 ### Setup Flow
 
@@ -121,7 +87,7 @@ Loop CLI: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.sh`, `src/lib/in
 - **Setup scripts architecture**: Shared functions in `config/scripts/setup-common.sh`, sourced by three adapters (`.devcontainer/setup-env.sh`, `docker/setup-env.sh`, `setup-local.sh`). Each adapter sets required variables (see contract at top of `setup-common.sh`), sources the library, defines env-specific functions, and runs `main()`. Edit only `setup-common.sh` for plugin/skill/MCP changes. Requires Bash 4+.
 - **Setup scripts must be non-fatal**: Writes to dotfiles use `|| warn` / `|| true`. Don't block plugin/MCP setup on non-essential ops.
 - **Shell helpers**: `ok()`, `warn()`, `fail()` for colored status output in setup scripts.
-- **Config parser**: `src/lib/config-parser.js` reads `config/env-config.yaml`, merges defaults with environment overrides, interpolates `${VAR}`. CLI: `node config-parser.js --config <path> --env <env> --section <name>` or `--all`. YAML configs: `env-config.yaml` (real, private), `env-config.example.yaml` (template, public).
+- **Config parser**: `config/scripts/config-parser.js` reads `config/env-config.yaml`, merges defaults with environment overrides, interpolates `${VAR}`. Runtime dependency `js-yaml` declared in `config/scripts/package.json`; installed lazily via `ensure_config_parser_deps()` in `setup-common.sh` before first use. CLI: `node config-parser.js --config <path> --env <env> --section <name>` or `--all`. YAML configs: `env-config.yaml` (real, private), `env-config.example.yaml` (template, public).
 - **Parser `skills` section**: expands `names: [a,b]` to flat `{url, name}` pairs; entry with neither `name` nor `names` emits sentinel `{url, name: "*"}` (wildcard, consumed by `install_skill_bundle`). `mergeConfig` dedupes by `name || url` so wildcard entries don't collide on `undefined`.
 - **Rerun setup scripts**: `rm -f /tmp/dev-env-setup.lock` before invoking `setup-env.sh` again — `flock` can hold the lock past exit on some shells.
 - **Config parser path timing**: In `setup-env.sh`, `CONFIG_PARSER`/`CONFIG_FILE` must be set inside `detect_workspace_folder()`, not at script top-level — `WORKSPACE_FOLDER` is unset until that function runs. In `setup-local.sh`, they're set at top-level using `$CONFIG_DIR` (`$SCRIPT_DIR/config`) which is available immediately.
@@ -138,14 +104,8 @@ Loop CLI: `src/bin/cli.js`, `src/lib/run.js`, `src/scripts/loop.sh`, `src/lib/in
 - **GPG in container**: Use `--pinentry-mode loopback` with `--passphrase` — without it, gpg tries to launch pinentry dialog which doesn't exist.
 
 **Testing & dev tools:**
-- **NODE_ENV gotcha**: DevContainer sets `NODE_ENV=production` which skips `devDependencies` on `npm install`. Use `NODE_ENV=development npm install --prefix src` to install jest and other dev tools.
-- **Jest 30 CLI**: Use `--testPathPatterns` (with trailing `s`), not `--testPathPattern`. The old flag is removed in Jest 30.
-- **Shell test assert helpers**: `assert_eq`/`assert_contains` in `src/scripts/tests/` increment `TESTS_RUN` internally — don't also increment manually before calling them.
+- **Shell test assert helpers**: `assert_eq`/`assert_contains` in `config/scripts/tests/` increment `TESTS_RUN` internally — don't also increment manually before calling them.
 
 **MCP & integrations:**
 - **Coolify MCP limitations**: `base_directory` and `docker_compose_location` not in MCP tool — use `curl -X PATCH` directly.
 - **MCP server JSON type**: Remote HTTP MCP servers require `"type": "http"` in `add-json` config, not `"type": "url"` (which silently fails).
-
-**Loop system:**
-- **Skill presets**: `src/lib/skill-presets.js` defines project type → skills mapping. `loop init --web` appends to PROMPT_skills_{design,run}.md. Type persisted in `loop/.type` for `loop update`.
-- **Loop file naming**: `docs/IDEA.md` (seed). Plans in `docs/superpowers/plans/`, specs in `docs/superpowers/specs/` — paths managed by superpowers skills. `find_current_plan()` in `loop.sh` globs `docs/superpowers/plans/*.md`. Archive: `docs/superpowers/archive/`.

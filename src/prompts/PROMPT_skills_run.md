@@ -1,6 +1,0 @@
-- `writing-plans`
-- `subagent-driven-development`
-- `agent-browser`
-- `simplify`
-- `auto-revise-claude-md`
-- `spec-compliance-review`

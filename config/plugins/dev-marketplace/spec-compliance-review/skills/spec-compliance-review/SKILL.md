@@ -29,10 +29,10 @@ If `$1` is not provided, resolve the spec in this order **before** asking the us
    - Exactly one match → use it as the spec.
    - Multiple matches → list them to the user and ask which one to use.
    - No matches → fall through to step 2.
-2. **`docs/IDEA.md`** — if it exists, use it as the spec (the seed document for `loop design` / `loop run`).
+2. **`docs/IDEA.md`** — if it exists, use it as the spec.
 3. Neither location yielded a file → ask the user to provide the spec path explicitly.
 
-Why this order: in projects that use the superpowers/loop workflow, `docs/superpowers/specs/` is the canonical home for formal specifications produced by the `writing-plans` and related skills. `docs/IDEA.md` is the earlier, lighter-weight seed document and should only be used when no formal spec has been written yet.
+Why this order: in projects using the superpowers workflow, `docs/superpowers/specs/` is the canonical home for formal specifications produced by the `writing-plans` and related skills. `docs/IDEA.md` is the earlier, lighter-weight seed document and should only be used when no formal spec has been written yet.
 
 If `$2` (target) is missing, always ask the user — target artifacts are not auto-discovered.
 

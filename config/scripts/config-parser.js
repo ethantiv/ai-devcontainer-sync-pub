@@ -1,4 +1,4 @@
-// src/lib/config-parser.js
+// config/scripts/config-parser.js
 const fs = require('fs');
 const yaml = require('js-yaml');
 

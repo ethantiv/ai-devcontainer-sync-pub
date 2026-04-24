@@ -1,25 +1,18 @@
 # AI DevContainer Environment
 
-Ready-to-use development environment with Claude Code, Gemini CLI, autonomous development loops, and pre-configured AI tools.
+Ready-to-use development environment with Claude Code, Gemini CLI, and pre-configured AI tools.
 
 ## Table of Contents
 
 - [What's Inside](#whats-inside)
-- [Interactive Guide](#interactive-guide)
 - [Getting Started](#getting-started)
-- [Using the Loop System](#using-the-loop-system)
 - [Environment Variables](#environment-variables)
 - [Multi-GitHub Accounts](#multi-github-accounts)
 - [Volume Backups](#volume-backups)
 
-## Interactive Guide
-
-Open [`ai-devcontainer-course.html`](ai-devcontainer-course.html) in your browser for a step-by-step walkthrough covering setup, the loop system, plugins, skills, and configuration. It's a single self-contained HTML file — no server needed.
-
 ## What's Inside
 
 - **Claude Code** and **Gemini CLI** — pre-installed and configured
-- **dev-loop** — autonomous plan + build powered by Claude CLI (`loop` command)
 - **MCP Servers** — Context7, Coolify
 - **Local Plugins** — `roadmap`, `git-worktree`, `dependency-update`, `read-arxiv-paper`, `spec-compliance-review`
 - **Skills & Plugins** — official marketplace plugins + external skills, auto-installed from `config/env-config.yaml`. Skills entries support single (`name: x`), bundle (`names: [a, b]`), or wildcard (url only → install all skills from repo)
@@ -64,50 +57,11 @@ Deploy as a Docker Compose app on a [Coolify](https://coolify.io/)-managed serve
 
 ### Option 4: macOS (Local)
 
-No Docker required. Installs plugins, skills, and the loop CLI directly.
+No Docker required. Installs plugins and skills directly.
 
 ```bash
 ./setup-local.sh
 ```
-
-## Using the Loop System
-
-The `loop` command runs Claude CLI in autonomous plan/build cycles against any project.
-
-```bash
-cd ~/projects/my-project
-loop init                          # Set up loop in your project
-loop init --web                    # Init with web-specific skills
-
-loop design                        # Interactive brainstorming / design session
-loop run                           # Autonomous plan + build (two phases)
-loop run --plan                    # Plan phase only
-loop run --build                   # Build phase only
-
-loop run -i "Add authentication"   # Seed an idea before running
-loop run --interactive             # Manual Claude session
-loop run --tmux                    # Run in a detached tmux session
-
-loop kill                          # Kill all loop processes
-loop update                        # Refresh symlinks after package update
-loop update --web --devops         # Update with merged skill presets
-```
-
-### Idea Seeding
-
-The `-i` flag accepts multiple source formats — not just inline text:
-
-```bash
-loop run -i "Add user authentication"                        # Inline text
-loop run -i @docs/feature-spec.md                            # Read from file
-loop run -i https://github.com/org/repo/issues/42            # GitHub issue body (via gh CLI)
-loop run -i https://github.com/org/repo/pull/15              # GitHub PR body (via gh CLI)
-loop run -i https://example.com/spec.html                    # Any URL (via curl, HTML stripped)
-```
-
-The resolved content is written to `docs/IDEA.md`, which Claude reads as context during planning.
-
-Completed plans are archived automatically to `docs/superpowers/archive/` at the start of each new `loop run`, so you can just re-run the command to start a new cycle.
 
 ## Environment Variables
 

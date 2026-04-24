@@ -10,7 +10,7 @@ set -e
 
 CLAUDE_DIR="$HOME/.claude"
 CLAUDE_SETTINGS_FILE="$CLAUDE_DIR/settings.json"
-CONFIG_PARSER="/opt/loop/lib/config-parser.js"
+CONFIG_PARSER="/opt/claude-config/scripts/config-parser.js"
 CONFIG_FILE="$CLAUDE_DIR/env-config.yaml"
 ENVIRONMENT_TAG="docker"
 OFFICIAL_MARKETPLACE_NAME="claude-plugins-official"
@@ -61,6 +61,7 @@ main() {
 
     setup_github_token
     apply_claude_settings
+    ensure_config_parser_deps
     propagate_env_from_config
     configure_agent_browser
     sync_plugins

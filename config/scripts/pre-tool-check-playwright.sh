@@ -18,9 +18,9 @@ case "$command" in
 esac
 
 # Locate ensure-playwright.sh: Docker path first, then project-local
-SCRIPT="/opt/loop/scripts/ensure-playwright.sh"
+SCRIPT="/opt/claude-config/scripts/ensure-playwright.sh"
 if [ ! -f "$SCRIPT" ]; then
-    SCRIPT="${CLAUDE_PROJECT_DIR:-}/src/scripts/ensure-playwright.sh"
+    SCRIPT="${CLAUDE_PROJECT_DIR:-}/config/scripts/ensure-playwright.sh"
 fi
 if [ ! -f "$SCRIPT" ]; then
     # Script not found — don't block the command

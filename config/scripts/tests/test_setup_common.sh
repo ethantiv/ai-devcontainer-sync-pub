@@ -1,6 +1,6 @@
 #!/bin/bash
 # Tests for config/scripts/setup-common.sh
-# Run: bash src/scripts/tests/test_setup_common.sh
+# Run: bash config/scripts/tests/test_setup_common.sh
 
 set -euo pipefail
 

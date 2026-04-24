@@ -14,14 +14,9 @@ package-lock.json
 next-env.d.ts
 __pycache__/
 
-# Logs
-src/logs/
-
 # Generated docs
 docs/
 
-# Project-local (created by loop init)
-loop/
 .claude/
 
 # Encrypted volume backups

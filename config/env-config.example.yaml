@@ -4,7 +4,7 @@
 # Copy this file to env-config.yaml and fill in your personal values.
 # env-config.yaml should remain PRIVATE (not committed to the public mirror).
 #
-# MERGE RULES (applied by src/lib/config-parser.js):
+# MERGE RULES (applied by config/scripts/config-parser.js):
 #   - Scalars:          environment value overrides default
 #   - Lists of objects: environment entries appended to defaults, deduplicated by `name`
 #   - Lists of strings: environment entries appended, deduplicated by value
