@@ -36,7 +36,6 @@ CONFIG_DIR="$SCRIPT_DIR/config"
 
 CLAUDE_DIR="$HOME/.claude"
 CLAUDE_SETTINGS_FILE="$CLAUDE_DIR/settings.json"
-CONFIG_PARSER="$SCRIPT_DIR/config/scripts/config-parser.js"
 CONFIG_FILE="$CONFIG_DIR/env-config.yaml"
 ENVIRONMENT_TAG="local"
 OFFICIAL_MARKETPLACE_NAME="claude-plugins-official"
@@ -81,6 +80,13 @@ check_requirements() {
         ok "jq $(jq --version 2>/dev/null | head -1)"
     fi
 
+    if ! has_command yq; then
+        missing+=("yq")
+        fail "yq not found"
+    else
+        ok "yq $(yq --version 2>/dev/null | head -1)"
+    fi
+
     if ! has_command node; then
         missing+=("node")
         fail "node not found"
@@ -116,6 +122,7 @@ check_requirements() {
         for dep in "${missing[@]}"; do
             case "$dep" in
                 jq) echo "  jq is required — install with: brew install jq" ;;
+                yq) echo "  yq is required — install with: brew install yq" ;;
                 node|npm|npx) echo "  brew install node" ;;
                 brew) echo "  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"" ;;
             esac
@@ -184,7 +191,6 @@ main() {
     check_requirements
     install_claude_cli
     install_agent_browser
-    ensure_config_parser_deps
     setup_claude_configuration
     sync_plugins
     sync_skills

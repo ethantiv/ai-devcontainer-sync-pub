@@ -25,10 +25,9 @@ readonly SSH_KNOWN_HOSTS_FILE="$SSH_DIR/known_hosts"
 
 readonly GEMINI_DIR="$HOME/.gemini"
 
-# Required by setup-common.sh (CONFIG_PARSER & CONFIG_FILE set in detect_workspace_folder)
+# Required by setup-common.sh (CONFIG_FILE set in detect_workspace_folder)
 CLAUDE_DIR="$HOME/.claude"
 CLAUDE_SETTINGS_FILE="$CLAUDE_DIR/settings.json"
-CONFIG_PARSER=""
 CONFIG_FILE=""
 ENVIRONMENT_TAG="devcontainer"
 OFFICIAL_MARKETPLACE_NAME="claude-plugins-official"
@@ -55,14 +54,13 @@ setup_file_lock() {
 
 detect_workspace_folder() {
     WORKSPACE_FOLDER="${CODESPACE_VSCODE_FOLDER:-$PWD}"
-    CONFIG_PARSER="$WORKSPACE_FOLDER/config/scripts/config-parser.js"
     CONFIG_FILE="$WORKSPACE_FOLDER/config/env-config.yaml"
     LOCAL_MARKETPLACE_DIR="$WORKSPACE_FOLDER/config/plugins/$LOCAL_MARKETPLACE_NAME"
     local env_type="local DevContainer"
     [[ -n "${CODESPACE_VSCODE_FOLDER}" ]] && env_type="Codespaces"
     echo "🌍 Detected $env_type environment: $WORKSPACE_FOLDER"
 
-    # Source shared functions (requires CONFIG_PARSER, CONFIG_FILE, etc.)
+    # Source shared functions (requires CONFIG_FILE, ENVIRONMENT_TAG, etc.)
     source "$WORKSPACE_FOLDER/config/scripts/setup-common.sh"
 }
 
@@ -316,7 +314,6 @@ main() {
     detect_workspace_folder
     load_env_file
 
-    ensure_config_parser_deps
     propagate_env_from_config
     configure_agent_browser
     setup_git_identity

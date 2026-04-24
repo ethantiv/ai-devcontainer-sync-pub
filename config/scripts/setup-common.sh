@@ -22,7 +22,6 @@ readonly _SETUP_COMMON_LOADED=1
 # Required variables that callers must set before sourcing this file:
 #   CLAUDE_DIR              - Path to Claude config directory (e.g. ~/.claude)
 #   CLAUDE_SETTINGS_FILE    - Path to Claude settings.json
-#   CONFIG_PARSER           - Path to config-parser.js
 #   CONFIG_FILE             - Path to env-config.yaml
 #   ENVIRONMENT_TAG         - Environment identifier (devcontainer|docker|local)
 #   OFFICIAL_MARKETPLACE_NAME  - Name of the official plugin marketplace
@@ -36,7 +35,6 @@ _validate_required_vars() {
     local required_vars=(
         CLAUDE_DIR
         CLAUDE_SETTINGS_FILE
-        CONFIG_PARSER
         CONFIG_FILE
         ENVIRONMENT_TAG
         OFFICIAL_MARKETPLACE_NAME
@@ -76,6 +74,79 @@ warn() { echo -e "  \033[33m⚠️\033[0m  $1"; }
 fail() { echo -e "  \033[31m❌\033[0m $1"; }
 
 # =============================================================================
+# CONFIG LOADING (YAML → JSON via yq, merge/interp/dedup via jq)
+# =============================================================================
+
+# Emit merged config as JSON: defaults + environments[$ENVIRONMENT_TAG],
+# with list deduplication (by .name or .url for objects, by value for strings)
+# and ${VAR} interpolation from the process environment.
+_config_json() {
+    has_command yq || { warn "yq not found — install mikefarah/yq"; return 1; }
+    has_command jq || { warn "jq not found"; return 1; }
+
+    yq eval -o=json "$CONFIG_FILE" | jq --arg env "$ENVIRONMENT_TAG" '
+        def dedup_list(xs):
+            if (xs | length) == 0 then xs
+            elif (xs[0] | type) == "object" and ((xs[0].name // xs[0].url) // null) != null then
+                reduce xs[] as $i ({}; .[($i.name // $i.url)] = $i) | [.[]]
+            else (xs | unique) end;
+        def merge($a; $b):
+            if $b == null then $a
+            elif $a == null then $b
+            elif ($a | type) == "array" and ($b | type) == "array" then dedup_list($a + $b)
+            elif ($a | type) == "object" and ($b | type) == "object" then
+                reduce ([$a, $b] | add | keys_unsorted[]) as $k ({};
+                    .[$k] = merge($a[$k]; $b[$k]))
+            else $b end;
+        def interp:
+            walk(if type == "string" then
+                gsub("\\$\\{(?<v>[^}]+)\\}";
+                    (env[.v] // (. | "Warning: unresolved variable ${\(.v)}\n" | stderr | "")))
+            else . end);
+        def validate:
+            . as $out |
+            ["git.personal.name", "git.personal.email"] as $required |
+            ($required | map(select(. as $p |
+                ($out | getpath($p | split(".")) // "") | tostring | length == 0))) as $missing |
+            if ($missing | length) > 0 then
+                error("Missing required fields: \($missing | join(", "))")
+            else $out end;
+        (.defaults // {}) as $d |
+        (.environments[$env] // {}) as $e |
+        merge($d; $e) | interp | validate
+    '
+}
+
+# Emit a computed section. Args: $1 = section name
+#   __all__           — entire merged config
+#   plugins_flat      — marketplace + lsp flattened to [{name, type:"marketplace"}]
+#   plugins_external  — .plugins.external list
+#   skills            — expanded to [{url, name}], with "*" wildcard for bundles without names
+#   <top-level-key>   — raw value of .<key> (falls back to [] when missing)
+_config_section() {
+    local section="$1"
+    local json
+    json=$(_config_json) || return 1
+    case "$section" in
+        __all__)
+            printf '%s\n' "$json" ;;
+        plugins_flat)
+            printf '%s\n' "$json" | jq '[(.plugins.marketplace // [])[], (.plugins.lsp // [])[]]
+                | map({name: ., type: "marketplace"})' ;;
+        plugins_external)
+            printf '%s\n' "$json" | jq '.plugins.external // []' ;;
+        skills)
+            printf '%s\n' "$json" | jq '[.skills // [] | .[]
+                | if (.names | type) == "array" and (.names | length) > 0
+                    then .names[] as $n | {url, name: $n}
+                  elif .name then {url, name}
+                  else {url, name: "*"} end]' ;;
+        *)
+            printf '%s\n' "$json" | jq --arg s "$section" '.[$s] // []' ;;
+    esac
+}
+
+# =============================================================================
 # CLAUDE SETTINGS
 # =============================================================================
 
@@ -83,7 +154,7 @@ apply_claude_settings() {
     has_command jq || { warn "jq not found - cannot manage settings"; return 0; }
 
     local claude_config
-    claude_config=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section claude) || {
+    claude_config=$(_config_section claude) || {
         warn "Failed to parse Claude settings"; return 0
     }
 
@@ -124,28 +195,12 @@ apply_claude_settings() {
     fi
 }
 
-# Install runtime npm dependencies for config-parser.js (js-yaml) if missing.
-# Called by each adapter before any CONFIG_PARSER invocation.
-ensure_config_parser_deps() {
-    local parser_dir
-    parser_dir="$(dirname "$CONFIG_PARSER")"
-    [[ -d "$parser_dir/node_modules/js-yaml" ]] && return 0
-    [[ -f "$parser_dir/package.json" ]] || return 0
-
-    echo "📦 Installing config-parser dependencies..."
-    if (cd "$parser_dir" && npm install --omit=dev --no-audit --no-fund --silent >/dev/null 2>&1); then
-        ok "config-parser dependencies installed"
-    else
-        warn "Failed to install config-parser dependencies (js-yaml) — parsing may fail"
-    fi
-}
-
 # Propagate timezone, locale, and git identity from config to $ENV_EXPORT_FILE
 # Includes all vars from the DevContainer version: tz, locale, git_name, git_email,
 # work_email, work_orgs, work_dirs
 propagate_env_from_config() {
     local config_json
-    config_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --all 2>/dev/null) || return 0
+    config_json=$(_config_section __all__ 2>/dev/null) || return 0
 
     local tz locale git_name git_email work_email work_orgs work_dirs
     tz=$(echo "$config_json" | jq -r '.timezone // empty')
@@ -405,7 +460,7 @@ install_all_plugins_and_skills() {
 
     # Plugins (flat array from parser)
     local plugins_json
-    plugins_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section plugins_flat) || {
+    plugins_json=$(_config_section plugins_flat) || {
         warn "Failed to parse plugin config"; return 0
     }
 
@@ -420,7 +475,7 @@ install_all_plugins_and_skills() {
 
     # Skills
     local skills_json
-    skills_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section skills) || {
+    skills_json=$(_config_section skills) || {
         warn "Failed to parse skills config"; return 0
     }
 
@@ -451,7 +506,7 @@ install_external_marketplace_plugins() {
     has_command jq || { warn "jq not found"; return 0; }
 
     local external_json
-    external_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section plugins_external 2>/dev/null) || {
+    external_json=$(_config_section plugins_external 2>/dev/null) || {
         warn "Failed to parse external plugins"; return 0
     }
     [[ "$external_json" == "[]" ]] && { ok "No external plugins declared"; return 0; }
@@ -515,7 +570,7 @@ build_expected_plugins_list() {
     expected_plugins=()
 
     local plugins_json
-    plugins_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section plugins_flat) || return 0
+    plugins_json=$(_config_section plugins_flat) || return 0
 
     # Process substitution to preserve expected_plugins associative array
     while IFS= read -r plugin; do
@@ -539,7 +594,7 @@ build_expected_plugins_list() {
     # Fall back to [] on parser failure — returning early would empty the whole
     # expected list (built above) and cause sync_plugins to mass-uninstall.
     local external_json
-    external_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section plugins_external 2>/dev/null) || external_json='[]'
+    external_json=$(_config_section plugins_external 2>/dev/null) || external_json='[]'
     while IFS= read -r entry; do
         [[ -z "$entry" ]] && continue
         local name marketplace
@@ -594,7 +649,7 @@ sync_skills() {
     # Build expected skills list from YAML
     local expected=()
     local skills_json
-    skills_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section skills 2>/dev/null) || return 0
+    skills_json=$(_config_section skills 2>/dev/null) || return 0
 
     local wildcard_urls=()
     while IFS= read -r skill; do
@@ -681,7 +736,7 @@ add_mcp_server() {
 # Populates caller's mcp_expected array (must be declared in calling scope)
 parse_mcp_servers() {
     local mcp_json
-    mcp_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section mcp_servers) || {
+    mcp_json=$(_config_section mcp_servers) || {
         warn "Failed to parse MCP config"; return 0
     }
 
@@ -763,7 +818,7 @@ sync_marketplaces() {
 
     # Preserve marketplaces that host declared external plugins
     local external_json
-    external_json=$(node "$CONFIG_PARSER" --config "$CONFIG_FILE" --env "$ENVIRONMENT_TAG" --section plugins_external 2>/dev/null) || external_json='[]'
+    external_json=$(_config_section plugins_external 2>/dev/null) || external_json='[]'
     while IFS= read -r marketplace; do
         [[ -n "$marketplace" ]] && expected_marketplaces["$marketplace"]=1
     done < <(echo "$external_json" | jq -r '.[]?.marketplace // empty' 2>/dev/null)

@@ -42,13 +42,13 @@ Codespaces: add as repository secrets. Local: create `config/.env` (copy from `c
 
 ### MCP Servers
 
-Declared in `config/env-config.yaml` (per-environment `mcp_servers` section) — single source of truth. All three setup scripts (`setup-env.sh`, `docker/setup-env.sh`, `setup-local.sh`) use `config/scripts/config-parser.js` to read YAML and sync (add/remove) servers automatically.
+Declared in `config/env-config.yaml` (per-environment `mcp_servers` section) — single source of truth. All three setup scripts (`setup-env.sh`, `docker/setup-env.sh`, `setup-local.sh`) read YAML via the shared `_config_section` helper in `setup-common.sh` (backed by `yq` + `jq`) and sync (add/remove) servers automatically.
 
 ### Adding New Components
 
 **Global npm tools** — 3 files: `.devcontainer/Dockerfile`, `docker/Dockerfile`, `setup-local.sh`.
 
-**Plugins/Skills** — Edit `config/env-config.yaml` (plugins/skills sections). All three setup scripts read via config-parser. Local plugins: add to `config/plugins/dev-marketplace/` + register in `marketplace.json`. Third-party marketplace plugins (outside `claude-plugins-official` and `dev-marketplace`): add to `plugins.external` with `name` (plugin ID), `marketplace` (name from its `marketplace.json`), and `source` (arg for `claude plugin marketplace add`, e.g. `owner/repo`).
+**Plugins/Skills** — Edit `config/env-config.yaml` (plugins/skills sections). All three setup scripts read via `_config_section` in `setup-common.sh`. Local plugins: add to `config/plugins/dev-marketplace/` + register in `marketplace.json`. Third-party marketplace plugins (outside `claude-plugins-official` and `dev-marketplace`): add to `plugins.external` with `name` (plugin ID), `marketplace` (name from its `marketplace.json`), and `source` (arg for `claude plugin marketplace add`, e.g. `owner/repo`).
 
 **Local plugin layout**: `plugins/dev-marketplace/<name>/.claude-plugin/plugin.json` + `commands/<cmd>.md` (YAML frontmatter: `allowed-tools`, `description`, `argument-hint`).
 
@@ -83,10 +83,10 @@ Documentation: `README.md` (setup guide).
 - **Setup scripts architecture**: Shared functions in `config/scripts/setup-common.sh`, sourced by three adapters (`.devcontainer/setup-env.sh`, `docker/setup-env.sh`, `setup-local.sh`). Each adapter sets required variables (see contract at top of `setup-common.sh`), sources the library, defines env-specific functions, and runs `main()`. Edit only `setup-common.sh` for plugin/skill/MCP changes. Requires Bash 4+.
 - **Setup scripts must be non-fatal**: Writes to dotfiles use `|| warn` / `|| true`. Don't block plugin/MCP setup on non-essential ops.
 - **Shell helpers**: `ok()`, `warn()`, `fail()` for colored status output in setup scripts.
-- **Config parser**: `config/scripts/config-parser.js` reads `config/env-config.yaml`, merges defaults with environment overrides, interpolates `${VAR}`. Runtime dependency `js-yaml` declared in `config/scripts/package.json`; installed lazily via `ensure_config_parser_deps()` in `setup-common.sh` before first use. CLI: `node config-parser.js --config <path> --env <env> --section <name>` or `--all`. YAML configs: `env-config.yaml` (real, private), `env-config.example.yaml` (template, public).
-- **Parser `skills` section**: expands `names: [a,b]` to flat `{url, name}` pairs; entry with neither `name` nor `names` emits sentinel `{url, name: "*"}` (wildcard, consumed by `install_skill_bundle`). `mergeConfig` dedupes by `name || url` so wildcard entries don't collide on `undefined`.
+- **Config parser**: `setup-common.sh` exposes `_config_json` (YAML → merged JSON) and `_config_section <name>` (extracts computed sections). Pipeline: `yq eval -o=json` parses YAML, `jq` merges `defaults` with `environments[$env]`, dedupes lists by `.name || .url`, and interpolates `${VAR}` via `env[.v]`. No npm dependency. Requires the Go variant of `yq` (`mikefarah/yq`) — NOT the Python wrapper from Debian's `apt install yq`. YAML configs: `env-config.yaml` (real, private), `env-config.example.yaml` (template, public).
+- **Computed sections** (in `_config_section`): `plugins_flat` (marketplace + lsp merged to `[{name, type}]`), `plugins_external` (`.plugins.external`), `skills` (expands `names: [a,b]` to flat `{url, name}` pairs; entry with neither `name` nor `names` emits sentinel `{url, name: "*"}` — wildcard consumed by `install_skill_bundle`), `__all__` (full merged config). Dedup inside merge keeps wildcard entries from colliding on `null`.
 - **Rerun setup scripts**: `rm -f /tmp/dev-env-setup.lock` before invoking `setup-env.sh` again — `flock` can hold the lock past exit on some shells.
-- **Config parser path timing**: In `setup-env.sh`, `CONFIG_PARSER`/`CONFIG_FILE` must be set inside `detect_workspace_folder()`, not at script top-level — `WORKSPACE_FOLDER` is unset until that function runs. In `setup-local.sh`, they're set at top-level using `$CONFIG_DIR` (`$SCRIPT_DIR/config`) which is available immediately.
+- **Config path timing**: In `.devcontainer/setup-env.sh`, `CONFIG_FILE` must be set inside `detect_workspace_folder()`, not at script top-level — `WORKSPACE_FOLDER` is unset until that function runs. In `setup-local.sh`, it's set at top-level using `$CONFIG_DIR` (`$SCRIPT_DIR/config`) which is available immediately.
 - **Skills install**: One `npx skills add` call per repo via `install_skill_bundle()`. YAML entry supports `name: x`, `names: [a, b]`, or bare `url` (wildcard → `--skill '*'`). Never use `--all` (forces `--agent '*'` → creates dot-dirs for every supported agent; omitting `-g` installs to CWD instead of `~/.claude/skills/`).
 - **Wildcard manifest**: `~/.claude/skills/.sources.json` tracks `{url: [skills]}` for wildcard entries — snapshot-delta updated on each install. Lets sync remove skills when URL removed from YAML.
 - **Setup order**: `install_all_plugins_and_skills` MUST run before `sync_skills` — sync reads the manifest for wildcard URLs, which is populated during install.

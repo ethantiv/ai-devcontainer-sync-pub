@@ -10,7 +10,6 @@ set -e
 
 CLAUDE_DIR="$HOME/.claude"
 CLAUDE_SETTINGS_FILE="$CLAUDE_DIR/settings.json"
-CONFIG_PARSER="/opt/claude-config/scripts/config-parser.js"
 CONFIG_FILE="$CLAUDE_DIR/env-config.yaml"
 ENVIRONMENT_TAG="docker"
 OFFICIAL_MARKETPLACE_NAME="claude-plugins-official"
@@ -51,6 +50,7 @@ main() {
     [[ -x "$CLAUDE_CMD" ]] || CLAUDE_CMD="$(command -v claude 2>/dev/null || true)"
     [[ -x "$CLAUDE_CMD" ]] || { fail "Claude CLI not found"; exit 1; }
     has_command jq || { fail "jq not found"; exit 1; }
+    has_command yq || { fail "yq not found"; exit 1; }
 
     # Define claude function to use correct binary
     claude() { "$CLAUDE_CMD" "$@"; }
@@ -61,7 +61,6 @@ main() {
 
     setup_github_token
     apply_claude_settings
-    ensure_config_parser_deps
     propagate_env_from_config
     configure_agent_browser
     sync_plugins

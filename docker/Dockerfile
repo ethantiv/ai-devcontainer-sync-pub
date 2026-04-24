@@ -44,6 +44,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tmux locales sudo chromium \
     && rm -rf /var/lib/apt/lists/*
 
+# Install mikefarah/yq (Go binary) from GitHub Releases.
+# NOT apt's `yq` package — that one is kislyuk/yq (Python wrapper) with incompatible API.
+RUN ARCH=$(dpkg --print-architecture) && \
+    curl -fsSL "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${ARCH}" \
+        -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq
+
 # Generate UTF-8 locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 
@@ -89,7 +95,6 @@ COPY config/plugins/dev-marketplace /opt/claude-config/plugins/dev-marketplace
 COPY docker/entrypoint.sh docker/setup-env.sh /usr/local/bin/
 
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/setup-env.sh \
-    && cd /opt/claude-config/scripts && npm install --omit=dev --no-audit --no-fund --silent \
     && chown -R ${USERNAME}:${USERNAME} /opt/claude-config
 
 VOLUME ["${HOME}/.claude", "${HOME}/.agents", "${HOME}/.gemini", "${HOME}/projects"]

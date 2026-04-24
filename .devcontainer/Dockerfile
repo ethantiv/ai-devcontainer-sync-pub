@@ -61,6 +61,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libatspi2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
+# Install mikefarah/yq (Go binary) from GitHub Releases.
+# NOT apt's `yq` package — that one is kislyuk/yq (Python wrapper) with incompatible API.
+RUN ARCH=$(dpkg --print-architecture) && \
+    curl -fsSL "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${ARCH}" \
+        -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq
+
 # Configure Polish locale
 RUN if grep -q '^# pl_PL.UTF-8' /etc/locale.gen 2>/dev/null; then \
     sed -i '/pl_PL.UTF-8/s/^# //g' /etc/locale.gen && locale-gen; \
