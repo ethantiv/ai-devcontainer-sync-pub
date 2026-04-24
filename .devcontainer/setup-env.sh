@@ -25,14 +25,10 @@ readonly SSH_KNOWN_HOSTS_FILE="$SSH_DIR/known_hosts"
 
 readonly GEMINI_DIR="$HOME/.gemini"
 
-# Required by setup-common.sh (CONFIG_FILE set in detect_workspace_folder)
-CLAUDE_DIR="$HOME/.claude"
-CLAUDE_SETTINGS_FILE="$CLAUDE_DIR/settings.json"
+# Required by setup-common.sh (CONFIG_FILE and LOCAL_MARKETPLACE_DIR
+# resolved inside detect_workspace_folder before sourcing the library).
 CONFIG_FILE=""
 ENVIRONMENT_TAG="devcontainer"
-OFFICIAL_MARKETPLACE_NAME="claude-plugins-official"
-OFFICIAL_MARKETPLACE_REPO="anthropics/claude-plugins-official"
-LOCAL_MARKETPLACE_NAME="dev-marketplace"
 LOCAL_MARKETPLACE_DIR=""
 ENV_EXPORT_FILE="$HOME/.bashrc"
 
@@ -55,12 +51,11 @@ setup_file_lock() {
 detect_workspace_folder() {
     WORKSPACE_FOLDER="${CODESPACE_VSCODE_FOLDER:-$PWD}"
     CONFIG_FILE="$WORKSPACE_FOLDER/config/env-config.yaml"
-    LOCAL_MARKETPLACE_DIR="$WORKSPACE_FOLDER/config/plugins/$LOCAL_MARKETPLACE_NAME"
+    LOCAL_MARKETPLACE_DIR="$WORKSPACE_FOLDER/config/plugins/dev-marketplace"
     local env_type="local DevContainer"
     [[ -n "${CODESPACE_VSCODE_FOLDER}" ]] && env_type="Codespaces"
     echo "🌍 Detected $env_type environment: $WORKSPACE_FOLDER"
 
-    # Source shared functions (requires CONFIG_FILE, ENVIRONMENT_TAG, etc.)
     source "$WORKSPACE_FOLDER/config/scripts/setup-common.sh"
 }
 
@@ -90,11 +85,9 @@ setup_ssh_github_integration() {
         ok "GitHub added to known_hosts"
     fi
 
-    if ssh -T git@github.com -o ConnectTimeout=10 -o StrictHostKeyChecking=yes 2>&1 | grep -q "successfully authenticated"; then
-        ok "SSH connection to GitHub successful"
-    else
-        warn "SSH key configured but connection test failed (key may not be in GitHub account)"
-    fi
+    ssh -T git@github.com -o ConnectTimeout=10 -o StrictHostKeyChecking=yes 2>&1 | grep -q "successfully authenticated" \
+        && { ok "SSH connection to GitHub successful"; return; }
+    warn "SSH key configured but connection test failed (key may not be in GitHub account)"
 }
 
 setup_ssh_authentication() {
@@ -132,18 +125,16 @@ setup_github_token() {
     fi
 
     ok "GitHub token configured"
-    # Register gh as git credential helper for HTTPS repos
     gh auth setup-git 2>/dev/null || warn "Failed to configure gh as git credential helper"
-    # Append token export and aliases (idempotent)
-    if ! grep -q "GH_TOKEN" "$HOME/.bashrc" 2>/dev/null; then
-        cat >> ~/.bashrc << TOKENEOF
 
-# GitHub token and Claude aliases
-export GH_TOKEN='${GH_TOKEN}'
+    _write_env_export GH_TOKEN "$GH_TOKEN"
+    if ! grep -q "^alias cc=" "$HOME/.bashrc" 2>/dev/null; then
+        cat >> "$HOME/.bashrc" << 'ALIASEOF'
+
 alias cc='clear && claude'
 alias ccc='clear && claude -c'
 alias ccr='clear && claude -r'
-TOKENEOF
+ALIASEOF
     fi
 }
 
@@ -223,14 +214,7 @@ CREDEOF
         sed -i '/# Multi-GitHub: .* account routing/d' "$HOME/.bashrc"
     fi
 
-    # Export GH_TOKEN_WORK for child processes (idempotent guard)
-    if ! grep -q "GH_TOKEN_WORK" "$HOME/.bashrc" 2>/dev/null; then
-        cat >> "$HOME/.bashrc" << BASHEOF
-
-# Multi-GitHub: work account token
-export GH_TOKEN_WORK='${GH_TOKEN_WORK}'
-BASHEOF
-    fi
+    _write_env_export GH_TOKEN_WORK "$GH_TOKEN_WORK"
 
     # Write gh CLI shim (works in both interactive and non-interactive shells)
     cat > "$HOME/.local/bin/gh" << 'GHEOF'
@@ -294,10 +278,7 @@ reset_config_if_requested() {
 setup_claude_configuration() {
     echo "📄 Setting up Claude configuration..."
 
-    ensure_directory "$CLAUDE_DIR"
-    ensure_directory "$CLAUDE_DIR/tmp"
-    export TMPDIR="$CLAUDE_DIR/tmp"
-
+    init_claude_dirs
     apply_claude_settings
     copy_claude_memory "$WORKSPACE_FOLDER"
     sync_claude_scripts "$WORKSPACE_FOLDER"
@@ -325,13 +306,7 @@ main() {
     reset_config_if_requested "RESET_GEMINI_CONFIG" "$GEMINI_DIR"
 
     setup_claude_configuration
-    sync_plugins
-    install_all_plugins_and_skills
-    sync_skills
-    install_external_marketplace_plugins
-    install_local_marketplace_plugins
-    sync_marketplaces
-    sync_mcp_servers
+    run_plugin_sync_pipeline
 
     ok "Setup complete!"
 }

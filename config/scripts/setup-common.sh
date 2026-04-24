@@ -16,30 +16,27 @@
 readonly _SETUP_COMMON_LOADED=1
 
 # =============================================================================
-# REQUIRED VARIABLE VALIDATION
+# DEFAULTS AND REQUIRED VARIABLE VALIDATION
 # =============================================================================
 
-# Required variables that callers must set before sourcing this file:
-#   CLAUDE_DIR              - Path to Claude config directory (e.g. ~/.claude)
-#   CLAUDE_SETTINGS_FILE    - Path to Claude settings.json
+# Defaults — callers may override any of these before sourcing.
+: "${CLAUDE_DIR:=$HOME/.claude}"
+: "${CLAUDE_SETTINGS_FILE:=$CLAUDE_DIR/settings.json}"
+: "${OFFICIAL_MARKETPLACE_NAME:=claude-plugins-official}"
+: "${OFFICIAL_MARKETPLACE_REPO:=anthropics/claude-plugins-official}"
+: "${LOCAL_MARKETPLACE_NAME:=dev-marketplace}"
+
+# Required — callers must set before sourcing:
 #   CONFIG_FILE             - Path to env-config.yaml
 #   ENVIRONMENT_TAG         - Environment identifier (devcontainer|docker|local)
-#   OFFICIAL_MARKETPLACE_NAME  - Name of the official plugin marketplace
-#   OFFICIAL_MARKETPLACE_REPO  - GitHub repo of the official marketplace
-#   LOCAL_MARKETPLACE_NAME  - Name of the local plugin marketplace
 #   LOCAL_MARKETPLACE_DIR   - Directory of the local plugin marketplace
 #   ENV_EXPORT_FILE         - File to write exported env vars into (e.g. ~/.bashrc or $CLAUDE_DIR/env.sh)
 
 _validate_required_vars() {
     local missing=()
     local required_vars=(
-        CLAUDE_DIR
-        CLAUDE_SETTINGS_FILE
         CONFIG_FILE
         ENVIRONMENT_TAG
-        OFFICIAL_MARKETPLACE_NAME
-        OFFICIAL_MARKETPLACE_REPO
-        LOCAL_MARKETPLACE_NAME
         LOCAL_MARKETPLACE_DIR
         ENV_EXPORT_FILE
     )
@@ -69,9 +66,28 @@ has_command() {
     command -v "$1" &>/dev/null
 }
 
+# Create ~/.claude and ~/.claude/tmp, then point TMPDIR at the latter so that
+# rename(2) stays on the same filesystem as the Claude volume (avoids EXDEV).
+init_claude_dirs() {
+    ensure_directory "$CLAUDE_DIR"
+    ensure_directory "$CLAUDE_DIR/tmp"
+    export TMPDIR="$CLAUDE_DIR/tmp"
+}
+
 ok()   { echo -e "  \033[32m✔︎\033[0m $1"; }
 warn() { echo -e "  \033[33m⚠️\033[0m  $1"; }
 fail() { echo -e "  \033[31m❌\033[0m $1"; }
+
+# Emit "📊 <label>: N removed, N failed" when there's activity, else "All <thing> in sync".
+# Args: label, in_sync_msg, removed, failed
+_print_sync_summary() {
+    local label="$1" in_sync_msg="$2" removed="$3" failed="$4"
+    if ((removed > 0 || failed > 0)); then
+        echo "  📊 $label: $removed removed, $failed failed"
+    else
+        ok "$in_sync_msg"
+    fi
+}
 
 # =============================================================================
 # CONFIG LOADING (YAML → JSON via yq, merge/interp/dedup via jq)
@@ -80,11 +96,15 @@ fail() { echo -e "  \033[31m❌\033[0m $1"; }
 # Emit merged config as JSON: defaults + environments[$ENVIRONMENT_TAG],
 # with list deduplication (by .name or .url for objects, by value for strings)
 # and ${VAR} interpolation from the process environment.
+# Result is cached in _CONFIG_JSON_CACHE — ~10 callers per setup run.
+_CONFIG_JSON_CACHE=""
 _config_json() {
+    [[ -n "$_CONFIG_JSON_CACHE" ]] && { printf '%s\n' "$_CONFIG_JSON_CACHE"; return 0; }
     has_command yq || { warn "yq not found — install mikefarah/yq"; return 1; }
     has_command jq || { warn "jq not found"; return 1; }
 
-    yq eval -o=json "$CONFIG_FILE" | jq --arg env "$ENVIRONMENT_TAG" '
+    local result
+    result=$(yq eval -o=json "$CONFIG_FILE" | jq --arg env "$ENVIRONMENT_TAG" '
         def dedup_list(xs):
             if (xs | length) == 0 then xs
             elif (xs[0] | type) == "object" and ((xs[0].name // xs[0].url) // null) != null then
@@ -114,7 +134,9 @@ _config_json() {
         (.defaults // {}) as $d |
         (.environments[$env] // {}) as $e |
         merge($d; $e) | interp | validate
-    '
+    ') || return 1
+    _CONFIG_JSON_CACHE="$result"
+    printf '%s\n' "$_CONFIG_JSON_CACHE"
 }
 
 # Emit a computed section. Args: $1 = section name
@@ -195,6 +217,16 @@ apply_claude_settings() {
     fi
 }
 
+# Append `export KEY=<shell-escaped value>` to $ENV_EXPORT_FILE, skipping empty
+# values and entries already present. printf %q guards against injection via
+# $()/backticks in config values.
+_write_env_export() {
+    local key="$1" value="$2"
+    [[ -z "$value" ]] && return 0
+    grep -q "^export $key=" "$ENV_EXPORT_FILE" 2>/dev/null && return 0
+    printf 'export %s=%q\n' "$key" "$value" >> "$ENV_EXPORT_FILE"
+}
+
 # Propagate timezone, locale, and git identity from config to $ENV_EXPORT_FILE
 # Includes all vars from the DevContainer version: tz, locale, git_name, git_email,
 # work_email, work_orgs, work_dirs
@@ -203,24 +235,27 @@ propagate_env_from_config() {
     config_json=$(_config_section __all__ 2>/dev/null) || return 0
 
     local tz locale git_name git_email work_email work_orgs work_dirs
-    tz=$(echo "$config_json" | jq -r '.timezone // empty')
-    locale=$(echo "$config_json" | jq -r '.locale // empty')
-    git_name=$(echo "$config_json" | jq -r '.git.personal.name // empty')
-    git_email=$(echo "$config_json" | jq -r '.git.personal.email // empty')
-    work_email=$(echo "$config_json" | jq -r '.git.work.email // empty')
-    work_orgs=$(echo "$config_json" | jq -r '.git.work.orgs // empty')
-    work_dirs=$(echo "$config_json" | jq -r '(.git.work.dirs // []) | join("|")')
+    IFS=$'\t' read -r tz locale git_name git_email work_email work_orgs work_dirs < <(
+        echo "$config_json" | jq -r '[
+            .timezone // "",
+            .locale // "",
+            .git.personal.name // "",
+            .git.personal.email // "",
+            .git.work.email // "",
+            .git.work.orgs // "",
+            ((.git.work.dirs // []) | join("|"))
+        ] | @tsv'
+    )
 
-    # Use printf %q to shell-escape values (prevents injection via $() or backticks in config)
-    [[ -n "$tz" ]]         && ! grep -q "^export TZ="                "$ENV_EXPORT_FILE" 2>/dev/null && printf 'export TZ=%q\n' "$tz"                        >> "$ENV_EXPORT_FILE"
-    [[ -n "$locale" ]]     && ! grep -q "^export LC_TIME="           "$ENV_EXPORT_FILE" 2>/dev/null && printf 'export LC_TIME=%q\n' "$locale"               >> "$ENV_EXPORT_FILE"
-    [[ -n "$git_name" ]]   && ! grep -q "^export GIT_USER_NAME="     "$ENV_EXPORT_FILE" 2>/dev/null && printf 'export GIT_USER_NAME=%q\n' "$git_name"       >> "$ENV_EXPORT_FILE"
-    [[ -n "$git_email" ]]  && ! grep -q "^export GIT_USER_EMAIL="    "$ENV_EXPORT_FILE" 2>/dev/null && printf 'export GIT_USER_EMAIL=%q\n' "$git_email"     >> "$ENV_EXPORT_FILE"
-    [[ -n "$work_email" ]] && ! grep -q "^export GIT_USER_EMAIL_WORK=" "$ENV_EXPORT_FILE" 2>/dev/null && printf 'export GIT_USER_EMAIL_WORK=%q\n' "$work_email" >> "$ENV_EXPORT_FILE"
-    [[ -n "$work_orgs" ]]  && ! grep -q "^export GH_WORK_ORGS="      "$ENV_EXPORT_FILE" 2>/dev/null && printf 'export GH_WORK_ORGS=%q\n' "$work_orgs"      >> "$ENV_EXPORT_FILE"
+    _write_env_export TZ                 "$tz"
+    _write_env_export LC_TIME            "$locale"
+    _write_env_export GIT_USER_NAME      "$git_name"
+    _write_env_export GIT_USER_EMAIL     "$git_email"
+    _write_env_export GIT_USER_EMAIL_WORK "$work_email"
+    _write_env_export GH_WORK_ORGS       "$work_orgs"
     if [[ -n "$work_dirs" ]]; then
         export GH_WORK_DIRS="$work_dirs"
-        ! grep -q "^export GH_WORK_DIRS=" "$ENV_EXPORT_FILE" 2>/dev/null && printf 'export GH_WORK_DIRS=%q\n' "$work_dirs" >> "$ENV_EXPORT_FILE"
+        _write_env_export GH_WORK_DIRS   "$work_dirs"
     fi
 
     ok "Environment variables propagated to $ENV_EXPORT_FILE"
@@ -305,7 +340,7 @@ update_plugin_counters() {
     case $rc in
         0) _installed=$((_installed + 1)) ;;
         1) _skipped=$((_skipped + 1)) ;;
-        2) _failed=$((_failed + 1)) ;;
+        *) _failed=$((_failed + 1)) ;;
     esac
 }
 
@@ -632,7 +667,7 @@ sync_plugins() {
         fi
     done
 
-    ((removed > 0 || failed > 0)) && echo "  📊 Sync: $removed removed, $failed failed" || ok "All plugins in sync"
+    _print_sync_summary "Sync" "All plugins in sync" "$removed" "$failed"
 }
 
 # =============================================================================
@@ -647,7 +682,7 @@ sync_skills() {
     [[ -d "$skills_dir" ]] || return 0
 
     # Build expected skills list from YAML
-    local expected=()
+    declare -A expected=()
     local skills_json
     skills_json=$(_config_section skills 2>/dev/null) || return 0
 
@@ -659,7 +694,7 @@ sync_skills() {
         if [[ "$name" == "*" ]]; then
             wildcard_urls+=("$url")
         elif [[ -n "$name" ]]; then
-            expected+=("$name")
+            expected["$name"]=1
         fi
     done < <(echo "$skills_json" | jq -c '.[]')
 
@@ -669,7 +704,7 @@ sync_skills() {
         local url
         for url in "${wildcard_urls[@]}"; do
             while IFS= read -r name; do
-                [[ -n "$name" ]] && expected+=("$name")
+                [[ -n "$name" ]] && expected["$name"]=1
             done < <(jq -r --arg u "$url" '.[$u][]? // empty' "$manifest")
         done
     fi
@@ -692,22 +727,17 @@ sync_skills() {
         local name
         name=$(basename "$entry")
         [[ "$name" == .* ]] && continue
-        local found=0
-        for exp in "${expected[@]}"; do
-            [[ "$name" == "$exp" ]] && { found=1; break; }
-        done
-        if [[ $found -eq 0 ]]; then
-            if rm -rf "$entry"; then
-                echo "  🗑️  Removed skill: $name"
-                removed=$((removed + 1))
-            else
-                warn "Failed to remove skill: $name"
-                failed=$((failed + 1))
-            fi
+        [[ -n "${expected[$name]:-}" ]] && continue
+        if rm -rf "$entry"; then
+            echo "  🗑️  Removed skill: $name"
+            removed=$((removed + 1))
+        else
+            warn "Failed to remove skill: $name"
+            failed=$((failed + 1))
         fi
     done
 
-    ((removed > 0 || failed > 0)) && echo "  📊 Skills sync: $removed removed, $failed failed" || ok "All skills in sync"
+    _print_sync_summary "Skills sync" "All skills in sync" "$removed" "$failed"
 }
 
 # =============================================================================
@@ -732,15 +762,14 @@ add_mcp_server() {
     fi
 }
 
-# Parse MCP server declarations from YAML and call add_mcp_server for each
-# Populates caller's mcp_expected array (must be declared in calling scope)
+# Parse MCP server declarations from YAML and call add_mcp_server for each.
+# Populates caller's mcp_expected associative array (must be declared as `declare -A`).
 parse_mcp_servers() {
     local mcp_json
     mcp_json=$(_config_section mcp_servers) || {
         warn "Failed to parse MCP config"; return 0
     }
 
-    # Process substitution to preserve mcp_expected array modifications in caller's scope
     while IFS= read -r server; do
         local name type
         name=$(echo "$server" | jq -r '.name')
@@ -753,7 +782,7 @@ parse_mcp_servers() {
             config_json=$(echo "$server" | jq '{type, url, headers}')
         fi
 
-        mcp_expected+=("$name")
+        mcp_expected["$name"]=1
         add_mcp_server "$name" "$config_json"
     done < <(echo "$mcp_json" | jq -c '.[]')
 }
@@ -764,7 +793,7 @@ sync_mcp_servers() {
     has_command claude || return 0
     has_command jq || return 0
 
-    local mcp_expected=()
+    declare -A mcp_expected=()
     parse_mcp_servers
 
     # Get installed MCP servers from .claude.json
@@ -779,11 +808,7 @@ sync_mcp_servers() {
     # Remove servers not in expected list
     local removed=0
     for name in "${installed[@]}"; do
-        local found=0
-        for expected in "${mcp_expected[@]}"; do
-            [[ "$name" == "$expected" ]] && { found=1; break; }
-        done
-        if [[ $found -eq 0 ]]; then
+        if [[ -z "${mcp_expected[$name]:-}" ]]; then
             if claude mcp remove "$name" --scope user < /dev/null 2>/dev/null; then
                 echo "  🗑️  Removed MCP: $name"
                 removed=$((removed + 1))
@@ -836,5 +861,22 @@ sync_marketplaces() {
         fi
     done < <(jq -r 'keys[]' "$known_file" 2>/dev/null)
 
-    ((removed > 0 || failed > 0)) && echo "  📊 Marketplaces sync: $removed removed, $failed failed" || ok "All marketplaces in sync"
+    _print_sync_summary "Marketplaces sync" "All marketplaces in sync" "$removed" "$failed"
+}
+
+# =============================================================================
+# PIPELINE
+# =============================================================================
+
+# Full install/sync pipeline. Order matters:
+#   install_all_plugins_and_skills must run BEFORE sync_skills, because
+#   sync_skills reads the wildcard manifest populated during install.
+run_plugin_sync_pipeline() {
+    sync_plugins
+    install_all_plugins_and_skills
+    sync_skills
+    install_external_marketplace_plugins
+    install_local_marketplace_plugins
+    sync_marketplaces
+    sync_mcp_servers
 }
