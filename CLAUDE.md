@@ -14,13 +14,9 @@ Re-sync configuration after changes:
 ```bash
 claude mcp list                                       # Verify MCP servers
 claude plugin marketplace list                        # List installed plugins
-bash config/scripts/tests/test_ensure_playwright.sh   # Run Playwright lazy-install tests
-bash config/scripts/tests/test_backup.sh              # Run backup.sh tests
-bash config/scripts/tests/test_setup_common.sh        # Run setup-common.sh tests
-npx jest config/scripts/tests/config-parser.test.js   # Run config-parser tests (Jest)
 ```
 
-No typecheck (pure JS/Bash project). No linter configured.
+No automated test suite, typecheck, or linter — pure JS/Bash project validated by running the setup scripts end-to-end.
 
 ## Operational Notes
 
@@ -100,11 +96,8 @@ Documentation: `README.md` (setup guide).
 - **Claude binary in Docker**: Scripts use `CLAUDE_CMD="${CLAUDE_DIR}/bin/claude"; claude() { "$CLAUDE_CMD" "$@"; }` to ensure correct binary.
 - **Claude config persistence**: `CLAUDE_CONFIG_DIR=~/.claude` keeps `.claude.json` inside the volume. Set in `devcontainer.json` and `Dockerfile`.
 - **UTF-8 locale**: Dockerfile must generate `en_US.UTF-8` locale. Without it, Polish chars in tmux show as `_`.
-- **Lazy Playwright**: Docker image ships with system `chromium` package (ARM64 compatible) and sets `AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium`. On x86_64, `ensure-playwright.sh` installs Chromium via Playwright on first `agent-browser` use (PreToolUse hook). On ARM64, the script falls back to system chromium since Chrome for Testing and Playwright lack ARM64 builds. DevContainer retains build-time Playwright install.
+- **Chromium for `agent-browser`**: Docker image ships with system `chromium` package (ARM64 compatible) and sets `AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium`. DevContainer installs Chromium via Playwright at build time (`.devcontainer/Dockerfile`). `setup-local.sh` runs `npx playwright install chromium` during setup.
 - **GPG in container**: Use `--pinentry-mode loopback` with `--passphrase` — without it, gpg tries to launch pinentry dialog which doesn't exist.
-
-**Testing & dev tools:**
-- **Shell test assert helpers**: `assert_eq`/`assert_contains` in `config/scripts/tests/` increment `TESTS_RUN` internally — don't also increment manually before calling them.
 
 **MCP & integrations:**
 - **Coolify MCP limitations**: `base_directory` and `docker_compose_location` not in MCP tool — use `curl -X PATCH` directly.
