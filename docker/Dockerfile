@@ -1,4 +1,4 @@
-# Claude Code & Gemini CLI Docker image for ARM64
+# Claude Code Docker image for ARM64
 # Multi-stage build for terminal-only AI development
 
 # =============================================================================

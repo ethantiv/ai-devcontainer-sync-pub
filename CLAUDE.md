@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-DevContainer for multi-AI agent development with Claude Code and Gemini CLI. Configuration, setup scripts, and shared tooling for plugins, skills and MCP servers.
+DevContainer for multi-AI agent development with Claude Code. Configuration, setup scripts, and shared tooling for plugins, skills and MCP servers.
 
 ## Build & Run
 
@@ -27,7 +27,6 @@ No automated test suite, typecheck, or linter — pure JS/Bash project validated
 | `GH_TOKEN` | Yes | GitHub PAT with `repo`, `workflow` permissions |
 | `SSH_PRIVATE_KEY` | No | Base64-encoded SSH key for Git auth |
 | `RESET_CLAUDE_CONFIG` | No | Clear `~/.claude/` on startup |
-| `RESET_GEMINI_CONFIG` | No | Clear `~/.gemini/` on startup (DevContainer only) |
 | `CONTEXT7_API_KEY` | No | API key for Context7 MCP server |
 | `COOLIFY_BASE_URL` | No | URL of Coolify instance |
 | `COOLIFY_ACCESS_TOKEN` | No | Coolify API access token |

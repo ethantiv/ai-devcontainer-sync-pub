@@ -32,7 +32,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Overridable for testing
 BACKUP_DIR="${BACKUP_DIR:-$SCRIPT_DIR/backups}"
-BACKUP_SOURCE_PATHS="${BACKUP_SOURCE_PATHS:-/home/vscode/.claude /home/vscode/.gemini /home/vscode/.cache/google-vscode-extension/auth}"
+BACKUP_SOURCE_PATHS="${BACKUP_SOURCE_PATHS:-/home/vscode/.claude}"
 
 # ── Command router ───────────────────────────────────────
 cmd_create() {

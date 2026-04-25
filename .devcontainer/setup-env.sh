@@ -23,8 +23,6 @@ readonly SSH_DIR="$HOME/.ssh"
 readonly SSH_KEY_FILE="$SSH_DIR/id_rsa"
 readonly SSH_KNOWN_HOSTS_FILE="$SSH_DIR/known_hosts"
 
-readonly GEMINI_DIR="$HOME/.gemini"
-
 # Required by setup-common.sh (CONFIG_FILE and LOCAL_MARKETPLACE_DIR
 # resolved inside detect_workspace_folder before sourcing the library).
 CONFIG_FILE=""
@@ -303,7 +301,6 @@ main() {
     setup_multi_github
 
     reset_config_if_requested "RESET_CLAUDE_CONFIG" "$CLAUDE_DIR"
-    reset_config_if_requested "RESET_GEMINI_CONFIG" "$GEMINI_DIR"
 
     setup_claude_configuration
     run_plugin_sync_pipeline

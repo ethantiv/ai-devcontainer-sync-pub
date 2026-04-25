@@ -485,11 +485,6 @@ install_all_plugins_and_skills() {
     fi
     claude plugin marketplace update "$OFFICIAL_MARKETPLACE_NAME" >/dev/null 2>&1 || true
 
-    # Clean stale gemini skill symlinks (gemini-cli scans ~/.agents/skills/ directly)
-    if [[ -d "$HOME/.gemini/skills" ]]; then
-        find "$HOME/.gemini/skills" -maxdepth 1 -type l -delete 2>/dev/null || true
-    fi
-
     local plugins_installed=0 plugins_skipped=0 plugins_failed=0
     local skills_installed=0 skills_failed=0
 

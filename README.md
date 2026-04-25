@@ -1,6 +1,6 @@
 # AI DevContainer Environment
 
-Ready-to-use development environment with Claude Code, Gemini CLI, and pre-configured AI tools.
+Ready-to-use development environment with Claude Code and pre-configured AI tools.
 
 ## Table of Contents
 
@@ -12,7 +12,7 @@ Ready-to-use development environment with Claude Code, Gemini CLI, and pre-confi
 
 ## What's Inside
 
-- **Claude Code** and **Gemini CLI** — pre-installed and configured
+- **Claude Code** — pre-installed and configured
 - **MCP Servers** — Context7, Coolify
 - **Local Plugins** — `roadmap`, `git-worktree`, `dependency-update`, `read-arxiv-paper`
 - **Skills & Plugins** — official marketplace plugins + external skills, auto-installed from `config/env-config.yaml`. Skills entries support single (`name: x`), bundle (`names: [a, b]`), or wildcard (url only → install all skills from repo)
@@ -75,7 +75,7 @@ Set in `config/.env` (copy from `config/.env.example`).
 | `CONTEXT7_API_KEY` | No | Context7 MCP server |
 | `COOLIFY_BASE_URL` / `COOLIFY_ACCESS_TOKEN` | No | Coolify deployment management |
 | `STITCH_API_KEY` | No | Google Stitch MCP server |
-| `RESET_CLAUDE_CONFIG` / `RESET_GEMINI_CONFIG` | No | Set `true` to clear config on startup (`RESET_GEMINI_CONFIG` applies to DevContainer only) |
+| `RESET_CLAUDE_CONFIG` | No | Set `true` to clear config on startup |
 | `BACKUP_PIN` | No | PIN for encrypting/decrypting volume backups |
 
 ## Multi-GitHub Accounts
@@ -100,7 +100,7 @@ The `gh` CLI shim at `~/.local/bin/gh` detects org URLs in arguments first, then
 
 ## Volume Backups
 
-Create encrypted backups of DevContainer Docker volumes (`~/.claude`, `~/.gemini`, `~/.cache/google-vscode-extension/auth`). Gemini and Google VSCode auth paths apply only to DevContainer/Codespaces; the standalone Docker image no longer mounts `~/.gemini`.
+Create encrypted backups of DevContainer Docker volumes (`~/.claude`).
 
 ```bash
 .devcontainer/backup.sh create              # Create encrypted backup
